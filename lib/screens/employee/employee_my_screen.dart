@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 
 import '../../theme.dart';
 import '../../widgets/common.dart';
-import 'employee_widgets.dart';
 import 'login_screen.dart';
 import 'my_documents_screen.dart';
 import 'notification_center_screen.dart';
@@ -46,7 +45,7 @@ class EmployeeMyScreen extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 12),
-          AvatarRow(
+          PersonRow(
             avatar: const LetterAvatar('매',
                 color: AppColors.primary, background: AppColors.primarySoft),
             title: '근무 매장 전환',
@@ -55,15 +54,15 @@ class EmployeeMyScreen extends StatelessWidget {
             onTap: () => _push(context, const StoreSwitchScreen()),
           ),
           const SizedBox(height: 12),
-          AvatarRow(
-            avatar: const LetterAvatar('서', color: kInfo, background: kInfoSoft),
+          PersonRow(
+            avatar: const LetterAvatar('서', color: AppColors.info, background: AppColors.infoSoft),
             title: '내 서류',
             subtitle: '보건증 · 근로계약서',
             trailing: chevron,
             onTap: () => _push(context, const MyDocumentsScreen()),
           ),
           const SizedBox(height: 12),
-          AvatarRow(
+          PersonRow(
             avatar: const LetterAvatar('알',
                 color: AppColors.accent, background: AppColors.accentSoft),
             title: '알림 설정',
@@ -73,7 +72,7 @@ class EmployeeMyScreen extends StatelessWidget {
             onTap: () => _push(context, const NotificationCenterScreen()),
           ),
           const SizedBox(height: 12),
-          AvatarRow(
+          PersonRow(
             avatar: const LetterAvatar('로',
                 color: AppColors.textSecondary, background: AppColors.bg),
             title: '로그아웃',

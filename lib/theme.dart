@@ -13,6 +13,11 @@ class AppColors {
   static const textPrimary = Color(0xFF191F28);
   static const textSecondary = Color(0xFF6B7684);
   static const textTertiary = Color(0xFFA0A8B3);
+  static const danger = Color(0xFFE5484D);
+  static const dangerSoft = Color(0xFFFDECEC);
+  static const info = Color(0xFF3B82F6);
+  static const infoSoft = Color(0xFFE8F0FE);
+  static const kakao = Color(0xFFFEE500);
 }
 
 /// Figma 텍스트는 전부 line-height 1.4. 예: `AppText.style(15, FontWeight.w700)`.

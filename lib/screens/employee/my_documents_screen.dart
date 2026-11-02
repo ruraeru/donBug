@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import '../../theme.dart';
 import '../../widgets/common.dart';
 import 'contract_sign_screen.dart';
-import 'employee_widgets.dart';
 import 'health_cert_register_screen.dart';
 
 /// 내 서류: 보건증 · 근로계약서 · 급여 명세서.
@@ -21,7 +20,7 @@ class MyDocumentsScreen extends StatelessWidget {
           children: [
             _DocCard(
               title: '보건증',
-              chip: const Pill('만료 D-12', color: kDanger, background: kDangerSoft),
+              chip: const Pill('만료 D-12', color: AppColors.danger, background: AppColors.dangerSoft),
               description: '만료일 2026.05.26 · 갱신 후 새 사진을 등록하세요',
               button: AppButton(
                 '갱신본 등록하기',

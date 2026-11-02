@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 
 import '../../theme.dart';
 import '../../widgets/common.dart';
-import 'employer_widgets.dart';
 
 /// 매장 설정.
 class StoreSettingsScreen extends StatefulWidget {
@@ -84,7 +83,7 @@ class _StoreSettingsScreenState extends State<StoreSettingsScreen> {
             ],
             const SizedBox(height: 12),
             PersonRow(
-              avatar: const InitialAvatar('로',
+              avatar: const LetterAvatar('로',
                   color: AppColors.textSecondary, background: AppColors.bg),
               title: '로그아웃',
               trailing: Text('›',

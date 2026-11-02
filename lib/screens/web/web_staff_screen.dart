@@ -18,9 +18,9 @@ class _WebStaffScreenState extends State<WebStaffScreen> {
   // (이름, 아바타색, 아바타배경, 파트, 시급, 공제, 서류, 서류색, 서류배경)
   static const _staff = [
     ('지민', AppColors.primary, AppColors.primarySoft, '오픈', '10,030원', '3.3%', '정상', AppColors.primary, AppColors.primarySoft),
-    ('수빈', AppColors.accent, AppColors.accentSoft, '오픈', '10,030원', '3.3%', '보건증 D-12', WebColors.danger, WebColors.dangerSoft),
-    ('하윤', WebColors.info, WebColors.infoSoft, '마감', '10,030원', '3.3%', '계약서 미서명', AppColors.accent, AppColors.accentSoft),
-    ('도현', WebColors.danger, WebColors.dangerSoft, '마감', '10,030원', '4대보험', '정상', AppColors.primary, AppColors.primarySoft),
+    ('수빈', AppColors.accent, AppColors.accentSoft, '오픈', '10,030원', '3.3%', '보건증 D-12', AppColors.danger, AppColors.dangerSoft),
+    ('하윤', AppColors.info, AppColors.infoSoft, '마감', '10,030원', '3.3%', '계약서 미서명', AppColors.accent, AppColors.accentSoft),
+    ('도현', AppColors.danger, AppColors.dangerSoft, '마감', '10,030원', '4대보험', '정상', AppColors.primary, AppColors.primarySoft),
     ('서연', AppColors.primary, AppColors.primarySoft, '미들', '10,500원', '3.3%', '정상', AppColors.primary, AppColors.primarySoft),
   ];
 

@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 
 import '../../theme.dart';
 import '../../widgets/common.dart';
-import 'employer_widgets.dart';
 import 'schedule_template_screen.dart';
 import 'shift_add_screen.dart';
 
@@ -18,7 +17,7 @@ class _EmployerScheduleScreenState extends State<EmployerScheduleScreen> {
   static const _days = ['월', '화', '수', '목', '금', '토', '일'];
   static const _shifts = [
     (part: '오픈', color: AppColors.primary, bg: AppColors.primarySoft, time: '10:00 – 16:00', need: '필요 2명 · 충족', short: false, staff: '지민 · 수빈'),
-    (part: '미들', color: EmpColors.info, bg: EmpColors.infoSoft, time: '14:00 – 20:00', need: '필요 2명 · 충족', short: false, staff: '태우 · 서연'),
+    (part: '미들', color: AppColors.info, bg: AppColors.infoSoft, time: '14:00 – 20:00', need: '필요 2명 · 충족', short: false, staff: '태우 · 서연'),
     (part: '마감', color: AppColors.accent, bg: AppColors.accentSoft, time: '18:00 – 22:00', need: '필요 2명 · 1명 부족', short: true, staff: '하윤'),
   ];
 
@@ -69,7 +68,7 @@ class _EmployerScheduleScreenState extends State<EmployerScheduleScreen> {
                         Text(
                           s.need,
                           style: AppText.style(12, FontWeight.w400,
-                              s.short ? EmpColors.danger : AppColors.textSecondary),
+                              s.short ? AppColors.danger : AppColors.textSecondary),
                         ),
                       ],
                     ),

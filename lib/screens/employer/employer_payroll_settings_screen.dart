@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 
 import '../../theme.dart';
 import '../../widgets/common.dart';
-import 'payroll_docs_widgets.dart';
 
 /// 급여 설정 (Figma 48:136). 저장 시 인건비 대시보드로 복귀.
 class EmployerPayrollSettingsScreen extends StatefulWidget {
@@ -29,7 +28,7 @@ class _EmployerPayrollSettingsScreenState
             AppCard(
               child: Row(
                 children: [
-                  const InitialAvatar('수',
+                  const LetterAvatar('수',
                       size: 40,
                       color: AppColors.accent,
                       background: AppColors.accentSoft),
@@ -49,7 +48,7 @@ class _EmployerPayrollSettingsScreenState
               ),
             ),
             const SizedBox(height: 14),
-            const LabeledField('시급', '10,030원'),
+            const LabeledField('시급', child: FieldBox('10,030원')),
             const SizedBox(height: 14),
             Text('공제 유형',
                 style: AppText.style(14, FontWeight.w700, AppColors.textSecondary)),
@@ -77,7 +76,7 @@ class _EmployerPayrollSettingsScreenState
                 (v) => setState(() => _premium = v)),
           ],
         ),
-        bottomNavigationBar: BottomCta(
+        bottomNavigationBar: BottomBar.button(
           '저장',
           // 설정 → 급여 상세 → 대시보드
           onPressed: () => Navigator.of(context)

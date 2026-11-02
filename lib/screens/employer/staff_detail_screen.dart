@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 
 import '../../theme.dart';
 import '../../widgets/common.dart';
-import 'employer_widgets.dart';
 
 /// 직원 상세 (더미: 수빈).
 class StaffDetailScreen extends StatelessWidget {
@@ -19,7 +18,7 @@ class StaffDetailScreen extends StatelessWidget {
                 children: [
                   Row(
                     children: [
-                      const InitialAvatar('수',
+                      const LetterAvatar('수',
                           color: AppColors.accent,
                           background: AppColors.accentSoft),
                       const SizedBox(width: 12),
@@ -61,8 +60,8 @@ class StaffDetailScreen extends StatelessWidget {
                   const SizedBox(height: 10),
                   const _DocRow('보건증',
                       Pill('만료 D-12',
-                          color: EmpColors.danger,
-                          background: EmpColors.dangerSoft)),
+                          color: AppColors.danger,
+                          background: AppColors.dangerSoft)),
                   const SizedBox(height: 10),
                   const _DocRow('근로계약서', Pill('서명 완료')),
                 ],
@@ -73,7 +72,7 @@ class StaffDetailScreen extends StatelessWidget {
         bottomNavigationBar: BottomBar(children: [
           const AppButton('급여 설정'),
           Material(
-            color: EmpColors.dangerSoft,
+            color: AppColors.dangerSoft,
             borderRadius: BorderRadius.circular(14),
             clipBehavior: Clip.antiAlias,
             child: InkWell(
@@ -83,7 +82,7 @@ class StaffDetailScreen extends StatelessWidget {
                 child: Center(
                   child: Text('매장에서 내보내기',
                       style: AppText.style(
-                          16, FontWeight.w700, EmpColors.danger)),
+                          16, FontWeight.w700, AppColors.danger)),
                 ),
               ),
             ),

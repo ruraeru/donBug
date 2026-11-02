@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 
 import '../../theme.dart';
 import '../../widgets/common.dart';
-import 'employee_widgets.dart';
 
 /// 근무 매장 전환.
 class StoreSwitchScreen extends StatefulWidget {
@@ -15,7 +14,7 @@ class StoreSwitchScreen extends StatefulWidget {
 class _StoreSwitchScreenState extends State<StoreSwitchScreen> {
   static const _stores = [
     ('커', AppColors.primary, AppColors.primarySoft, '카페 커푸치노', '홀 서빙 · 시급 10,030원'),
-    ('편', kInfo, kInfoSoft, '편의점 모아', '야간 근무 · 시급 10,500원'),
+    ('편', AppColors.info, AppColors.infoSoft, '편의점 모아', '야간 근무 · 시급 10,500원'),
   ];
   int _current = 0;
 

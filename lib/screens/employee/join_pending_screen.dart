@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 
 import '../../theme.dart';
 import '../../widgets/common.dart';
-import 'employee_widgets.dart';
 import 'join_approved_screen.dart';
 
 /// 가입 승인 대기.

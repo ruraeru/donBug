@@ -2,9 +2,8 @@ import 'package:flutter/material.dart';
 
 import '../../theme.dart';
 import '../../widgets/common.dart';
-import 'employer_flow_widgets.dart';
-import 'employer_widgets.dart';
 import 'schedule_template_screen.dart';
+import 'employer_parts.dart';
 
 /// 근무 추가 (Figma 47:297).
 class ShiftAddScreen extends StatefulWidget {
@@ -17,7 +16,7 @@ class ShiftAddScreen extends StatefulWidget {
 class _ShiftAddScreenState extends State<ShiftAddScreen> {
   static const _staff = [
     (initial: '태', color: AppColors.primary, bg: AppColors.primarySoft),
-    (initial: '서', color: EmpColors.info, bg: EmpColors.infoSoft),
+    (initial: '서', color: AppColors.info, bg: AppColors.infoSoft),
     (initial: '하', color: AppColors.accent, bg: AppColors.accentSoft),
   ];
 
@@ -60,7 +59,7 @@ class _ShiftAddScreenState extends State<ShiftAddScreen> {
                     GestureDetector(
                       onTap: () => setState(() =>
                           _picked.contains(i) ? _picked.remove(i) : _picked.add(i)),
-                      child: Avatar(
+                      child: LetterAvatar(
                         _staff[i].initial,
                         color: _staff[i].color,
                         background: _staff[i].bg,

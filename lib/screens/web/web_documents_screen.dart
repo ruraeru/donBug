@@ -24,9 +24,9 @@ class _WebDocumentsScreenState extends State<WebDocumentsScreen> {
   // (이름, 아바타색, 배경, 보건증 라벨, 보건증색, 보건증배경, 만료일, 계약서 라벨, 계약서 완료?)
   static const _rows = [
     ('지민', AppColors.primary, AppColors.primarySoft, '정상', AppColors.primary, AppColors.primarySoft, '2027.01.18', '서명 완료', true),
-    ('수빈', AppColors.accent, AppColors.accentSoft, 'D-12', WebColors.danger, WebColors.dangerSoft, '2026.05.26', '서명 완료', true),
-    ('하윤', WebColors.info, WebColors.infoSoft, '정상', AppColors.primary, AppColors.primarySoft, '2026.11.02', '서명 필요', false),
-    ('도현', WebColors.danger, WebColors.dangerSoft, 'D-45', AppColors.accent, AppColors.accentSoft, '2026.06.28', '서명 완료', true),
+    ('수빈', AppColors.accent, AppColors.accentSoft, 'D-12', AppColors.danger, AppColors.dangerSoft, '2026.05.26', '서명 완료', true),
+    ('하윤', AppColors.info, AppColors.infoSoft, '정상', AppColors.primary, AppColors.primarySoft, '2026.11.02', '서명 필요', false),
+    ('도현', AppColors.danger, AppColors.dangerSoft, 'D-45', AppColors.accent, AppColors.accentSoft, '2026.06.28', '서명 완료', true),
     ('서연', AppColors.primary, AppColors.primarySoft, '정상', AppColors.primary, AppColors.primarySoft, '2027.03.09', '서명 대기', false),
   ];
 

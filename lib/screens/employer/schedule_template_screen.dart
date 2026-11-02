@@ -2,8 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../theme.dart';
 import '../../widgets/common.dart';
-import 'employer_flow_widgets.dart';
-import 'employer_widgets.dart';
+import 'employer_parts.dart';
 
 /// 근무표 템플릿 · 필요 인원 (Figma 47:355).
 class ScheduleTemplateScreen extends StatefulWidget {

@@ -2,9 +2,9 @@ import 'package:flutter/material.dart';
 
 import '../../theme.dart';
 import '../../widgets/common.dart';
-import 'employee_widgets.dart';
 import 'login_screen.dart';
 import 'role_select_screen.dart';
+import 'employee_parts.dart';
 
 /// 카카오 동의.
 class KakaoConsentScreen extends StatelessWidget {

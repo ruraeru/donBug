@@ -2,9 +2,8 @@ import 'package:flutter/material.dart';
 
 import '../../theme.dart';
 import '../../widgets/common.dart';
-import 'employee_parts.dart';
-import 'employee_widgets.dart';
 import 'substitute_done_screen.dart';
+import 'employee_parts.dart';
 
 /// 동료 대타 상세 ("대타 구해요").
 class SubstituteDetailScreen extends StatelessWidget {
@@ -52,11 +51,11 @@ class SubstituteDetailScreen extends StatelessWidget {
                   Text('내 상황 확인',
                       style: AppText.style(14, FontWeight.w700, AppColors.textSecondary)),
                   const SizedBox(height: 12),
-                  const KvRow('이 시간 내 근무', '없음'),
+                  const KeyValueRow('이 시간 내 근무', '없음'),
                   const SizedBox(height: 12),
-                  const KvRow('예상 수입', '₩40,120'),
+                  const KeyValueRow('예상 수입', '₩40,120'),
                   const SizedBox(height: 12),
-                  const KvRow('이번 주 근무', '15시간'),
+                  const KeyValueRow('이번 주 근무', '15시간'),
                 ],
               ),
             ),

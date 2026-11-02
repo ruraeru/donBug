@@ -2,12 +2,10 @@ import 'package:flutter/material.dart';
 
 import '../../theme.dart';
 import '../../widgets/common.dart';
+import 'web_common.dart';
 
 /// 웹 근무표 변형(W2-A~E)이 함께 쓰는 색상·더미 데이터·작은 위젯.
-class WebColors {
-  static const danger = Color(0xFFE5484D);
-  static const dangerSoft = Color(0xFFFDECEC);
-  static const blue = Color(0xFF3B82F6);
+class ScheduleColors {
   static const blueSoft = Color(0xFFEAF1FE);
   static const purple = Color(0xFF8B5CF6);
   static const purpleSoft = Color(0xFFF0EAFE);
@@ -44,8 +42,8 @@ const webWeekCodes = [
 
 /// 토(5) 파랑, 일(6) 빨강, 평일은 null.
 (Color bg, Color fg)? webWeekendColors(int day) => switch (day) {
-      5 => (WebColors.blueSoft, WebColors.blue),
-      6 => (WebColors.dangerSoft, WebColors.danger),
+      5 => (ScheduleColors.blueSoft, AppColors.info),
+      6 => (AppColors.dangerSoft, AppColors.danger),
       _ => null,
     };
 
@@ -102,10 +100,10 @@ class WebShiftCell extends StatelessWidget {
     final (Color bg, Color fg, Color? side) = switch (s.kind) {
       ShiftKind.time => (AppColors.surface, AppColors.textPrimary, AppColors.border),
       ShiftKind.open => (AppColors.primarySoft, AppColors.primary, null),
-      ShiftKind.close => (WebColors.blueSoft, WebColors.blue, null),
+      ShiftKind.close => (ScheduleColors.blueSoft, AppColors.info, null),
       ShiftKind.off => (AppColors.border, AppColors.textSecondary, null),
       ShiftKind.sub => (AppColors.accentSoft, AppColors.accent, null),
-      ShiftKind.offRequest => (WebColors.dangerSoft, WebColors.danger, WebColors.danger),
+      ShiftKind.offRequest => (AppColors.dangerSoft, AppColors.danger, AppColors.danger),
     };
     final weight = s.kind == ShiftKind.off ? FontWeight.w500 : FontWeight.w700;
 
@@ -180,8 +178,8 @@ class WebShiftCell extends StatelessWidget {
   }
 }
 
-class WebAvatar extends StatelessWidget {
-  const WebAvatar(this.staff, {super.key, this.size = 34, this.solid = false});
+class StaffAvatar extends StatelessWidget {
+  const StaffAvatar(this.staff, {super.key, this.size = 34, this.solid = false});
 
   final WebStaff staff;
   final double size;
@@ -205,62 +203,6 @@ class WebAvatar extends StatelessWidget {
           ),
         ),
       );
-}
-
-/// 높이 고정 · 글자 폭만큼(또는 Expanded 안에서 꽉) 차는 radius 12 버튼.
-class WebButton extends StatelessWidget {
-  const WebButton(
-    this.label, {
-    super.key,
-    this.variant = AppButtonVariant.primary,
-    this.onPressed,
-    this.height = 42,
-    this.fontSize = 14,
-    this.radius = 12,
-  });
-
-  final String label;
-  final AppButtonVariant variant;
-  final VoidCallback? onPressed;
-  final double height;
-  final double fontSize;
-  final double radius;
-
-  @override
-  Widget build(BuildContext context) {
-    final (bg, fg) = switch (variant) {
-      AppButtonVariant.primary => (AppColors.primary, AppColors.onPrimary),
-      AppButtonVariant.soft => (AppColors.primarySoft, AppColors.primary),
-      AppButtonVariant.surface => (AppColors.surface, AppColors.primary),
-      AppButtonVariant.outline => (AppColors.surface, AppColors.textPrimary),
-    };
-    return Material(
-      color: bg,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(radius),
-        side: variant == AppButtonVariant.outline
-            ? const BorderSide(color: AppColors.border)
-            : BorderSide.none,
-      ),
-      clipBehavior: Clip.antiAlias,
-      child: InkWell(
-        onTap: onPressed ?? () {},
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 18),
-          child: SizedBox(
-            height: height,
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Text(label, style: AppText.style(fontSize, FontWeight.w700, fg)),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
 }
 
 /// 흰 테두리 박스 안의 세그먼트 탭.
@@ -344,7 +286,7 @@ class WebScheduleHeader extends StatelessWidget {
               ],
             ),
           ),
-          WebButton(action, variant: AppButtonVariant.outline),
+          WebButton(action, style: WebButtonStyle.outline),
           const SizedBox(width: 10),
           const WebButton('게시하기'),
         ],

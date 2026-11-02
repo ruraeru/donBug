@@ -16,7 +16,7 @@ class WebScheduleWeeklyMatrix extends StatelessWidget {
 
   /// 고정 파트 행: (라벨, 라벨색, 칸배경, 칸글자색, 요일별 시간).
   static const _fixedRows = [
-    ('사장님', WebColors.purple, WebColors.purpleSoft, WebColors.purple,
+    ('사장님', ScheduleColors.purple, ScheduleColors.purpleSoft, ScheduleColors.purple,
         [null, null, null, null, null, '9:00', '8:00']),
     ('평일 마감 · 민준', AppColors.textSecondary, AppColors.bg, AppColors.textSecondary,
         ['16:00~21:00', '16:00~21:00', '16:00~21:00', '16:00~21:00', '15:30~21:00', null, null]),
@@ -78,11 +78,11 @@ class WebScheduleWeeklyMatrix extends StatelessWidget {
                   runSpacing: 8,
                   children: [
                     WebLegend(AppColors.primarySoft, '오픈'),
-                    WebLegend(WebColors.blueSoft, '마감'),
+                    WebLegend(ScheduleColors.blueSoft, '마감'),
                     WebLegend(AppColors.surface, '가변 시작 시간', borderColor: AppColors.border),
                     WebLegend(AppColors.border, '휴무 (N = 월 누적)'),
                     WebLegend(AppColors.accentSoft, '대타'),
-                    WebLegend(WebColors.dangerSoft, '휴무 신청'),
+                    WebLegend(AppColors.dangerSoft, '휴무 신청'),
                   ],
                 ),
               ],
@@ -141,7 +141,7 @@ class WebScheduleWeeklyMatrix extends StatelessWidget {
             width: _nameW,
             child: Row(
               children: [
-                WebAvatar(webStaff[i], size: 36),
+                StaffAvatar(webStaff[i], size: 36),
                 const SizedBox(width: 10),
                 Expanded(
                   child: Column(
@@ -207,7 +207,7 @@ class WebScheduleWeeklyMatrix extends StatelessWidget {
         children: [
           Row(
             children: [
-              WebAvatar(staff, size: 28, solid: true),
+              StaffAvatar(staff, size: 28, solid: true),
               const SizedBox(width: 8),
               Text(staff.name, style: AppText.style(15, FontWeight.w700)),
             ],
