@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import '../../theme.dart';
 import '../../widgets/common.dart';
 import 'attendance_screen.dart';
-import 'employer_widgets.dart';
 import 'staff_management_screen.dart';
 import 'substitute_approval_screen.dart';
 
@@ -116,7 +115,7 @@ class EmployerDashboardScreen extends StatelessWidget {
               ),
               const SizedBox(height: 16),
               AppCard(
-                color: EmpColors.dangerSoft,
+                color: AppColors.dangerSoft,
                 onTap: () => _push(context, const StaffManagementScreen()),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -124,9 +123,9 @@ class EmployerDashboardScreen extends StatelessWidget {
                     const Row(
                       children: [
                         Pill('보건증 D-12',
-                            color: EmpColors.danger, background: AppColors.surface),
+                            color: AppColors.danger, background: AppColors.surface),
                         Spacer(),
-                        AppIcon('chevron_right', size: 20, color: EmpColors.danger),
+                        AppIcon('chevron_right', size: 20, color: AppColors.danger),
                       ],
                     ),
                     const SizedBox(height: 6),

@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../theme.dart';
 import '../../widgets/common.dart';
 import 'web_schedule_common.dart';
+import 'web_common.dart';
 
 /// W2-A 일간 타임라인 (Figma 53:3, 콘텐츠 영역 53:35).
 class WebScheduleDailyTimeline extends StatelessWidget {
@@ -73,7 +74,7 @@ class WebScheduleDailyTimeline extends StatelessWidget {
                     WebLegend(AppColors.border, '가용 불가'),
                     WebLegend(AppColors.textPrimary, '배정'),
                     WebLegend(AppColors.accentSoft, '대타 확정'),
-                    WebLegend(WebColors.dangerSoft, '인원 부족'),
+                    WebLegend(AppColors.dangerSoft, '인원 부족'),
                   ],
                 ),
               ],
@@ -92,8 +93,8 @@ class WebScheduleDailyTimeline extends StatelessWidget {
                     ),
                     const Pill(
                       '17:00 1명 부족 · 11·14·15·19시 과다',
-                      color: WebColors.danger,
-                      background: WebColors.dangerSoft,
+                      color: AppColors.danger,
+                      background: AppColors.dangerSoft,
                     ),
                   ],
                 ),
@@ -184,7 +185,7 @@ class WebScheduleDailyTimeline extends StatelessWidget {
 
   Widget _needBox(int need, int cur) {
     final (bg, fg) = cur < need
-        ? (WebColors.dangerSoft, WebColors.danger)
+        ? (AppColors.dangerSoft, AppColors.danger)
         : cur > need
             ? (AppColors.accentSoft, AppColors.accent)
             : (AppColors.primarySoft, AppColors.primary);
@@ -220,7 +221,7 @@ class WebScheduleDailyTimeline extends StatelessWidget {
             bottom: 0,
             child: Container(height: 1, color: AppColors.border),
           ),
-          Positioned(left: 4, top: 13, child: WebAvatar(staff)),
+          Positioned(left: 4, top: 13, child: StaffAvatar(staff)),
           Positioned(
             left: 48,
             top: 11,
@@ -291,7 +292,7 @@ class WebScheduleDailyTimeline extends StatelessWidget {
           const SizedBox(height: 6),
           Text(body, style: AppText.style(12, FontWeight.w400, AppColors.textSecondary)),
           const SizedBox(height: 6),
-          WebButton(action, variant: AppButtonVariant.soft),
+          WebButton(action, style: WebButtonStyle.soft),
         ],
       ),
     );

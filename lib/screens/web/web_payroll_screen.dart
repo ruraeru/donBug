@@ -12,8 +12,8 @@ class WebPayrollScreen extends StatelessWidget {
   static const _rows = [
     ('지민', AppColors.primary, AppColors.primarySoft, '74h', '742,220', '120,360', '45,000', '−31,600', '968,300'),
     ('수빈', AppColors.accent, AppColors.accentSoft, '88h', '882,640', '150,540', '125,520', '−38,300', '1,120,400'),
-    ('하윤', WebColors.info, WebColors.infoSoft, '62h', '621,860', '120,360', '128,780', '−28,743', '842,257'),
-    ('도현', WebColors.danger, WebColors.dangerSoft, '78h', '782,340', '150,540', '95,000', '−41,180', '986,700'),
+    ('하윤', AppColors.info, AppColors.infoSoft, '62h', '621,860', '120,360', '128,780', '−28,743', '842,257'),
+    ('도현', AppColors.danger, AppColors.dangerSoft, '78h', '782,340', '150,540', '95,000', '−41,180', '986,700'),
     ('서연', AppColors.primary, AppColors.primarySoft, '70h', '735,000', '120,360', '62,000', '−23,017', '894,343'),
   ];
 
@@ -32,7 +32,7 @@ class WebPayrollScreen extends StatelessWidget {
           const WebRow(children: [
             _Stat('이번 달 예상 인건비', '₩4,812,000', primary: true),
             _Stat('지급 대상', '5명'),
-            _Stat('전월 대비', '−3%', valueColor: WebColors.danger),
+            _Stat('전월 대비', '−3%', valueColor: AppColors.danger),
           ]),
           WebSplit(
             rightWidth: 300,

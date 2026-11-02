@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 
 import '../../theme.dart';
 import '../../widgets/common.dart';
-import 'employer_widgets.dart';
 import 'notice_result_screen.dart';
 
 /// 필독 확인 현황.
@@ -12,7 +11,7 @@ class NoticeReadStatusScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     const unread = Pill('미확인',
-        color: EmpColors.danger, background: EmpColors.dangerSoft);
+        color: AppColors.danger, background: AppColors.dangerSoft);
     final section =
         AppText.style(14, FontWeight.w700, AppColors.textSecondary);
 
@@ -53,18 +52,18 @@ class NoticeReadStatusScreen extends StatelessWidget {
           Text('확인함', style: section),
           const SizedBox(height: 12),
           const PersonRow(
-              avatar: InitialAvatar('지'), title: '지민', subtitle: '10:02 확인'),
+              avatar: LetterAvatar('지'), title: '지민', subtitle: '10:02 확인'),
           const SizedBox(height: 12),
           const PersonRow(
-            avatar: InitialAvatar('수',
+            avatar: LetterAvatar('수',
                 color: AppColors.accent, background: AppColors.accentSoft),
             title: '수빈',
             subtitle: '10:15 확인',
           ),
           const SizedBox(height: 12),
           const PersonRow(
-            avatar: InitialAvatar('태',
-                color: EmpColors.info, background: EmpColors.infoSoft),
+            avatar: LetterAvatar('태',
+                color: AppColors.info, background: AppColors.infoSoft),
             title: '태우',
             subtitle: '14:03 확인',
           ),
@@ -72,7 +71,7 @@ class NoticeReadStatusScreen extends StatelessWidget {
           Text('미확인', style: section),
           const SizedBox(height: 12),
           const PersonRow(
-            avatar: InitialAvatar('하',
+            avatar: LetterAvatar('하',
                 color: AppColors.accent, background: AppColors.accentSoft),
             title: '하윤',
             subtitle: '아직 확인 안 함',
@@ -80,8 +79,8 @@ class NoticeReadStatusScreen extends StatelessWidget {
           ),
           const SizedBox(height: 12),
           const PersonRow(
-            avatar: InitialAvatar('서',
-                color: EmpColors.info, background: EmpColors.infoSoft),
+            avatar: LetterAvatar('서',
+                color: AppColors.info, background: AppColors.infoSoft),
             title: '서연',
             subtitle: '아직 확인 안 함',
             trailing: unread,

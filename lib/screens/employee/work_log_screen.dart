@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 
 import '../../theme.dart';
 import '../../widgets/common.dart';
-import 'employee_parts.dart';
 
 /// 일자별 근무 내역.
 class WorkLogScreen extends StatelessWidget {
@@ -66,9 +65,9 @@ class WorkLogScreen extends StatelessWidget {
             const AppCard(
               child: Column(
                 children: [
-                  KvRow('이번 달 누적', '62시간'),
+                  KeyValueRow('이번 달 누적', '62시간'),
                   SizedBox(height: 8),
-                  KvRow('이번 달 예상 실수령액', '₩842,257'),
+                  KeyValueRow('이번 달 예상 실수령액', '₩842,257'),
                 ],
               ),
             ),

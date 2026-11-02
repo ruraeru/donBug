@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import '../../theme.dart';
 import 'kakao_consent_screen.dart';
 
-const kKakao = Color(0xFFFEE500);
 
 /// A1 로그인 (앱 진입점).
 class LoginScreen extends StatelessWidget {
@@ -78,7 +77,7 @@ class KakaoButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Material(
-        color: kKakao,
+        color: AppColors.kakao,
         borderRadius: BorderRadius.circular(14),
         clipBehavior: Clip.antiAlias,
         child: InkWell(

@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../theme.dart';
 import '../../widgets/common.dart';
 import 'web_schedule_common.dart';
+import 'web_common.dart';
 
 /// W2-E 유동 스케줄 보드 (Figma 57:846).
 /// 금요일 '0 / 1 부족' 칸을 누르면 오픈 배정 팝오버가 열린다.
@@ -125,7 +126,7 @@ class _WebScheduleFlexBoardState extends State<WebScheduleFlexBoard> {
               width: _nameW,
               child: Row(
                 children: [
-                  WebAvatar(webStaff[i], size: 30),
+                  StaffAvatar(webStaff[i], size: 30),
                   const SizedBox(width: 8),
                   Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -178,13 +179,13 @@ class _WebScheduleFlexBoardState extends State<WebScheduleFlexBoard> {
         margin: const EdgeInsets.only(right: _gap),
         alignment: Alignment.center,
         decoration: BoxDecoration(
-          color: short ? WebColors.dangerSoft : AppColors.primarySoft,
+          color: short ? AppColors.dangerSoft : AppColors.primarySoft,
           borderRadius: BorderRadius.circular(8),
         ),
         child: Text(
           short ? '$have / 1 부족' : '$have / 1',
           style: AppText.style(
-              13, FontWeight.w700, short ? WebColors.danger : AppColors.primary),
+              13, FontWeight.w700, short ? AppColors.danger : AppColors.primary),
         ),
       ),
     );
@@ -230,7 +231,7 @@ class _WebScheduleFlexBoardState extends State<WebScheduleFlexBoard> {
                   ),
                   child: Row(
                     children: [
-                      WebAvatar(webStaff[staff], size: 26),
+                      StaffAvatar(webStaff[staff], size: 26),
                       const SizedBox(width: 8),
                       Expanded(
                         child: Column(
@@ -241,7 +242,7 @@ class _WebScheduleFlexBoardState extends State<WebScheduleFlexBoard> {
                                     ok ? AppColors.textPrimary : AppColors.textTertiary)),
                             Text(note,
                                 style: AppText.style(10, FontWeight.w400,
-                                    ok ? AppColors.textSecondary : WebColors.danger)),
+                                    ok ? AppColors.textSecondary : AppColors.danger)),
                           ],
                         ),
                       ),
@@ -270,7 +271,7 @@ class _WebScheduleFlexBoardState extends State<WebScheduleFlexBoard> {
               children: [
                 Expanded(child: Text('변경 요청', style: AppText.style(16, FontWeight.w700))),
                 Pill('${_requests.length}건',
-                    color: WebColors.danger, background: WebColors.dangerSoft),
+                    color: AppColors.danger, background: AppColors.dangerSoft),
               ],
             ),
             for (final (title, note, confirm) in _requests) ...[
@@ -296,7 +297,7 @@ class _WebScheduleFlexBoardState extends State<WebScheduleFlexBoard> {
                         children: [
                           Expanded(
                             child: WebButton('반려',
-                                variant: AppButtonVariant.outline, height: 34, radius: 10),
+                                style: WebButtonStyle.outline, height: 34, radius: 10),
                           ),
                           SizedBox(width: 8),
                           Expanded(child: WebButton('승인', height: 34, radius: 10)),

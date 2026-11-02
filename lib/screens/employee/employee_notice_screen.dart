@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 
 import '../../theme.dart';
 import '../../widgets/common.dart';
-import 'employee_widgets.dart';
 import 'notice_detail_screen.dart';
 
 /// A7 공지 수신함 (탭 루트).
@@ -57,11 +56,11 @@ class _EmployeeNoticeScreenState extends State<EmployeeNoticeScreen> {
                   _pinnedCard(),
                   const SizedBox(height: 12),
                   _NoticeCard(
-                    tag: const Pill('일반', color: kInfo, background: kInfoSoft),
+                    tag: const Pill('일반', color: AppColors.info, background: AppColors.infoSoft),
                     title: '6월 근무표가 확정되었어요',
                     body: '변경이 필요하면 5/25까지 휴무 신청으로 남겨주세요.',
                     meta: '사장님 · 5/13 18:40',
-                    status: Text('안 읽음', style: AppText.style(12, FontWeight.w700, kDanger)),
+                    status: Text('안 읽음', style: AppText.style(12, FontWeight.w700, AppColors.danger)),
                     onTap: _openDetail,
                   ),
                   const SizedBox(height: 12),
@@ -114,7 +113,7 @@ class _EmployeeNoticeScreenState extends State<EmployeeNoticeScreen> {
                 const SizedBox(height: 10),
                 _MetaRow(
                   '사장님 · 5/14 09:12',
-                  Text('안 읽음', style: AppText.style(12, FontWeight.w700, kDanger)),
+                  Text('안 읽음', style: AppText.style(12, FontWeight.w700, AppColors.danger)),
                 ),
                 const SizedBox(height: 10),
                 AppButton('확인했어요', verticalPadding: 13, fontSize: 15, onPressed: () {}),

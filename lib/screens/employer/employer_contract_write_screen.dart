@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import '../../theme.dart';
 import '../../widgets/common.dart';
 import 'employer_signature_request_screen.dart';
-import 'payroll_docs_widgets.dart';
 
 /// 근로계약서 작성 (Figma 48:425).
 class EmployerContractWriteScreen extends StatelessWidget {
@@ -18,8 +17,8 @@ class EmployerContractWriteScreen extends StatelessWidget {
             AppCard(
               child: Row(
                 children: [
-                  const InitialAvatar('서',
-                      size: 40, color: kInfo, background: kInfoSoft),
+                  const LetterAvatar('서',
+                      size: 40, color: AppColors.info, background: AppColors.infoSoft),
                   const SizedBox(width: 12),
                   Expanded(
                     child: Column(
@@ -32,16 +31,16 @@ class EmployerContractWriteScreen extends StatelessWidget {
                       ],
                     ),
                   ),
-                  const Pill('신규', color: kInfo, background: kInfoSoft),
+                  const Pill('신규', color: AppColors.info, background: AppColors.infoSoft),
                 ],
               ),
             ),
             const SizedBox(height: 14),
-            const LabeledField('계약 기간', '2026.05.15 ~ 2027.05.14'),
+            const LabeledField('계약 기간', child: FieldBox('2026.05.15 ~ 2027.05.14')),
             const SizedBox(height: 14),
-            const LabeledField('시급', '10,030원'),
+            const LabeledField('시급', child: FieldBox('10,030원')),
             const SizedBox(height: 14),
-            const LabeledField('소정근로시간', '주 15시간 (화·목·토 14:00–19:00)'),
+            const LabeledField('소정근로시간', child: FieldBox('주 15시간 (화·목·토 14:00–19:00)')),
             const SizedBox(height: 14),
             AppCard(
               color: AppColors.primarySoft,
@@ -68,7 +67,7 @@ class EmployerContractWriteScreen extends StatelessWidget {
             ),
           ],
         ),
-        bottomNavigationBar: BottomCta(
+        bottomNavigationBar: BottomBar.button(
           '서명 요청 보내기',
           // 완료 화면의 "서류 목록으로"가 한 번 pop으로 B2에 닿도록 교체.
           onPressed: () => Navigator.pushReplacement(

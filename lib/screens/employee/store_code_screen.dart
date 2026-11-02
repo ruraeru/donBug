@@ -2,8 +2,6 @@ import 'package:flutter/material.dart';
 
 import '../../theme.dart';
 import '../../widgets/common.dart';
-import 'employee_parts.dart';
-import 'employee_widgets.dart';
 import 'join_pending_screen.dart';
 
 /// 매장 코드 입력.
@@ -43,8 +41,8 @@ class StoreCodeScreen extends StatelessWidget {
             const SizedBox(height: 16),
             const NoteBox(
               '매장 코드는 사장님 앱의 [매장 설정]에서 확인할 수 있어요. 여러 매장에서 일하면 코드를 추가로 입력하세요.',
-              color: kInfo,
-              background: kInfoSoft,
+              color: AppColors.info,
+              background: AppColors.infoSoft,
             ),
           ],
         ),

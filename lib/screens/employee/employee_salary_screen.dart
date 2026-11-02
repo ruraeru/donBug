@@ -2,9 +2,8 @@ import 'package:flutter/material.dart';
 
 import '../../theme.dart';
 import '../../widgets/common.dart';
-import 'employee_parts.dart';
-import 'employee_widgets.dart';
 import 'payslip_detail_screen.dart';
+import 'employee_parts.dart';
 
 /// A5 급여 정산 (탭 루트).
 class EmployeeSalaryScreen extends StatelessWidget {
@@ -54,21 +53,21 @@ class EmployeeSalaryScreen extends StatelessWidget {
                     children: [
                       Text('급여 내역', style: AppText.style(15, FontWeight.w700)),
                       const SizedBox(height: 14),
-                      const KvRow('기본급 (62시간 × 10,320원)', '₩ 639,840',
+                      const KeyValueRow('기본급 (62시간 × 10,320원)', '₩ 639,840',
                           valueWeight: FontWeight.w500),
                       const SizedBox(height: 14),
-                      const KvRow('주휴수당', '₩ 231,160', valueWeight: FontWeight.w500),
+                      const KeyValueRow('주휴수당', '₩ 231,160', valueWeight: FontWeight.w500),
                       const SizedBox(height: 14),
                       divider,
                       const SizedBox(height: 14),
-                      const KvRow('총 급여', '₩ 871,000', valueWeight: FontWeight.w500),
+                      const KeyValueRow('총 급여', '₩ 871,000', valueWeight: FontWeight.w500),
                       const SizedBox(height: 14),
-                      const KvRow('원천징수 (3.3%)', '-₩ 28,743',
-                          valueWeight: FontWeight.w500, valueColor: kDanger),
+                      const KeyValueRow('원천징수 (3.3%)', '-₩ 28,743',
+                          valueWeight: FontWeight.w500, valueColor: AppColors.danger),
                       const SizedBox(height: 14),
                       divider,
                       const SizedBox(height: 14),
-                      KvRow('실수령액', '₩ 842,257',
+                      KeyValueRow('실수령액', '₩ 842,257',
                           labelStyle: AppText.style(16, FontWeight.w700),
                           valueSize: 18,
                           valueColor: AppColors.primary),

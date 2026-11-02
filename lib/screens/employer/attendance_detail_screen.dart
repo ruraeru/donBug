@@ -2,8 +2,6 @@ import 'package:flutter/material.dart';
 
 import '../../theme.dart';
 import '../../widgets/common.dart';
-import 'employer_flow_widgets.dart';
-import 'employer_widgets.dart';
 
 /// 근태 상세 · 수정 (Figma 47:453).
 class AttendanceDetailScreen extends StatelessWidget {
@@ -22,8 +20,8 @@ class AttendanceDetailScreen extends StatelessWidget {
               children: [
                 Row(
                   children: [
-                    const InitialAvatar('수',
-                        color: EmpColors.danger, background: EmpColors.dangerSoft),
+                    const LetterAvatar('수',
+                        color: AppColors.danger, background: AppColors.dangerSoft),
                     const SizedBox(width: 12),
                     Expanded(
                       child: Column(
@@ -35,7 +33,7 @@ class AttendanceDetailScreen extends StatelessWidget {
                       ),
                     ),
                     const Pill('지각 12분',
-                        color: EmpColors.danger, background: EmpColors.dangerSoft),
+                        color: AppColors.danger, background: AppColors.dangerSoft),
                   ],
                 ),
                 const SizedBox(height: 12),

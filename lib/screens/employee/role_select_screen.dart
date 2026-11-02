@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import '../../theme.dart';
 import '../../widgets/common.dart';
 import '../employer/store_create_screen.dart';
-import 'employee_widgets.dart';
 import 'store_code_screen.dart';
 
 /// 역할 선택: 알바생 → 매장 코드 입력, 사장님 → 매장 생성.

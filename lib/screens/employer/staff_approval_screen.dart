@@ -2,9 +2,8 @@ import 'package:flutter/material.dart';
 
 import '../../theme.dart';
 import '../../widgets/common.dart';
-import 'employer_flow_widgets.dart';
 import 'employer_shell.dart';
-import 'employer_widgets.dart';
+import 'employer_parts.dart';
 
 /// 직원 가입 승인 (Figma 47:100). 온보딩 마지막 → EmployerShell.
 class StaffApprovalScreen extends StatelessWidget {
@@ -12,7 +11,7 @@ class StaffApprovalScreen extends StatelessWidget {
 
   static const _requests = [
     (initial: '태', name: '김태우', at: '5/14 09:41 신청', color: AppColors.primary, bg: AppColors.primarySoft),
-    (initial: '서', name: '이서연', at: '5/14 09:13 신청', color: EmpColors.info, bg: EmpColors.infoSoft),
+    (initial: '서', name: '이서연', at: '5/14 09:13 신청', color: AppColors.info, bg: AppColors.infoSoft),
   ];
 
   @override
@@ -27,7 +26,7 @@ class StaffApprovalScreen extends StatelessWidget {
                   children: [
                     Row(
                       children: [
-                        InitialAvatar(r.initial, color: r.color, background: r.bg),
+                        LetterAvatar(r.initial, color: r.color, background: r.bg),
                         const SizedBox(width: 12),
                         Expanded(
                           child: Column(

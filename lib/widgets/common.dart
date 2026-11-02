@@ -141,7 +141,7 @@ class AppButton extends StatelessWidget {
   }
 }
 
-/// 하위 화면 상단 바: 뒤로가기 + 제목 + 오른쪽 액션.
+/// Figma "Header": "‹ 제목" 왼쪽 정렬 + 오른쪽 액션. Scaffold.appBar 로 쓴다.
 class AppHeader extends StatelessWidget implements PreferredSizeWidget {
   const AppHeader(this.title, {super.key, this.actions = const []});
 
@@ -149,16 +149,356 @@ class AppHeader extends StatelessWidget implements PreferredSizeWidget {
   final List<Widget> actions;
 
   @override
-  Size get preferredSize => const Size.fromHeight(56);
+  Size get preferredSize => const Size.fromHeight(58);
 
   @override
-  Widget build(BuildContext context) => AppBar(
-        title: Text(title, style: AppText.style(17, FontWeight.w700)),
-        centerTitle: true,
-        backgroundColor: AppColors.bg,
-        surfaceTintColor: Colors.transparent,
-        foregroundColor: AppColors.textPrimary,
-        elevation: 0,
-        actions: actions,
+  Widget build(BuildContext context) => Material(
+        color: AppColors.bg,
+        child: SafeArea(
+          bottom: false,
+          child: SizedBox(
+            height: 58,
+            child: Padding(
+              padding: const EdgeInsets.only(left: 16, right: 20),
+              child: Row(
+                children: [
+                  if (Navigator.canPop(context)) ...[
+                    Semantics(
+                      button: true,
+                      label: '뒤로',
+                      child: InkWell(
+                        onTap: () => Navigator.maybePop(context),
+                        child: Text('‹',
+                            style: AppText.style(32).copyWith(height: 1.15)),
+                      ),
+                    ),
+                    const SizedBox(width: 6),
+                  ],
+                  Expanded(
+                    child: Text(title,
+                        overflow: TextOverflow.ellipsis,
+                        style: AppText.style(18, FontWeight.w700)),
+                  ),
+                  ...actions,
+                ],
+              ),
+            ),
+          ),
+        ),
+      );
+}
+
+/// 이름 첫 글자 원형 아바타. [selected]면 primary 2px 테두리.
+class LetterAvatar extends StatelessWidget {
+  const LetterAvatar(
+    this.letter, {
+    super.key,
+    this.color = AppColors.primary,
+    this.background = AppColors.primarySoft,
+    this.size = 40,
+    this.selected = false,
+  });
+
+  final String letter;
+  final Color color;
+  final Color background;
+  final double size;
+  final bool selected;
+
+  @override
+  Widget build(BuildContext context) => Container(
+        width: size,
+        height: size,
+        alignment: Alignment.center,
+        decoration: BoxDecoration(
+          color: background,
+          shape: BoxShape.circle,
+          border:
+              selected ? Border.all(color: AppColors.primary, width: 2) : null,
+        ),
+        child: Text(letter,
+            style: AppText.style(
+                (size * 0.375).roundToDouble(), FontWeight.w700, color)),
+      );
+}
+
+/// 흰 radius 16 리스트 행: 아바타 + 제목/부제 + 오른쪽 trailing.
+class PersonRow extends StatelessWidget {
+  const PersonRow({
+    super.key,
+    required this.avatar,
+    required this.title,
+    this.subtitle,
+    this.trailing,
+    this.onTap,
+  });
+
+  final Widget avatar;
+  final String title;
+  final String? subtitle;
+  final Widget? trailing;
+  final VoidCallback? onTap;
+
+  @override
+  Widget build(BuildContext context) => Material(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(16),
+        clipBehavior: Clip.antiAlias,
+        child: InkWell(
+          onTap: onTap,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+            child: Row(
+              children: [
+                avatar,
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(title, style: AppText.style(15, FontWeight.w700)),
+                      if (subtitle != null) ...[
+                        const SizedBox(height: 1),
+                        Text(subtitle!,
+                            style: AppText.style(
+                                12, FontWeight.w400, AppColors.textSecondary)),
+                      ],
+                    ],
+                  ),
+                ),
+                if (trailing != null) ...[
+                  const SizedBox(width: 12),
+                  trailing!,
+                ],
+              ],
+            ),
+          ),
+        ),
+      );
+}
+
+/// 왼쪽 회색 라벨 · 오른쪽 값 한 줄.
+class KeyValueRow extends StatelessWidget {
+  const KeyValueRow(
+    this.label,
+    this.value, {
+    super.key,
+    this.valueWeight = FontWeight.w700,
+    this.valueColor = AppColors.textPrimary,
+    this.valueSize = 14,
+    this.labelStyle,
+  });
+
+  final String label;
+  final String value;
+  final FontWeight valueWeight;
+  final Color valueColor;
+  final double valueSize;
+  final TextStyle? labelStyle;
+
+  @override
+  Widget build(BuildContext context) => Row(
+        children: [
+          Expanded(
+            child: Text(label,
+                style: labelStyle ??
+                    AppText.style(14, FontWeight.w400, AppColors.textSecondary)),
+          ),
+          const SizedBox(width: 12),
+          Flexible(
+            child: Text(value,
+                textAlign: TextAlign.right,
+                style: AppText.style(valueSize, valueWeight, valueColor)),
+          ),
+        ],
+      );
+}
+
+/// Figma "Bottom Bar": 흰 배경 + 버튼(들). Scaffold.bottomNavigationBar 로 쓴다.
+class BottomBar extends StatelessWidget {
+  const BottomBar({super.key, this.child, this.children = const []});
+
+  /// CTA 버튼 하나짜리 바.
+  BottomBar.button(String label, {super.key, VoidCallback? onPressed})
+      : child = AppButton(label, onPressed: onPressed, verticalPadding: 17),
+        children = const [];
+
+  final Widget? child;
+
+  /// 세로로 10 간격을 두고 쌓는다.
+  final List<Widget> children;
+
+  @override
+  Widget build(BuildContext context) {
+    final items = [?child, ...children];
+    return Container(
+      color: AppColors.surface,
+      padding: const EdgeInsets.fromLTRB(20, 12, 20, 12),
+      child: SafeArea(
+        top: false,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            for (var i = 0; i < items.length; i++) ...[
+              if (i > 0) const SizedBox(height: 10),
+              items[i],
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// 색 배경 안내 문구 박스(info / accent 등).
+class NoteBox extends StatelessWidget {
+  const NoteBox(this.text,
+      {super.key, required this.color, required this.background});
+
+  final String text;
+  final Color color;
+  final Color background;
+
+  @override
+  Widget build(BuildContext context) => Container(
+        width: double.infinity,
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+        decoration: BoxDecoration(
+          color: background,
+          borderRadius: BorderRadius.circular(14),
+        ),
+        child: Text(text, style: AppText.style(13, FontWeight.w400, color)),
+      );
+}
+
+/// 완료 화면 상단: 96px 체크 원 + 제목 + 설명.
+class SuccessHero extends StatelessWidget {
+  const SuccessHero({super.key, required this.title, required this.subtitle});
+
+  final String title;
+  final String subtitle;
+
+  @override
+  Widget build(BuildContext context) => Padding(
+        padding: const EdgeInsets.only(top: 28, bottom: 8),
+        child: Column(
+          children: [
+            Container(
+              width: 96,
+              height: 96,
+              alignment: Alignment.center,
+              decoration: const BoxDecoration(
+                  color: AppColors.primarySoft, shape: BoxShape.circle),
+              child:
+                  const Icon(Icons.check, size: 52, color: AppColors.primary),
+            ),
+            const SizedBox(height: 12),
+            Text(title,
+                textAlign: TextAlign.center,
+                style: AppText.style(22, FontWeight.w700)),
+            const SizedBox(height: 12),
+            Text(subtitle,
+                textAlign: TextAlign.center,
+                style:
+                    AppText.style(15, FontWeight.w400, AppColors.textSecondary)),
+          ],
+        ),
+      );
+}
+
+enum StepStatus { done, current, pending }
+
+/// 진행 단계 한 줄: 24px 원(완료/진행 중/대기) + 제목/설명.
+class StepRow extends StatelessWidget {
+  const StepRow(this.status, this.title, this.caption, {super.key});
+
+  final StepStatus status;
+  final String title;
+  final String caption;
+
+  @override
+  Widget build(BuildContext context) => Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            width: 24,
+            height: 24,
+            alignment: Alignment.center,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: switch (status) {
+                StepStatus.done => AppColors.primary,
+                StepStatus.current => AppColors.accentSoft,
+                StepStatus.pending => AppColors.bg,
+              },
+              border: status == StepStatus.current
+                  ? Border.all(color: AppColors.accent)
+                  : null,
+            ),
+            child: status == StepStatus.done
+                ? const Icon(Icons.check, size: 16, color: AppColors.onPrimary)
+                : null,
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: AppText.style(
+                    15,
+                    FontWeight.w700,
+                    status == StepStatus.pending
+                        ? AppColors.textTertiary
+                        : AppColors.textPrimary,
+                  ),
+                ),
+                const SizedBox(height: 1),
+                Text(caption,
+                    style: AppText.style(
+                        12, FontWeight.w400, AppColors.textSecondary)),
+              ],
+            ),
+          ),
+        ],
+      );
+}
+
+/// 라벨(14 bold secondary) + 아래 내용. 값만 보여줄 땐 child 에 [FieldBox].
+class LabeledField extends StatelessWidget {
+  const LabeledField(this.label, {super.key, required this.child});
+
+  final String label;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) => Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(label,
+              style: AppText.style(14, FontWeight.w700, AppColors.textSecondary)),
+          const SizedBox(height: 8),
+          child,
+        ],
+      );
+}
+
+/// 흰 배경 · border · radius 14 입력칸 모양(더미 값 표시).
+class FieldBox extends StatelessWidget {
+  const FieldBox(this.value, {super.key});
+
+  final String value;
+
+  @override
+  Widget build(BuildContext context) => Container(
+        width: double.infinity,
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 15),
+        decoration: BoxDecoration(
+          color: AppColors.surface,
+          border: Border.all(color: AppColors.border),
+          borderRadius: BorderRadius.circular(14),
+        ),
+        child: Text(value, style: AppText.style(15)),
       );
 }

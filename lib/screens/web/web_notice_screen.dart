@@ -33,7 +33,7 @@ class _WebNoticeScreenState extends State<WebNoticeScreen> {
   int _selected = 0;
 
   Widget _tag(bool required) => required
-      ? const Pill('필독', color: WebColors.danger, background: WebColors.dangerSoft)
+      ? const Pill('필독', color: AppColors.danger, background: AppColors.dangerSoft)
       : const Pill('일반', color: AppColors.textSecondary, background: AppColors.bg);
 
   @override
@@ -103,7 +103,7 @@ class _WebNoticeScreenState extends State<WebNoticeScreen> {
                           child: Text(name, style: AppText.style(14, FontWeight.w700))),
                       time == null
                           ? const Pill('미확인',
-                              color: WebColors.danger, background: WebColors.dangerSoft)
+                              color: AppColors.danger, background: AppColors.dangerSoft)
                           : Pill(time),
                     ]),
                   ),

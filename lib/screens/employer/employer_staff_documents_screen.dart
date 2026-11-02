@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import '../../theme.dart';
 import '../../widgets/common.dart';
 import 'employer_health_cert_alert_screen.dart';
-import 'payroll_docs_widgets.dart';
 
 /// 직원 서류 상세 (Figma 48:269).
 class EmployerStaffDocumentsScreen extends StatelessWidget {
@@ -19,7 +18,7 @@ class EmployerStaffDocumentsScreen extends StatelessWidget {
               child: Column(
                 children: [
                   _header('보건증',
-                      const Pill('만료 D-12', color: kDanger, background: kDangerSoft)),
+                      const Pill('만료 D-12', color: AppColors.danger, background: AppColors.dangerSoft)),
                   const SizedBox(height: 12),
                   Container(
                     height: 110,
@@ -33,7 +32,7 @@ class EmployerStaffDocumentsScreen extends StatelessWidget {
                             13, FontWeight.w400, AppColors.textTertiary)),
                   ),
                   const SizedBox(height: 12),
-                  const LabelValueRow('만료일', '2026.05.26', bold: true),
+                  const KeyValueRow('만료일', '2026.05.26'),
                   const SizedBox(height: 12),
                   AppButton(
                     '갱신 요청 보내기',
@@ -54,7 +53,7 @@ class EmployerStaffDocumentsScreen extends StatelessWidget {
                 children: [
                   _header('근로계약서', const Pill('서명 완료')),
                   const SizedBox(height: 10),
-                  const LabelValueRow('계약 기간', '2026.05.01 ~ 2027.04.30'),
+                  const KeyValueRow('계약 기간', '2026.05.01 ~ 2027.04.30', valueWeight: FontWeight.w400),
                 ],
               ),
             ),

@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 
 import '../../theme.dart';
 import '../../widgets/common.dart';
-import 'web_common.dart';
 
 /// W8 POS 동적 QR / W9 POS 출근 완료(전체 화면). [checkedIn] 이면 W9:
 /// QR 흐리게 + 출근 완료 토스트.
@@ -14,8 +13,8 @@ class WebPosQrScreen extends StatelessWidget {
   // (이름, 상태, 글자색, 배경)
   static const _today = [
     ('지민', '10:00 출근', AppColors.primary, AppColors.primarySoft),
-    ('수빈', '10:12 출근 · 지각', WebColors.danger, WebColors.dangerSoft),
-    ('태우', '14:02 출근', WebColors.info, WebColors.infoSoft),
+    ('수빈', '10:12 출근 · 지각', AppColors.danger, AppColors.dangerSoft),
+    ('태우', '14:02 출근', AppColors.info, AppColors.infoSoft),
   ];
 
   @override

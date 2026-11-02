@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import '../../theme.dart';
 import '../../widgets/common.dart';
 import 'ai_answer_detail_screen.dart';
-import 'employer_widgets.dart';
 
 /// B6 AI 노무 도우미 (채팅).
 class AiLaborAssistantScreen extends StatelessWidget {
@@ -19,7 +18,7 @@ class AiLaborAssistantScreen extends StatelessWidget {
 
     return Scaffold(
       appBar: const AppHeader('AI 노무 도우미', actions: [
-        Pill('Gemini', color: EmpColors.info, background: EmpColors.infoSoft),
+        Pill('Gemini', color: AppColors.info, background: AppColors.infoSoft),
         SizedBox(width: 16),
       ]),
       body: ListView(
@@ -62,7 +61,7 @@ class AiLaborAssistantScreen extends StatelessWidget {
                     children: [
                       Text('근거',
                           style: AppText.style(
-                              11, FontWeight.w700, EmpColors.info)),
+                              11, FontWeight.w700, AppColors.info)),
                       const SizedBox(width: 6),
                       Expanded(
                         child: Text('근로기준법 제55조 · 제11조',

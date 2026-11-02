@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 
 import '../../theme.dart';
 import '../../widgets/common.dart';
-import 'employer_widgets.dart';
 import 'staff_detail_screen.dart';
 
 /// 직원 관리.
@@ -12,9 +11,9 @@ class StaffManagementScreen extends StatelessWidget {
   static const _staff = [
     ('지', '지민', '오픈 · 10,030원', AppColors.primary, AppColors.primarySoft),
     ('수', '수빈', '오픈 · 10,030원', AppColors.accent, AppColors.accentSoft),
-    ('하', '하윤', '마감 · 10,030원', EmpColors.info, EmpColors.infoSoft),
+    ('하', '하윤', '마감 · 10,030원', AppColors.info, AppColors.infoSoft),
     ('태', '태우', '미들 · 10,030원', AppColors.primary, AppColors.primarySoft),
-    ('서', '서연', '미들 · 10,500원', EmpColors.danger, EmpColors.dangerSoft),
+    ('서', '서연', '미들 · 10,500원', AppColors.danger, AppColors.dangerSoft),
   ];
 
   @override
@@ -44,7 +43,7 @@ class StaffManagementScreen extends StatelessWidget {
             for (final (initial, name, sub, fg, bg) in _staff) ...[
               const SizedBox(height: 10),
               PersonRow(
-                avatar: InitialAvatar(initial, color: fg, background: bg),
+                avatar: LetterAvatar(initial, color: fg, background: bg),
                 title: name,
                 subtitle: sub,
                 trailing: Text('›',

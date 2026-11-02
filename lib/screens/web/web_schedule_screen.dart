@@ -15,7 +15,7 @@ class WebScheduleScreen extends StatelessWidget {
     ('오픈', '10–16', AppColors.primary, AppColors.primarySoft, [
       ['지민', '수빈'], ['수빈'], ['지민', '수빈'], ['도현'], ['지민'], ['수빈'], [],
     ]),
-    ('미들', '14–20', WebColors.info, WebColors.infoSoft, [
+    ('미들', '14–20', AppColors.info, AppColors.infoSoft, [
       ['서연'], ['하윤', '서연'], ['하윤'], ['서연'], ['도현', '서연'], ['하윤'], ['서연'],
     ]),
     ('마감', '18–22', AppColors.accent, AppColors.accentSoft, [
@@ -26,8 +26,8 @@ class WebScheduleScreen extends StatelessWidget {
   static const _staff = <(String, String, Color, Color)>[
     ('지민', '주 18h', AppColors.primary, AppColors.primarySoft),
     ('수빈', '주 22h', AppColors.accent, AppColors.accentSoft),
-    ('하윤', '주 20h', WebColors.info, WebColors.infoSoft),
-    ('도현', '주 16h', WebColors.danger, WebColors.dangerSoft),
+    ('하윤', '주 20h', AppColors.info, AppColors.infoSoft),
+    ('도현', '주 16h', AppColors.danger, AppColors.dangerSoft),
     ('서연', '주 20h', AppColors.primary, AppColors.primarySoft),
   ];
 
@@ -142,12 +142,12 @@ class _Slot extends StatelessWidget {
         decoration: BoxDecoration(
           color: AppColors.bg,
           borderRadius: BorderRadius.circular(12),
-          border: people.isEmpty ? Border.all(color: WebColors.danger) : null,
+          border: people.isEmpty ? Border.all(color: AppColors.danger) : null,
         ),
         child: people.isEmpty
             ? Text('인원 부족',
                 textAlign: TextAlign.center,
-                style: AppText.style(11, FontWeight.w400, WebColors.danger))
+                style: AppText.style(11, FontWeight.w400, AppColors.danger))
             : Column(children: [
                 for (final p in people) ...[
                   Container(

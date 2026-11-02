@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 
 import '../../theme.dart';
 import '../../widgets/common.dart';
-import 'employee_widgets.dart';
 
 /// 공지 상세.
 class NoticeDetailScreen extends StatelessWidget {
@@ -20,7 +19,7 @@ class NoticeDetailScreen extends StatelessWidget {
                 children: [
                   Row(
                     children: [
-                      const Pill('필독', color: kDanger, background: kDangerSoft),
+                      const Pill('필독', color: AppColors.danger, background: AppColors.dangerSoft),
                       const SizedBox(width: 8),
                       Text('5/12 · 사장님',
                           style: AppText.style(12, FontWeight.w400, AppColors.textTertiary)),

@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import '../../theme.dart';
 import '../../widgets/common.dart';
 import 'employer_payroll_settings_screen.dart';
-import 'payroll_docs_widgets.dart';
 
 /// 직원 급여 상세 (Figma 48:101).
 class EmployerPayrollDetailScreen extends StatelessWidget {
@@ -39,17 +38,17 @@ class EmployerPayrollDetailScreen extends StatelessWidget {
                   Text('지급 내역',
                       style: AppText.style(14, FontWeight.w700, AppColors.textSecondary)),
                   const SizedBox(height: 12),
-                  const LabelValueRow('기본급 (88시간 × 10,030원)', '882,640원'),
+                  const KeyValueRow('기본급 (88시간 × 10,030원)', '882,640원', valueWeight: FontWeight.w400),
                   const SizedBox(height: 12),
-                  const LabelValueRow('주휴수당', '150,540원'),
+                  const KeyValueRow('주휴수당', '150,540원', valueWeight: FontWeight.w400),
                   const SizedBox(height: 12),
-                  const LabelValueRow('야간·연장 가산', '125,520원'),
+                  const KeyValueRow('야간·연장 가산', '125,520원', valueWeight: FontWeight.w400),
                   const SizedBox(height: 12),
-                  const LabelValueRow('휴일 가산', '0원'),
+                  const KeyValueRow('휴일 가산', '0원', valueWeight: FontWeight.w400),
                   const SizedBox(height: 12),
                   const Divider(height: 1, color: AppColors.border),
                   const SizedBox(height: 12),
-                  const LabelValueRow('세전 합계', '1,158,700원', bold: true),
+                  const KeyValueRow('세전 합계', '1,158,700원'),
                 ],
               ),
             ),
@@ -57,17 +56,17 @@ class EmployerPayrollDetailScreen extends StatelessWidget {
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
               decoration: BoxDecoration(
-                color: kInfoSoft,
+                color: AppColors.infoSoft,
                 borderRadius: BorderRadius.circular(14),
               ),
               child: Text(
                 '근태 기록(QR 인증 · 연장 12분 포함)을 기준으로 자동 계산된 금액이에요.',
-                style: AppText.style(13, FontWeight.w400, kInfo),
+                style: AppText.style(13, FontWeight.w400, AppColors.info),
               ),
             ),
           ],
         ),
-        bottomNavigationBar: BottomCta(
+        bottomNavigationBar: BottomBar.button(
           '급여 설정 변경',
           onPressed: () => Navigator.push(
             context,

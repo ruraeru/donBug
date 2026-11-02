@@ -2,9 +2,8 @@ import 'package:flutter/material.dart';
 
 import '../../theme.dart';
 import '../../widgets/common.dart';
-import 'employee_parts.dart';
-import 'employee_widgets.dart';
 import 'leave_request_screen.dart';
+import 'employee_parts.dart';
 
 /// 근무 상세.
 class ShiftDetailScreen extends StatelessWidget {
@@ -32,13 +31,13 @@ class ShiftDetailScreen extends StatelessWidget {
                   const SizedBox(height: 12),
                   _coworker('지', '지민 · 오픈', AppColors.primary, AppColors.primarySoft),
                   const SizedBox(height: 12),
-                  _coworker('하', '하윤 · 미들', kInfo, kInfoSoft),
+                  _coworker('하', '하윤 · 미들', AppColors.info, AppColors.infoSoft),
                 ],
               ),
             ),
             const SizedBox(height: 16),
             const NoteBox('근무 2일 전까지 신청하면 동료에게 먼저 알림이 가요.',
-                color: kInfo, background: kInfoSoft),
+                color: AppColors.info, background: AppColors.infoSoft),
           ],
         ),
         bottomNavigationBar: BottomBar(

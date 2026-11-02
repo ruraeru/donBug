@@ -2,10 +2,9 @@ import 'package:flutter/material.dart';
 
 import '../../theme.dart';
 import '../../widgets/common.dart';
-import 'employee_parts.dart';
-import 'employee_widgets.dart';
 import 'leave_request_screen.dart';
 import 'shift_detail_screen.dart';
+import 'employee_parts.dart';
 
 /// A3 근무표 (탭 루트).
 class EmployeeScheduleScreen extends StatefulWidget {
@@ -29,7 +28,7 @@ const _shifts = [
   ('월', '12', '14:00 – 20:00 · 홀', '완료', AppColors.textSecondary, AppColors.bg),
   ('수', '14', '14:00 – 20:00 · 홀', '오늘', AppColors.primary, AppColors.primarySoft),
   ('금', '16', '10:00 – 16:00 · 주방', '휴무 신청 중', AppColors.accent, AppColors.accentSoft),
-  ('토', '17', '16:00 – 22:00 · 홀', '대타 확정', kInfo, kInfoSoft),
+  ('토', '17', '16:00 – 22:00 · 홀', '대타 확정', AppColors.info, AppColors.infoSoft),
 ];
 
 class _EmployeeScheduleScreenState extends State<EmployeeScheduleScreen> {

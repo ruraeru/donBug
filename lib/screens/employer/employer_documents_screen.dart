@@ -4,7 +4,6 @@ import '../../theme.dart';
 import '../../widgets/common.dart';
 import 'employer_contract_write_screen.dart';
 import 'employer_staff_documents_screen.dart';
-import 'payroll_docs_widgets.dart';
 
 /// B2 서류·컴플라이언스 (Figma 48:179, 계약서 variant 48:335). 탭 루트.
 /// 두 variant는 화면이 같고 탭 가능한 카드만 다르다: 둘 다 연결했다.
@@ -55,7 +54,7 @@ class EmployerDocumentsScreen extends StatelessWidget {
                                 style: AppText.style(15, FontWeight.w700)),
                           ),
                           const Pill('5인 미만 사업장',
-                              color: kInfo, background: kInfoSoft),
+                              color: AppColors.info, background: AppColors.infoSoft),
                         ],
                       ),
                       for (var i = 0; i < _checks.length; i++) ...[
@@ -110,7 +109,7 @@ class EmployerDocumentsScreen extends StatelessWidget {
             child: Text(label,
                 style: ok
                     ? AppText.style(14)
-                    : AppText.style(14, FontWeight.w700, kDanger)),
+                    : AppText.style(14, FontWeight.w700, AppColors.danger)),
           ),
         ],
       );
@@ -122,7 +121,7 @@ class EmployerDocumentsScreen extends StatelessWidget {
               color: AppColors.textSecondary, background: AppColors.bg),
           const SizedBox(width: 6),
           w.$3
-              ? Pill(w.$2, color: kDanger, background: kDangerSoft)
+              ? Pill(w.$2, color: AppColors.danger, background: AppColors.dangerSoft)
               : Pill(w.$2),
         ],
       );
