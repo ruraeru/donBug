@@ -22,7 +22,7 @@ class NotificationCenterScreen extends StatelessWidget {
         body: ListView.separated(
           padding: const EdgeInsets.fromLTRB(20, 8, 20, 16),
           itemCount: _items.length,
-          separatorBuilder: (_, __) => const SizedBox(height: 10),
+          separatorBuilder: (_, _) => const SizedBox(height: 10),
           itemBuilder: (_, i) {
             final (letter, fg, bg, title, sub, time) = _items[i];
             return AvatarRow(

@@ -25,7 +25,7 @@ class _StoreSwitchScreenState extends State<StoreSwitchScreen> {
         body: ListView.separated(
           padding: const EdgeInsets.fromLTRB(20, 8, 20, 16),
           itemCount: _stores.length,
-          separatorBuilder: (_, __) => const SizedBox(height: 12),
+          separatorBuilder: (_, _) => const SizedBox(height: 12),
           itemBuilder: (_, i) {
             final (letter, fg, bg, name, sub) = _stores[i];
             final selected = i == _current;
