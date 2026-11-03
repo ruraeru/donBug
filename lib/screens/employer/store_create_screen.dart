@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 
 import '../../widgets/common.dart';
-import 'employer_flow_widgets.dart';
-import 'employer_widgets.dart';
 import 'store_code_screen.dart';
+import 'employer_parts.dart';
+import '../../theme.dart';
 
 /// 매장 만들기 (Figma 47:41).
 class StoreCreateScreen extends StatefulWidget {
@@ -47,8 +47,8 @@ class _StoreCreateScreenState extends State<StoreCreateScreen> {
             const SizedBox(height: 14),
             const NoteBox(
               '5인 미만 사업장은 연차·가산수당 적용 기준이 달라요. 이 설정에 맞춰 급여가 계산돼요.',
-              color: EmpColors.info,
-              background: EmpColors.infoSoft,
+              color: AppColors.info,
+              background: AppColors.infoSoft,
             ),
           ],
         ),

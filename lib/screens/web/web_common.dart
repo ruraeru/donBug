@@ -2,14 +2,6 @@ import 'package:flutter/material.dart';
 
 import '../../theme.dart';
 
-/// 웹 디자인에만 있는 Figma 변수(danger/info). AppColors 에 없는 값.
-class WebColors {
-  static const danger = Color(0xFFE5484D);
-  static const dangerSoft = Color(0xFFFDECEC);
-  static const info = Color(0xFF3B82F6);
-  static const infoSoft = Color(0xFFE8F0FE);
-}
-
 /// 웹 콘텐츠 영역 공통 틀: 제목/부제 + 오른쪽 액션, 아래로 스크롤되는 본문.
 class WebPage extends StatelessWidget {
   const WebPage({
@@ -72,6 +64,7 @@ class WebButton extends StatelessWidget {
     this.onPressed,
     this.height = 42,
     this.fontSize = 14,
+    this.radius = 12,
   });
 
   final String label;
@@ -79,6 +72,7 @@ class WebButton extends StatelessWidget {
   final VoidCallback? onPressed;
   final double height;
   final double fontSize;
+  final double radius;
 
   @override
   Widget build(BuildContext context) {
@@ -91,7 +85,7 @@ class WebButton extends StatelessWidget {
     return Material(
       color: bg,
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(radius),
         side: style == WebButtonStyle.outline
             ? const BorderSide(color: AppColors.border)
             : BorderSide.none,

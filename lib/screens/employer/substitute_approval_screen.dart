@@ -2,8 +2,6 @@ import 'package:flutter/material.dart';
 
 import '../../theme.dart';
 import '../../widgets/common.dart';
-import 'employer_flow_widgets.dart';
-import 'employer_widgets.dart';
 import 'substitute_done_screen.dart';
 
 /// B4 대타 승인 (Figma 47:573).
@@ -72,7 +70,7 @@ class SubstituteApprovalScreen extends StatelessWidget {
                   width: double.infinity,
                   padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
                   decoration: BoxDecoration(
-                    color: EmpColors.infoSoft,
+                    color: AppColors.infoSoft,
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Text(
@@ -116,7 +114,7 @@ class SubstituteApprovalScreen extends StatelessWidget {
               children: [
                 Row(
                   children: [
-                    const _SmallChip('동료 응답 대기', EmpColors.info, EmpColors.infoSoft),
+                    const _SmallChip('동료 응답 대기', AppColors.info, AppColors.infoSoft),
                     const Spacer(),
                     Text('1시간 전', style: tertiary),
                   ],
@@ -191,7 +189,7 @@ class _PersonChip extends StatelessWidget {
         ),
         child: Row(
           children: [
-            Avatar(initial, color: color, background: background, size: 30),
+            LetterAvatar(initial, color: color, background: background, size: 30),
             const SizedBox(width: 8),
             Expanded(
               child: Column(

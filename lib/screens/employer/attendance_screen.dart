@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import '../../theme.dart';
 import '../../widgets/common.dart';
 import 'attendance_detail_screen.dart';
-import 'employer_widgets.dart';
 
 /// 오늘 근태 현황 (Figma 47:402).
 class AttendanceScreen extends StatelessWidget {
@@ -11,14 +10,14 @@ class AttendanceScreen extends StatelessWidget {
 
   static const _rows = [
     (initial: '지', name: '지민', sub: '10:00 출근 · 정상', status: '출근', color: AppColors.primary, bg: AppColors.primarySoft),
-    (initial: '수', name: '수빈', sub: '10:12 출근 · 12분 지각', status: '지각', color: EmpColors.danger, bg: EmpColors.dangerSoft),
-    (initial: '태', name: '태우', sub: '14:02 출근 · 근무 중', status: '근무 중', color: EmpColors.info, bg: EmpColors.infoSoft),
+    (initial: '수', name: '수빈', sub: '10:12 출근 · 12분 지각', status: '지각', color: AppColors.danger, bg: AppColors.dangerSoft),
+    (initial: '태', name: '태우', sub: '14:02 출근 · 근무 중', status: '근무 중', color: AppColors.info, bg: AppColors.infoSoft),
     (initial: '하', name: '하윤', sub: '18:00 출근 예정', status: '대기', color: AppColors.accent, bg: AppColors.accentSoft),
   ];
 
   static const _summary = [
     (label: '출근', count: '2', color: AppColors.primary, bg: AppColors.primarySoft),
-    (label: '지각', count: '1', color: EmpColors.danger, bg: EmpColors.dangerSoft),
+    (label: '지각', count: '1', color: AppColors.danger, bg: AppColors.dangerSoft),
     (label: '대기', count: '1', color: AppColors.accent, bg: AppColors.accentSoft),
   ];
 
@@ -66,7 +65,7 @@ class AttendanceScreen extends StatelessWidget {
             for (final r in _rows) ...[
               const SizedBox(height: 10),
               PersonRow(
-                avatar: InitialAvatar(r.initial, color: r.color, background: r.bg),
+                avatar: LetterAvatar(r.initial, color: r.color, background: r.bg),
                 title: r.name,
                 subtitle: r.sub,
                 trailing: Pill(r.status, color: r.color, background: r.bg),

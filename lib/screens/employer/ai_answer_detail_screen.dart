@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 
 import '../../theme.dart';
 import '../../widgets/common.dart';
-import 'employer_widgets.dart';
 
 /// AI 답변 상세.
 class AiAnswerDetailScreen extends StatelessWidget {
@@ -51,8 +50,8 @@ class AiAnswerDetailScreen extends StatelessWidget {
                     runSpacing: 6,
                     children: [
                       Pill('근로기준법 제55조',
-                          color: EmpColors.info,
-                          background: EmpColors.infoSoft),
+                          color: AppColors.info,
+                          background: AppColors.infoSoft),
                       Pill('적용 대상 확인',
                           color: AppColors.textSecondary,
                           background: AppColors.bg),

@@ -117,7 +117,7 @@ class WebScheduleWeeklyCalendar extends StatelessWidget {
                   today ? AppColors.onPrimary : AppColors.textPrimary)),
           Text('부족 ${_shortHours[d]}h',
               style: AppText.style(11, FontWeight.w700,
-                  today ? AppColors.onPrimary : WebColors.danger)),
+                  today ? AppColors.onPrimary : AppColors.danger)),
         ],
       ),
     );

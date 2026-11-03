@@ -1,8 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../widgets/common.dart';
-import 'employee_parts.dart';
-import 'employee_widgets.dart';
+import '../../theme.dart';
 
 /// 출근 완료 → 홈(근무 중).
 class ClockInDoneScreen extends StatelessWidget {
@@ -14,24 +13,24 @@ class ClockInDoneScreen extends StatelessWidget {
           child: ListView(
             padding: const EdgeInsets.fromLTRB(20, 8, 20, 16),
             children: const [
-              DoneHero(title: '출근이 완료됐어요', subtitle: '14:02 · QR 스캔 인증'),
+              SuccessHero(title: '출근이 완료됐어요', subtitle: '14:02 · QR 스캔 인증'),
               SizedBox(height: 16),
               AppCard(
                 child: Column(
                   children: [
-                    KvRow('오늘 근무', '14:00 – 20:00'),
+                    KeyValueRow('오늘 근무', '14:00 – 20:00'),
                     SizedBox(height: 14),
-                    KvRow('인증 방식', '매장 POS QR'),
+                    KeyValueRow('인증 방식', '매장 POS QR'),
                     SizedBox(height: 14),
-                    KvRow('지각 여부', '정상 출근'),
+                    KeyValueRow('지각 여부', '정상 출근'),
                     SizedBox(height: 14),
-                    KvRow('예상 일급', '₩55,667'),
+                    KeyValueRow('예상 일급', '₩55,667'),
                   ],
                 ),
               ),
               SizedBox(height: 16),
               NoteBox('퇴근도 같은 방법으로 인증하면 근무시간이 자동 계산돼요.',
-                  color: kInfo, background: kInfoSoft),
+                  color: AppColors.info, background: AppColors.infoSoft),
             ],
           ),
         ),

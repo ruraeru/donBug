@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import '../../theme.dart';
 import '../../widgets/common.dart';
 import 'employer_payroll_detail_screen.dart';
-import 'payroll_docs_widgets.dart';
 
 /// B5 인건비 대시보드 (Figma 48:3). 탭 루트.
 class EmployerLaborCostScreen extends StatelessWidget {
@@ -21,7 +20,7 @@ class EmployerLaborCostScreen extends StatelessWidget {
   static const _workers = [
     ('지', '지민', '62시간 · 3.3%', '₩ 842,257', AppColors.primary, AppColors.primarySoft),
     ('수', '수빈', '80시간 · 4대보험', '₩ 1,120,400', AppColors.accent, AppColors.accentSoft),
-    ('하', '하윤', '69시간 · 4대보험', '₩ 968,300', kInfo, kInfoSoft),
+    ('하', '하윤', '69시간 · 4대보험', '₩ 968,300', AppColors.info, AppColors.infoSoft),
   ];
 
   @override
@@ -94,7 +93,7 @@ class EmployerLaborCostScreen extends StatelessWidget {
                           padding: const EdgeInsets.symmetric(vertical: 10),
                           child: Row(
                             children: [
-                              InitialAvatar(w.$1, color: w.$5, background: w.$6),
+                              LetterAvatar(w.$1, color: w.$5, background: w.$6),
                               const SizedBox(width: 12),
                               Expanded(
                                 child: Column(

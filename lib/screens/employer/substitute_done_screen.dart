@@ -2,8 +2,6 @@ import 'package:flutter/material.dart';
 
 import '../../theme.dart';
 import '../../widgets/common.dart';
-import 'employer_flow_widgets.dart';
-import 'employer_widgets.dart';
 
 /// 대타 승인 완료 (Figma 47:670).
 class SubstituteDoneScreen extends StatelessWidget {

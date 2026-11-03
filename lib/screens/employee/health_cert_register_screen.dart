@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../theme.dart';
 import '../../widgets/common.dart';
-import 'employee_widgets.dart';
+import 'employee_parts.dart';
 
 /// 보건증 등록: 사진 업로드 · 만료일 · 만료 알림.
 class HealthCertRegisterScreen extends StatelessWidget {

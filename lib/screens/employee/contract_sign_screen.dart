@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../theme.dart';
 import '../../widgets/common.dart';
-import 'employee_widgets.dart';
+import 'employee_parts.dart';
 
 /// 전자 근로계약서 확인 · 서명.
 class ContractSignScreen extends StatelessWidget {

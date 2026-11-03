@@ -2,8 +2,6 @@ import 'package:flutter/material.dart';
 
 import '../../theme.dart';
 import '../../widgets/common.dart';
-import 'employee_parts.dart';
-import 'employee_widgets.dart';
 import 'substitute_detail_screen.dart';
 
 /// 대타 요청 현황: 내 요청 / 지원 가능 세그먼트.
@@ -91,7 +89,7 @@ class _SubstituteStatusScreenState extends State<SubstituteStatusScreen> {
             const StepRow(StepStatus.pending, '근무표 반영', '승인 후 자동 반영'),
             const SizedBox(height: 16),
             Material(
-              color: kDangerSoft,
+              color: AppColors.dangerSoft,
               borderRadius: BorderRadius.circular(14),
               clipBehavior: Clip.antiAlias,
               child: InkWell(
@@ -101,7 +99,7 @@ class _SubstituteStatusScreenState extends State<SubstituteStatusScreen> {
                   width: double.infinity,
                   child: Center(
                     child: Text('요청 취소',
-                        style: AppText.style(16, FontWeight.w700, kDanger)),
+                        style: AppText.style(16, FontWeight.w700, AppColors.danger)),
                   ),
                 ),
               ),
@@ -111,7 +109,7 @@ class _SubstituteStatusScreenState extends State<SubstituteStatusScreen> {
       );
 
   // shortcut: Figma has no 지원 가능 frame here; one card linking to 대타 상세.
-  Widget _available(BuildContext context) => AvatarRow(
+  Widget _available(BuildContext context) => PersonRow(
         avatar: const LetterAvatar('수',
             color: AppColors.accent, background: AppColors.accentSoft),
         title: '5/14(수) 18:00 – 22:00',

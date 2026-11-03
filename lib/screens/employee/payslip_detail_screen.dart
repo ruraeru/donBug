@@ -2,8 +2,6 @@ import 'package:flutter/material.dart';
 
 import '../../theme.dart';
 import '../../widgets/common.dart';
-import 'employee_parts.dart';
-import 'employee_widgets.dart';
 import 'work_log_screen.dart';
 
 /// 급여 명세서 상세.
@@ -42,17 +40,17 @@ class PayslipDetailScreen extends StatelessWidget {
               children: [
                 Text('지급 내역', style: section),
                 const SizedBox(height: 12),
-                const KvRow('기본급 (62시간 × 10,030원)', '621,860원', valueWeight: regular),
+                const KeyValueRow('기본급 (62시간 × 10,030원)', '621,860원', valueWeight: regular),
                 const SizedBox(height: 12),
-                const KvRow('주휴수당', '120,360원', valueWeight: regular),
+                const KeyValueRow('주휴수당', '120,360원', valueWeight: regular),
                 const SizedBox(height: 12),
-                const KvRow('야간·연장 가산', '128,780원', valueWeight: regular),
+                const KeyValueRow('야간·연장 가산', '128,780원', valueWeight: regular),
                 const SizedBox(height: 12),
-                const KvRow('휴일 가산', '0원', valueWeight: regular),
+                const KeyValueRow('휴일 가산', '0원', valueWeight: regular),
                 const SizedBox(height: 12),
                 const Divider(height: 1, color: AppColors.border),
                 const SizedBox(height: 12),
-                const KvRow('세전 합계', '871,000원'),
+                const KeyValueRow('세전 합계', '871,000원'),
               ],
             ),
           ),
@@ -63,13 +61,13 @@ class PayslipDetailScreen extends StatelessWidget {
               children: [
                 Text('공제 내역', style: section),
                 const SizedBox(height: 12),
-                const KvRow('사업소득세 3.3%', '−28,743원', valueWeight: regular),
+                const KeyValueRow('사업소득세 3.3%', '−28,743원', valueWeight: regular),
               ],
             ),
           ),
           const SizedBox(height: 14),
           AppCard(
-            color: kInfoSoft,
+            color: AppColors.infoSoft,
             radius: 14,
             padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
             onTap: () => Navigator.push(
@@ -77,7 +75,7 @@ class PayslipDetailScreen extends StatelessWidget {
               MaterialPageRoute(builder: (_) => const WorkLogScreen()),
             ),
             child: Text('일자별 근무 내역 보기  ›',
-                style: AppText.style(14, FontWeight.w700, kInfo)),
+                style: AppText.style(14, FontWeight.w700, AppColors.info)),
           ),
         ],
       ),

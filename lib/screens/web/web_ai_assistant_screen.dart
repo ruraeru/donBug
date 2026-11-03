@@ -75,7 +75,7 @@ class _WebAiAssistantScreenState extends State<WebAiAssistantScreen> {
                           ),
                           const SizedBox(height: 10),
                           const Pill('근로기준법 제55조',
-                              color: WebColors.info, background: WebColors.infoSoft),
+                              color: AppColors.info, background: AppColors.infoSoft),
                         ],
                       ),
                     ),

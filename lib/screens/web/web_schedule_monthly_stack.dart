@@ -48,7 +48,7 @@ class WebScheduleMonthlyStack extends StatelessWidget {
   static const _distLabels = ['오픈', '마감', '가변 시간', '휴무'];
   static const _distColors = [
     AppColors.primary,
-    WebColors.blue,
+    AppColors.info,
     AppColors.textSecondary,
     AppColors.textTertiary,
   ];
@@ -198,7 +198,7 @@ class WebScheduleMonthlyStack extends StatelessWidget {
               width: 150,
               child: Row(
                 children: [
-                  WebAvatar(webStaff[i], size: 20),
+                  StaffAvatar(webStaff[i], size: 20),
                   const SizedBox(width: 8),
                   Text(webStaff[i].name, style: AppText.style(13, FontWeight.w700)),
                 ],

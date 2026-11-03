@@ -3,9 +3,8 @@ import 'package:flutter/services.dart';
 
 import '../../theme.dart';
 import '../../widgets/common.dart';
-import 'employer_flow_widgets.dart';
-import 'employer_widgets.dart';
 import 'staff_approval_screen.dart';
+import 'employer_parts.dart';
 
 /// 매장 코드 공유 (Figma 47:78).
 class StoreCodeScreen extends StatelessWidget {
@@ -70,7 +69,7 @@ class StoreCodeScreen extends StatelessWidget {
             ),
           ),
           Material(
-            color: kKakao,
+            color: AppColors.kakao,
             borderRadius: BorderRadius.circular(14),
             clipBehavior: Clip.antiAlias,
             child: InkWell(

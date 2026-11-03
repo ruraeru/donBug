@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 
 import '../../theme.dart';
 import '../../widgets/common.dart';
-import 'employer_widgets.dart';
 import 'notice_read_status_screen.dart';
 
 enum NoticeResult { published, reminded }
@@ -83,7 +82,7 @@ class _NoticeCard extends StatelessWidget {
             Row(
               children: [
                 const Pill('필독',
-                    color: EmpColors.danger, background: EmpColors.dangerSoft),
+                    color: AppColors.danger, background: AppColors.dangerSoft),
                 const SizedBox(width: 8),
                 Text('방금 전',
                     style: AppText.style(

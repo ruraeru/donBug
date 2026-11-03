@@ -2,8 +2,6 @@ import 'package:flutter/material.dart';
 
 import '../../theme.dart';
 import '../../widgets/common.dart';
-import 'employee_parts.dart';
-import 'employee_widgets.dart';
 import 'substitute_done_screen.dart';
 
 /// A4 휴무·대타 신청.
@@ -121,7 +119,7 @@ class _LeaveRequestScreenState extends State<LeaveRequestScreen> {
           ),
           const SizedBox(height: 16),
           const NoteBox('신청하면 사장님께도 알림이 가요. 대타가 확정되면 근무표가 자동으로 바뀝니다.',
-              color: kInfo, background: kInfoSoft),
+              color: AppColors.info, background: AppColors.infoSoft),
         ],
       ),
       bottomNavigationBar: BottomBar(
