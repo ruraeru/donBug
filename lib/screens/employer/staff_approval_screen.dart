@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
 
 import '../../theme.dart';
+import '../../data/models.dart';
 import '../../widgets/common.dart';
-import 'employer_shell.dart';
+import '../../widgets/demo_menu.dart';
 import 'employer_parts.dart';
 
 /// 직원 가입 승인 (Figma 47:100). 온보딩 마지막 → EmployerShell.
@@ -62,11 +63,7 @@ class StaffApprovalScreen extends StatelessWidget {
         bottomNavigationBar: BottomBar(children: [
           AppButton(
             '대시보드로 이동',
-            onPressed: () => Navigator.pushAndRemoveUntil(
-              context,
-              MaterialPageRoute(builder: (_) => const EmployerShell()),
-              (_) => false,
-            ),
+            onPressed: () => openShell(context, Role.employer),
           ),
         ]),
       );

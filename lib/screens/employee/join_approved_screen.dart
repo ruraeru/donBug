@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 
+import '../../data/models.dart';
 import '../../widgets/common.dart';
-import 'employee_shell.dart';
+import '../../widgets/demo_menu.dart';
 
 /// 가입 승인 완료 → 알바생 메인.
 class JoinApprovedScreen extends StatelessWidget {
@@ -35,11 +36,7 @@ class JoinApprovedScreen extends StatelessWidget {
         bottomNavigationBar: BottomBar(
           child: AppButton(
             '홈으로 가기',
-            onPressed: () => Navigator.pushAndRemoveUntil(
-              context,
-              MaterialPageRoute(builder: (_) => const EmployeeShell()),
-              (_) => false,
-            ),
+            onPressed: () => openShell(context, Role.employee),
           ),
         ),
       );
