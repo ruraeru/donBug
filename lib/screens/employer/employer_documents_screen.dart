@@ -1,34 +1,41 @@
 import 'package:flutter/material.dart';
 
+import '../../data/app_scope.dart';
+import '../../data/format.dart';
+import '../../data/models.dart';
+import '../../data/payroll.dart';
 import '../../theme.dart';
 import '../../widgets/common.dart';
 import 'employer_contract_write_screen.dart';
 import 'employer_staff_documents_screen.dart';
 
 /// B2 서류·컴플라이언스 (Figma 48:179, 계약서 variant 48:335). 탭 루트.
-/// 두 variant는 화면이 같고 탭 가능한 카드만 다르다: 둘 다 연결했다.
+/// 체크리스트는 직원 데이터로 계산한다.
 class EmployerDocumentsScreen extends StatelessWidget {
   const EmployerDocumentsScreen({super.key});
 
-  static const _checks = [
-    ('근로계약서 작성 · 교부', true),
-    ('최저임금 준수 (시급 10,320원)', true),
-    ('주휴수당 지급', true),
-    ('보건증 갱신 필요 · 1명', false),
-  ];
-
-  static const _workers = [
-    ('지민', '보건증 정상', false),
-    ('수빈', '보건증 D-12', true),
-    ('현우', '보건증 정상', false),
-  ];
-
   @override
   Widget build(BuildContext context) {
-    void openStaff() => Navigator.push(
-          context,
-          MaterialPageRoute(builder: (_) => const EmployerStaffDocumentsScreen()),
-        );
+    final store = AppScope.of(context);
+    final staff = store.activeStaff;
+    final unsigned = staff.where((s) => !(s.contract?.signed ?? false)).length;
+    final underpaid = staff.where((s) => s.wage < minimumWage2026).length;
+    final noHoliday = staff.where((s) => !s.weeklyHolidayAuto).length;
+    final certDue = staff.where((s) {
+      final d = store.certDaysLeft(store.personOf(s));
+      return d == null || d <= 30;
+    }).length;
+    final checks = [
+      (unsigned == 0 ? '근로계약서 작성 · 교부' : '근로계약서 미서명 · $unsigned명', unsigned == 0),
+      (underpaid == 0
+          ? '최저임금 준수 (시급 ${wonText(minimumWage2026)})'
+          : '최저임금 미달 · $underpaid명', underpaid == 0),
+      (noHoliday == 0 ? '주휴수당 지급' : '주휴수당 미적용 · $noHoliday명', noHoliday == 0),
+      (certDue == 0 ? '보건증 유효' : '보건증 갱신 필요 · $certDue명', certDue == 0),
+    ];
+
+    void openStaff(Staff s) => Navigator.push(
+        context, MaterialPageRoute(builder: (_) => EmployerStaffDocumentsScreen(staffId: s.id)));
 
     return SafeArea(
       bottom: false,
@@ -44,24 +51,20 @@ class EmployerDocumentsScreen extends StatelessWidget {
               padding: const EdgeInsets.fromLTRB(20, 8, 20, 20),
               children: [
                 AppCard(
-                  onTap: openStaff,
                   child: Column(
                     children: [
                       Row(
                         children: [
-                          Expanded(
-                            child: Text('노무 체크리스트',
-                                style: AppText.style(15, FontWeight.w700)),
-                          ),
-                          const Pill('5인 미만 사업장',
+                          Expanded(child: Text('노무 체크리스트', style: AppText.style(15, FontWeight.w700))),
+                          Pill(store.store.isSmall ? '5인 미만 사업장' : '5인 이상 사업장',
                               color: AppColors.info, background: AppColors.infoSoft),
                         ],
                       ),
-                      for (var i = 0; i < _checks.length; i++) ...[
+                      for (var i = 0; i < checks.length; i++) ...[
                         if (i > 0) const Divider(height: 1, color: AppColors.border),
                         Padding(
                           padding: const EdgeInsets.symmetric(vertical: 12),
-                          child: _checkRow(_checks[i].$1, ok: _checks[i].$2),
+                          child: _checkRow(checks[i].$1, ok: checks[i].$2),
                         ),
                       ],
                     ],
@@ -69,16 +72,27 @@ class EmployerDocumentsScreen extends StatelessWidget {
                 ),
                 const SizedBox(height: 16),
                 AppCard(
-                  onTap: openStaff,
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text('근로자별 서류', style: AppText.style(15, FontWeight.w700)),
-                      for (var i = 0; i < _workers.length; i++) ...[
+                      for (var i = 0; i < staff.length; i++) ...[
                         if (i > 0) const Divider(height: 1, color: AppColors.border),
-                        Padding(
-                          padding: const EdgeInsets.symmetric(vertical: 12),
-                          child: _workerRow(_workers[i]),
+                        InkWell(
+                          onTap: () => openStaff(staff[i]),
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(vertical: 12),
+                            child: Row(
+                              children: [
+                                Expanded(
+                                    child: Text(store.personOf(staff[i]).name,
+                                        style: AppText.style(15, FontWeight.w700))),
+                                contractPill(staff[i].contract),
+                                const SizedBox(width: 6),
+                                certPill(store.certDaysLeft(store.personOf(staff[i]))),
+                              ],
+                            ),
+                          ),
                         ),
                       ],
                     ],
@@ -88,10 +102,7 @@ class EmployerDocumentsScreen extends StatelessWidget {
                 AppButton(
                   '전자 근로계약서 작성',
                   onPressed: () => Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                        builder: (_) => const EmployerContractWriteScreen()),
-                  ),
+                      context, MaterialPageRoute(builder: (_) => const EmployerContractWriteScreen())),
                 ),
               ],
             ),
@@ -103,26 +114,20 @@ class EmployerDocumentsScreen extends StatelessWidget {
 
   Widget _checkRow(String label, {required bool ok}) => Row(
         children: [
-          AppIcon(ok ? 'check' : 'alert_circle', size: 20),
+          AppIcon(ok ? 'check' : 'alert_circle', size: 20,
+              color: ok ? AppColors.primary : AppColors.danger),
           const SizedBox(width: 10),
           Expanded(
             child: Text(label,
-                style: ok
-                    ? AppText.style(14)
-                    : AppText.style(14, FontWeight.w700, AppColors.danger)),
+                style: ok ? AppText.style(14) : AppText.style(14, FontWeight.w700, AppColors.danger)),
           ),
         ],
       );
-
-  Widget _workerRow((String, String, bool) w) => Row(
-        children: [
-          Expanded(child: Text(w.$1, style: AppText.style(15, FontWeight.w700))),
-          const Pill('계약서 완료',
-              color: AppColors.textSecondary, background: AppColors.bg),
-          const SizedBox(width: 6),
-          w.$3
-              ? Pill(w.$2, color: AppColors.danger, background: AppColors.dangerSoft)
-              : Pill(w.$2),
-        ],
-      );
 }
+
+/// 계약서 상태 칩.
+Pill contractPill(Contract? c) => c == null
+    ? const Pill('계약서 없음', color: AppColors.danger, background: AppColors.dangerSoft)
+    : c.signed
+        ? const Pill('계약서 완료', color: AppColors.textSecondary, background: AppColors.bg)
+        : const Pill.accent('서명 대기');
