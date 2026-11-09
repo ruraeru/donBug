@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../theme.dart';
 import '../../widgets/common.dart';
-import 'login_screen.dart';
+import '../../widgets/demo_menu.dart';
 import 'my_documents_screen.dart';
 import 'notification_center_screen.dart';
 import 'store_switch_screen.dart';
@@ -77,10 +77,10 @@ class EmployeeMyScreen extends StatelessWidget {
                 color: AppColors.textSecondary, background: AppColors.bg),
             title: '로그아웃',
             trailing: chevron,
-            onTap: () => Navigator.of(context).pushAndRemoveUntil(
-                MaterialPageRoute(builder: (_) => const LoginScreen()),
-                (_) => false),
+            onTap: () => logoutToLogin(context),
           ),
+          const SizedBox(height: 24),
+          const DemoMenu(),
         ],
       ),
     );

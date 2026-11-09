@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import 'package:donbug/data/app_scope.dart';
+import 'package:donbug/data/app_store.dart';
 import 'package:donbug/main.dart';
 import 'package:donbug/screens/employee/employee_shell.dart';
 import 'package:donbug/screens/employer/employer_shell.dart';
@@ -8,12 +10,21 @@ import 'package:donbug/screens/employer/staff_detail_screen.dart';
 import 'package:donbug/screens/web/web_shell.dart';
 import 'package:donbug/theme.dart';
 
-Future<void> pumpAt(WidgetTester tester, Widget home, Size size) async {
+/// 테스트 기준 시각: 2026-05-14(수) 14:30 (Figma 화면과 같은 날).
+final testNow = DateTime(2026, 5, 14, 14, 30);
+
+AppStore testStore() => AppStore.seeded(now: testNow);
+
+Future<AppStore> pumpAt(WidgetTester tester, Widget home, Size size,
+    {AppStore? store}) async {
+  final s = store ?? testStore();
   tester.view.physicalSize = size;
   tester.view.devicePixelRatio = 1;
   addTearDown(tester.view.reset);
-  await tester.pumpWidget(MaterialApp(theme: appTheme, home: home));
+  await tester.pumpWidget(
+      AppScope(store: s, child: MaterialApp(theme: appTheme, home: home)));
   await tester.pumpAndSettle();
+  return s;
 }
 
 /// 하단 탭을 하나씩 눌러 모든 탭 루트 화면이 오류·넘침 없이 그려지는지 본다.
@@ -27,7 +38,8 @@ Future<void> visitTabs(WidgetTester tester, List<String> labels) async {
 
 void main() {
   testWidgets('앱이 로그인 화면으로 시작한다', (tester) async {
-    await tester.pumpWidget(const MyApp());
+    await tester.pumpWidget(MyApp(store: testStore()));
+    expect(find.text('카카오로 시작하기'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
 

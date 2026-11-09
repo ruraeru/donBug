@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../theme.dart';
 import '../../widgets/common.dart';
+import '../../widgets/demo_menu.dart';
 
 /// 매장 설정.
 class StoreSettingsScreen extends StatefulWidget {
@@ -89,8 +90,10 @@ class _StoreSettingsScreenState extends State<StoreSettingsScreen> {
               trailing: Text('›',
                   style:
                       AppText.style(22, FontWeight.w400, AppColors.textTertiary)),
-              onTap: () {},
+              onTap: () => logoutToLogin(context),
             ),
+            const SizedBox(height: 24),
+            const DemoMenu(),
           ],
         ),
       );

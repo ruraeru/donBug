@@ -485,23 +485,81 @@ class LabeledField extends StatelessWidget {
       );
 }
 
-/// 흰 배경 · border · radius 14 입력칸 모양(더미 값 표시).
+/// 흰 배경 · border · radius 14 입력칸 모양. [onTap]을 주면 날짜·시간 선택 등 버튼으로 쓴다.
 class FieldBox extends StatelessWidget {
-  const FieldBox(this.value, {super.key});
+  const FieldBox(this.value, {super.key, this.onTap});
 
   final String value;
+  final VoidCallback? onTap;
 
   @override
-  Widget build(BuildContext context) => Container(
-        width: double.infinity,
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 15),
-        decoration: BoxDecoration(
-          color: AppColors.surface,
-          border: Border.all(color: AppColors.border),
+  Widget build(BuildContext context) => Material(
+        color: AppColors.surface,
+        shape: RoundedRectangleBorder(
+          side: const BorderSide(color: AppColors.border),
           borderRadius: BorderRadius.circular(14),
         ),
-        child: Text(value, style: AppText.style(15)),
+        clipBehavior: Clip.antiAlias,
+        child: InkWell(
+          onTap: onTap,
+          child: Container(
+            width: double.infinity,
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 15),
+            child: Row(children: [
+              Expanded(child: Text(value, style: AppText.style(15))),
+              if (onTap != null)
+                Text('›', style: AppText.style(18, FontWeight.w400, AppColors.textTertiary)),
+            ]),
+          ),
+        ),
       );
+}
+
+/// [FieldBox]와 같은 모양의 실제 입력칸.
+class AppTextField extends StatelessWidget {
+  const AppTextField({
+    super.key,
+    required this.controller,
+    this.hint,
+    this.keyboardType,
+    this.maxLines = 1,
+    this.maxLength,
+    this.onChanged,
+  });
+
+  final TextEditingController controller;
+  final String? hint;
+  final TextInputType? keyboardType;
+  final int maxLines;
+  final int? maxLength;
+  final ValueChanged<String>? onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    OutlineInputBorder border(Color c) => OutlineInputBorder(
+          borderRadius: BorderRadius.circular(14),
+          borderSide: BorderSide(color: c),
+        );
+    return TextField(
+      controller: controller,
+      keyboardType: keyboardType,
+      maxLines: maxLines,
+      maxLength: maxLength,
+      onChanged: onChanged,
+      style: AppText.style(15),
+      decoration: InputDecoration(
+        hintText: hint,
+        hintStyle: AppText.style(15, FontWeight.w400, AppColors.textTertiary),
+        filled: true,
+        fillColor: AppColors.surface,
+        isDense: true,
+        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 15),
+        border: border(AppColors.border),
+        enabledBorder: border(AppColors.border),
+        focusedBorder: border(AppColors.primary),
+      ),
+    );
+  }
 }
 
 /// 취소 / 확인 두 버튼 다이얼로그. 확인을 누르면 true.
