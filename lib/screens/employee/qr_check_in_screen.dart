@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 
+import '../../data/app_scope.dart';
+import '../../data/format.dart';
 import '../../theme.dart';
+import '../../widgets/common.dart';
 import 'clock_in_done_screen.dart';
 
 const _qrBg = AppColors.textPrimary;
@@ -30,19 +33,27 @@ const _qr = [
   '#######.#####..#.####',
 ];
 
-/// A6 QR 출근 인증. 스캔 영역을 탭하면 인증 성공(더미)으로 처리한다.
+/// A6 QR 출근 인증. 데모: 스캔 영역을 탭하면 인증 성공으로 출근 기록을 만든다.
 class QrCheckInScreen extends StatelessWidget {
-  const QrCheckInScreen({super.key});
+  const QrCheckInScreen({super.key, required this.shiftId});
 
-  // 홈에 true 를 돌려주고 출근 완료 화면으로 교체.
-  void _scanned(BuildContext context) => Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(builder: (_) => const ClockInDoneScreen()),
-        result: true,
-      );
+  final String shiftId;
+
+  // 출근 기록을 만들고 출근 완료 화면으로 교체.
+  void _scanned(BuildContext context) {
+    final a = AppScope.read(context).clockIn(shiftId);
+    Navigator.pushReplacement(
+      context,
+      MaterialPageRoute(builder: (_) => ClockInDoneScreen(attendanceId: a.id)),
+    );
+  }
 
   @override
-  Widget build(BuildContext context) => Scaffold(
+  Widget build(BuildContext context) {
+    final store = AppScope.of(context);
+    final shift = store.shiftById(shiftId);
+    if (shift == null) return const MissingScreen(title: '출근 인증');
+    return Scaffold(
         backgroundColor: _qrBg,
         body: SafeArea(
           child: Column(
@@ -64,7 +75,10 @@ class QrCheckInScreen extends StatelessWidget {
                               17, FontWeight.w700, AppColors.onPrimary)),
                     ),
                     TextButton(
-                      onPressed: () {},
+                      onPressed: () => showConfirmDialog(context,
+                          title: '데모 안내',
+                          message: '실제 앱은 카메라로 매장 POS 의 QR 을 스캔해요. 데모에서는 사각형을 탭하면 인증돼요.',
+                          confirmLabel: '확인'),
                       child: Text('도움말',
                           style: AppText.style(
                               15, FontWeight.w500, AppColors.textTertiary)),
@@ -85,17 +99,18 @@ class QrCheckInScreen extends StatelessWidget {
                           color: AppColors.primary,
                           borderRadius: BorderRadius.circular(999),
                         ),
-                        child: Text('카페 커푸치노 · 14:00 – 20:00 근무',
+                        child: Text('${store.store.name} · ${shiftTime(shift)} 근무',
                             style: AppText.style(
                                 13, FontWeight.w700, AppColors.onPrimary)),
                       ),
                       const SizedBox(height: 20),
                       GestureDetector(
+                        key: const ValueKey('qr-scan'),
                         onTap: () => _scanned(context),
                         child: const _ScanBox(),
                       ),
                       const SizedBox(height: 20),
-                      Text('POS 화면의 QR 코드를\n사각형 안에 맞춰주세요',
+                      Text('POS 화면의 QR 코드를\n사각형 안에 맞춰주세요\n(데모: 사각형을 탭하세요)',
                           textAlign: TextAlign.center,
                           style: AppText.style(
                               16, FontWeight.w700, AppColors.onPrimary)),
@@ -128,6 +143,7 @@ class QrCheckInScreen extends StatelessWidget {
           ),
         ),
       );
+  }
 }
 
 class _ScanBox extends StatelessWidget {

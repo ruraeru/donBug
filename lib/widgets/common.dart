@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 
+import '../data/app_scope.dart';
+import '../data/models.dart';
 import '../theme.dart';
 
 /// assets/icons/ 의 Figma SVG. [color]를 주면 단색으로 칠한다(탭 선택 상태 등).
@@ -562,6 +564,78 @@ class AppTextField extends StatelessWidget {
   }
 }
 
+/// 상세 화면의 대상이 사라졌을 때(취소·거절·삭제) 보여주는 화면.
+class MissingScreen extends StatelessWidget {
+  const MissingScreen({super.key, this.title = ''});
+
+  final String title;
+
+  @override
+  Widget build(BuildContext context) => Scaffold(
+        appBar: AppHeader(title),
+        body: Center(
+          child: Text('삭제되었거나 더 이상 없는 항목이에요',
+              style: AppText.style(15, FontWeight.w500, AppColors.textSecondary)),
+        ),
+        bottomNavigationBar: BottomBar.button('닫기', onPressed: () => Navigator.pop(context)),
+      );
+}
+
+/// 빈 목록 안내 한 줄.
+class EmptyNote extends StatelessWidget {
+  const EmptyNote(this.text, {super.key});
+
+  final String text;
+
+  @override
+  Widget build(BuildContext context) => Padding(
+        padding: const EdgeInsets.symmetric(vertical: 24),
+        child: Center(
+          child: Text(text,
+              textAlign: TextAlign.center,
+              style: AppText.style(14, FontWeight.w400, AppColors.textTertiary)),
+        ),
+      );
+}
+
+/// 아이콘 오른쪽 위 빨간 숫자 배지.
+class CountBadge extends StatelessWidget {
+  const CountBadge({super.key, required this.count, required this.child});
+
+  final int count;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) => Stack(
+        clipBehavior: Clip.none,
+        children: [
+          child,
+          if (count > 0)
+            Positioned(
+              right: -4,
+              top: -4,
+              child: Container(
+                constraints: const BoxConstraints(minWidth: 18),
+                height: 18,
+                padding: const EdgeInsets.symmetric(horizontal: 5),
+                alignment: Alignment.center,
+                decoration: BoxDecoration(
+                  color: AppColors.danger,
+                  borderRadius: BorderRadius.circular(9),
+                ),
+                child: Text(count > 99 ? '99+' : '$count',
+                    style: AppText.style(10, FontWeight.w700, AppColors.onPrimary)
+                        .copyWith(height: 1.2)),
+              ),
+            ),
+        ],
+      );
+}
+
+/// 화면 아래에 짧은 안내를 띄운다.
+void showToast(BuildContext context, String text) =>
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(text)));
+
 /// 취소 / 확인 두 버튼 다이얼로그. 확인을 누르면 true.
 Future<bool> showConfirmDialog(
   BuildContext context, {
@@ -613,3 +687,25 @@ Future<bool> showConfirmDialog(
       ),
     ) ??
     false;
+
+/// 직원 글자 아바타 (Staff.tone 색).
+class MemberAvatar extends StatelessWidget {
+  const MemberAvatar(this.staff, {super.key, this.size = 40});
+
+  final Staff staff;
+  final double size;
+
+  @override
+  Widget build(BuildContext context) {
+    final store = AppScope.of(context);
+    final (fg, bg) = toneColors(staff.tone);
+    return LetterAvatar(store.personOf(staff).letter, color: fg, background: bg, size: size);
+  }
+}
+
+(Color, Color) toneColors(Tone t) => switch (t) {
+      Tone.primary => (AppColors.primary, AppColors.primarySoft),
+      Tone.accent => (AppColors.accent, AppColors.accentSoft),
+      Tone.info => (AppColors.info, AppColors.infoSoft),
+      Tone.danger => (AppColors.danger, AppColors.dangerSoft),
+    };

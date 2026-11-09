@@ -1,6 +1,8 @@
 /// 화면 표시용 포맷 함수.
 library;
 
+import 'models.dart';
+
 const _weekdays = ['월', '화', '수', '목', '금', '토', '일'];
 
 String _comma(int n) {
@@ -86,3 +88,13 @@ String relative(DateTime t, DateTime now) {
 
 /// 그 주 월요일.
 DateTime mondayOf(DateTime d) => dayOf(d).subtract(Duration(days: d.weekday - 1));
+
+/// 근무 날짜 '5/14(수)'
+String shiftDay(Shift s) => md(parseYmd(s.date));
+
+/// '14:00 – 20:00'
+String shiftTime(Shift s) => range(s.startMin, s.endMin);
+
+/// '6시간 · 미들 · 휴게 30분'
+String shiftCaption(Shift s) =>
+    '${duration(s.endAbs - s.startMin)} · ${s.part}${s.breakMin > 0 ? ' · 휴게 ${s.breakMin}분' : ''}';

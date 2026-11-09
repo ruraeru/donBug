@@ -168,6 +168,31 @@ class AppStore extends ChangeNotifier {
     return d > 0 ? d : 0;
   }
 
+  /// 실근무 분(휴게 제외). 근무 중이면 지금까지.
+  int workedMinutes(Attendance a) {
+    final s = shiftById(a.shiftId);
+    final end = a.clockOut == null ? now : DateTime.parse(a.clockOut!);
+    return WorkEntry(
+      start: DateTime.parse(a.clockIn),
+      end: end,
+      breakMin: a.clockOut == null ? 0 : (s?.breakMin ?? 0),
+    ).minutes;
+  }
+
+  /// 그날 일급(기본급만, 주휴·공제 제외).
+  int dayPay(Attendance a) => payFor(workedMinutes(a), staffById(a.staffId)!.wage);
+
+  /// 예정 근무를 다 했을 때의 일급.
+  int plannedPay(Shift s) => payFor(s.scheduledMinutes, staffById(s.staffId)!.wage);
+
+  /// 예정 퇴근보다 늦게 퇴근한 분.
+  int overtimeMinutes(Attendance a) {
+    final s = shiftById(a.shiftId);
+    if (s == null || a.clockOut == null) return 0;
+    final d = DateTime.parse(a.clockOut!).difference(shiftEnd(s)).inMinutes;
+    return d > 0 ? d : 0;
+  }
+
   /// 대타 요청 중인 근무인지 (진행 중 요청).
   SubstituteRequest? pendingSubFor(String shiftId) =>
       state.subs.where((r) => r.shiftId == shiftId && r.pending).firstOrNull;
@@ -248,7 +273,9 @@ class AppStore extends ChangeNotifier {
   /// [staffId]의 그 달 급여. [projected]면 오늘 이후 예정 근무도 포함(예상 급여).
   Payslip payslip(String staffId, int year, int month, {bool projected = false}) {
     final staff = staffById(staffId)!;
-    final first = DateTime(year, month, 1);
+    final first = DateTime(year, month, 1); // month 가 0 이하·13 이상이어도 정규화
+    year = first.year;
+    month = first.month;
     final from = mondayOf(first);
     final to = mondayOf(DateTime(year, month + 1, 0)).add(const Duration(days: 7));
     final entries = <WorkEntry>[];
@@ -287,8 +314,10 @@ class AppStore extends ChangeNotifier {
 
   /// 매장 인건비(세전 합계). 상수로 둔 지난 달은 그 값을 쓴다.
   int laborTotal(int year, int month, {bool projected = false}) {
-    final key = ym(DateTime(year, month));
-    final fixed = store.monthlyTotals[key];
+    final first = DateTime(year, month);
+    year = first.year;
+    month = first.month;
+    final fixed = store.monthlyTotals[ym(first)];
     if (fixed != null) return fixed;
     return state.staff
         .where((s) => s.storeId == store.id && s.status != StaffStatus.pending)
