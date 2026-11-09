@@ -1,5 +1,9 @@
 import 'package:flutter/material.dart';
 
+import '../../data/app_scope.dart';
+import '../../data/app_store.dart';
+import '../../data/format.dart';
+import '../../data/models.dart';
 import '../../theme.dart';
 import '../../widgets/common.dart';
 import 'notice_detail_screen.dart';
@@ -13,115 +17,154 @@ class EmployeeNoticeScreen extends StatefulWidget {
 }
 
 class _EmployeeNoticeScreenState extends State<EmployeeNoticeScreen> {
-  static const _filters = ['전체', '중요', '안 읽음 2'];
   int _filter = 0;
 
-  void _openDetail() => Navigator.push(
-      context, MaterialPageRoute(builder: (_) => const NoticeDetailScreen()));
+  void _openDetail(Notice n) => Navigator.push(
+      context, MaterialPageRoute(builder: (_) => NoticeDetailScreen(noticeId: n.id)));
 
   @override
-  Widget build(BuildContext context) => SafeArea(
-        child: Column(
-          children: [
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-              child: Row(
-                children: [
-                  Expanded(child: Text('공지', style: AppText.style(24, FontWeight.w700))),
-                  GestureDetector(
-                    onTap: () {},
-                    child: Text('모두 읽음',
-                        style: AppText.style(14, FontWeight.w500, AppColors.primary)),
-                  ),
-                ],
-              ),
-            ),
-            Expanded(
-              child: ListView(
-                padding: const EdgeInsets.fromLTRB(20, 8, 20, 16),
-                children: [
-                  Row(
-                    children: [
-                      for (var i = 0; i < _filters.length; i++) ...[
-                        if (i > 0) const SizedBox(width: 8),
-                        _FilterChip(
-                          _filters[i],
-                          selected: i == _filter,
-                          onTap: () => setState(() => _filter = i),
-                        ),
-                      ],
-                    ],
-                  ),
-                  const SizedBox(height: 12),
-                  _pinnedCard(),
-                  const SizedBox(height: 12),
-                  _NoticeCard(
-                    tag: const Pill('일반', color: AppColors.info, background: AppColors.infoSoft),
-                    title: '6월 근무표가 확정되었어요',
-                    body: '변경이 필요하면 5/25까지 휴무 신청으로 남겨주세요.',
-                    meta: '사장님 · 5/13 18:40',
-                    status: Text('안 읽음', style: AppText.style(12, FontWeight.w700, AppColors.danger)),
-                    onTap: _openDetail,
-                  ),
-                  const SizedBox(height: 12),
-                  _NoticeCard(
-                    tag: const Pill('노무'),
-                    title: '보건증 만료 30일 전 알림 안내',
-                    body: '보건증은 만료 30일·14일·7일 전에 알림이 와요. 갱신 후 사진을 등록해 주세요.',
-                    meta: '사장님 · 5/10 10:05',
-                    status: Text('읽음 · 5/10 11:21',
-                        style: AppText.style(12, FontWeight.w500, AppColors.primary)),
-                    read: true,
-                    onTap: _openDetail,
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-      );
-
-  Widget _pinnedCard() => Material(
-        color: AppColors.accentSoft,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(20),
-          side: const BorderSide(color: AppColors.accent, width: 1.5),
-        ),
-        clipBehavior: Clip.antiAlias,
-        child: InkWell(
-          onTap: _openDetail,
-          child: Padding(
-            padding: const EdgeInsets.all(18),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+  Widget build(BuildContext context) {
+    final store = AppScope.of(context);
+    final all = store.storeNotices;
+    final unread = store.unreadNoticeCount;
+    final filters = ['전체', '중요', '안 읽음 $unread'];
+    final shown = switch (_filter) {
+      1 => all.where((n) => n.required || n.category == '중요').toList(),
+      2 => all.where((n) => !store.isNoticeReadByMe(n)).toList(),
+      _ => all,
+    };
+    final pinned = shown.where((n) => n.pinned).toList();
+    final rest = shown.where((n) => !n.pinned).toList();
+    return SafeArea(
+      child: Column(
+        children: [
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+            child: Row(
               children: [
-                const Row(
-                  children: [
-                    Pill('중요', color: AppColors.onPrimary, background: AppColors.accent),
-                    SizedBox(width: 6),
-                    Pill('상단 고정',
-                        color: AppColors.textSecondary, background: AppColors.surface),
-                  ],
+                Expanded(child: Text('공지', style: AppText.style(24, FontWeight.w700))),
+                GestureDetector(
+                  onTap: unread == 0 ? null : () => AppScope.read(context).markAllNoticesRead(),
+                  child: Text('모두 읽음',
+                      style: AppText.style(14, FontWeight.w500,
+                          unread == 0 ? AppColors.textTertiary : AppColors.primary)),
                 ),
-                const SizedBox(height: 10),
-                Text('5/17(토) 매장 위생 점검 안내', style: AppText.style(17, FontWeight.w700)),
-                const SizedBox(height: 10),
-                Text(
-                  '보건소 위생 점검이 예정되어 있어요. 당일 근무자는 앞치마·위생모를 꼭 착용하고, 보건증 원본을 지참해 주세요.',
-                  style: AppText.style(13, FontWeight.w400, AppColors.textSecondary),
-                ),
-                const SizedBox(height: 10),
-                _MetaRow(
-                  '사장님 · 5/14 09:12',
-                  Text('안 읽음', style: AppText.style(12, FontWeight.w700, AppColors.danger)),
-                ),
-                const SizedBox(height: 10),
-                AppButton('확인했어요', verticalPadding: 13, fontSize: 15, onPressed: () {}),
               ],
             ),
           ),
+          Expanded(
+            child: ListView(
+              padding: const EdgeInsets.fromLTRB(20, 8, 20, 16),
+              children: [
+                Row(
+                  children: [
+                    for (var i = 0; i < filters.length; i++) ...[
+                      if (i > 0) const SizedBox(width: 8),
+                      _FilterChip(
+                        filters[i],
+                        selected: i == _filter,
+                        onTap: () => setState(() => _filter = i),
+                      ),
+                    ],
+                  ],
+                ),
+                if (shown.isEmpty) const EmptyNote('공지가 없어요'),
+                for (final n in pinned) ...[
+                  const SizedBox(height: 12),
+                  _pinnedCard(store, n),
+                ],
+                for (final n in rest) ...[
+                  const SizedBox(height: 12),
+                  _NoticeCard(
+                    tag: noticeTags(n),
+                    title: n.title,
+                    body: n.body,
+                    meta: '사장님 · ${noticeTime(n)}',
+                    status: _readStatus(store, n),
+                    read: store.isNoticeReadByMe(n),
+                    onTap: () => _openDetail(n),
+                  ),
+                ],
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _readStatus(AppStore store, Notice n) {
+    final at = n.readBy[store.myStaff?.id];
+    return at == null
+        ? Text('안 읽음', style: AppText.style(12, FontWeight.w700, AppColors.danger))
+        : Text('읽음 · ${noticeTime(n, at: at)}',
+            style: AppText.style(12, FontWeight.w500, AppColors.primary));
+  }
+
+  Widget _pinnedCard(AppStore store, Notice n) {
+    final read = store.isNoticeReadByMe(n);
+    return Material(
+      color: AppColors.accentSoft,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(20),
+        side: const BorderSide(color: AppColors.accent, width: 1.5),
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
+        onTap: () => _openDetail(n),
+        child: Padding(
+          padding: const EdgeInsets.all(18),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  noticeTags(n),
+                  const SizedBox(width: 6),
+                  const Pill('상단 고정', color: AppColors.textSecondary, background: AppColors.surface),
+                ],
+              ),
+              const SizedBox(height: 10),
+              Text(n.title, style: AppText.style(17, FontWeight.w700)),
+              const SizedBox(height: 10),
+              Text(n.body, style: AppText.style(13, FontWeight.w400, AppColors.textSecondary)),
+              const SizedBox(height: 10),
+              _MetaRow('사장님 · ${noticeTime(n)}', _readStatus(store, n)),
+              if (!read) ...[
+                const SizedBox(height: 10),
+                AppButton('확인했어요',
+                    verticalPadding: 13,
+                    fontSize: 15,
+                    onPressed: () => AppScope.read(context).markNoticeRead(n.id)),
+              ],
+            ],
+          ),
         ),
-      );
+      ),
+    );
+  }
+}
+
+/// 공지 카테고리 칩 (+ 필독).
+Widget noticeTags(Notice n) {
+  final (fg, bg) = switch (n.category) {
+    '중요' => (AppColors.onPrimary, AppColors.accent),
+    '노무' => (AppColors.primary, AppColors.primarySoft),
+    _ => (AppColors.info, AppColors.infoSoft),
+  };
+  return Row(mainAxisSize: MainAxisSize.min, children: [
+    Pill(n.category, color: fg, background: bg),
+    if (n.required) ...[
+      const SizedBox(width: 6),
+      const Pill('필독', color: AppColors.danger, background: AppColors.dangerSoft),
+    ],
+  ]);
+}
+
+/// '5/14 09:12'
+String noticeTime(Notice n, {String? at}) {
+  final t = DateTime.parse(at ?? n.createdAt);
+  return '${t.month}/${t.day} ${clock(t)}';
 }
 
 class _FilterChip extends StatelessWidget {

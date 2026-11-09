@@ -1,37 +1,91 @@
 import 'package:flutter/material.dart';
 
+import '../../data/app_scope.dart';
+import '../../data/format.dart';
+import '../../data/models.dart';
 import '../../theme.dart';
 import '../../widgets/common.dart';
+import 'my_documents_screen.dart';
+import 'notice_detail_screen.dart';
+import 'substitute_detail_screen.dart';
+import 'substitute_status_screen.dart';
 
-/// 알림 센터 (홈 종 아이콘에서 push).
+/// 알림 센터. 지금 역할(알바생/사장님)의 내 알림. 탭하면 읽음 + 관련 화면.
 class NotificationCenterScreen extends StatelessWidget {
-  const NotificationCenterScreen({super.key});
+  const NotificationCenterScreen({super.key, this.onOpen});
 
-  static const _items = [
-    ('대', AppColors.primary, AppColors.primarySoft, '대타 승인 완료', '5/14 18:00–22:00 근무표에 반영됐어요', '방금'),
-    ('공', AppColors.info, AppColors.infoSoft, '새 필독 공지', '5월 마감 청소 방법 안내', '1시간 전'),
-    ('건', AppColors.danger, AppColors.dangerSoft, '보건증 만료 D-12', '갱신본을 등록해주세요', '어제'),
-    ('급', AppColors.accent, AppColors.accentSoft, '4월 급여 확정', '실수령액 ₩812,430', '5/10'),
-    ('지', AppColors.primary, AppColors.primarySoft, '하윤님이 대타에 지원했어요', '5/16 10:00–16:00', '5/9'),
-  ];
+  /// 역할별로 알림을 열 화면을 정한다. null 을 돌려주면 읽음 처리만.
+  /// 기본은 알바생 화면 연결.
+  final Widget? Function(BuildContext context, AppNotification n)? onOpen;
+
+  static (String, Color, Color) _style(String type) => switch (type) {
+        'sub' => ('대', AppColors.primary, AppColors.primarySoft),
+        'notice' => ('공', AppColors.info, AppColors.infoSoft),
+        'cert' => ('건', AppColors.danger, AppColors.dangerSoft),
+        'pay' => ('급', AppColors.accent, AppColors.accentSoft),
+        'join' => ('가', AppColors.primary, AppColors.primarySoft),
+        'contract' => ('계', AppColors.info, AppColors.infoSoft),
+        _ => ('알', AppColors.textSecondary, AppColors.bg),
+      };
+
+  static Widget? employeeTarget(BuildContext context, AppNotification n) {
+    final store = AppScope.read(context);
+    switch (n.type) {
+      case 'sub':
+        final r = store.subById(n.refId);
+        if (r == null) return null;
+        return r.requesterId == store.myStaff?.id || r.status != SubStatus.open
+            ? const SubstituteStatusScreen()
+            : SubstituteDetailScreen(requestId: r.id);
+      case 'notice':
+        return store.noticeById(n.refId) == null ? null : NoticeDetailScreen(noticeId: n.refId!);
+      case 'cert':
+      case 'contract':
+        return const MyDocumentsScreen();
+    }
+    return null;
+  }
 
   @override
-  Widget build(BuildContext context) => Scaffold(
-        appBar: const AppHeader('알림'),
-        body: ListView.separated(
-          padding: const EdgeInsets.fromLTRB(20, 8, 20, 16),
-          itemCount: _items.length,
-          separatorBuilder: (_, _) => const SizedBox(height: 10),
-          itemBuilder: (_, i) {
-            final (letter, fg, bg, title, sub, time) = _items[i];
-            return PersonRow(
-              avatar: LetterAvatar(letter, color: fg, background: bg),
-              title: title,
-              subtitle: sub,
-              trailing: Text(time,
-                  style: AppText.style(12, FontWeight.w400, AppColors.textTertiary)),
-            );
-          },
-        ),
-      );
+  Widget build(BuildContext context) {
+    final store = AppScope.of(context);
+    final items = store.myNotifications;
+    return Scaffold(
+      appBar: AppHeader('알림', actions: [
+        if (store.unreadNotificationCount > 0)
+          TextButton(
+            onPressed: () => AppScope.read(context).markAllNotificationsRead(),
+            child: Text('모두 읽음', style: AppText.style(14, FontWeight.w500, AppColors.primary)),
+          ),
+      ]),
+      body: items.isEmpty
+          ? const EmptyNote('알림이 없어요')
+          : ListView.separated(
+              padding: const EdgeInsets.fromLTRB(20, 8, 20, 16),
+              itemCount: items.length,
+              separatorBuilder: (_, _) => const SizedBox(height: 10),
+              itemBuilder: (_, i) {
+                final n = items[i];
+                final (letter, fg, bg) = _style(n.type);
+                return Opacity(
+                  opacity: n.read ? 0.6 : 1,
+                  child: PersonRow(
+                    avatar: LetterAvatar(letter, color: fg, background: bg),
+                    title: n.title,
+                    subtitle: n.body.isEmpty ? null : n.body,
+                    trailing: Text(relative(DateTime.parse(n.createdAt), store.now),
+                        style: AppText.style(12, FontWeight.w400, AppColors.textTertiary)),
+                    onTap: () {
+                      AppScope.read(context).markNotificationRead(n.id);
+                      final page = (onOpen ?? employeeTarget)(context, n);
+                      if (page != null) {
+                        Navigator.push(context, MaterialPageRoute(builder: (_) => page));
+                      }
+                    },
+                  ),
+                );
+              },
+            ),
+    );
+  }
 }
