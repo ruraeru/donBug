@@ -3,6 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 
 import 'package:donbug/data/app_scope.dart';
 import 'package:donbug/data/app_store.dart';
+import 'package:donbug/data/format.dart';
 import 'package:donbug/data/models.dart';
 import 'package:donbug/main.dart';
 import 'package:donbug/screens/employee/contract_sign_screen.dart';
@@ -23,6 +24,7 @@ import 'package:donbug/screens/employee/substitute_status_screen.dart';
 import 'package:donbug/screens/employee/work_log_screen.dart';
 import 'package:donbug/screens/employer/attendance_detail_screen.dart';
 import 'package:donbug/screens/employer/attendance_screen.dart';
+import 'package:donbug/screens/employer/employer_parts.dart';
 import 'package:donbug/screens/employer/employer_payroll_detail_screen.dart';
 import 'package:donbug/screens/employer/employer_payroll_settings_screen.dart';
 import 'package:donbug/screens/employer/employer_contract_write_screen.dart';
@@ -44,6 +46,9 @@ import 'package:donbug/screens/employer/store_settings_screen.dart';
 import 'package:donbug/screens/employer/substitute_approval_screen.dart';
 import 'package:donbug/screens/employer/substitute_done_screen.dart' as employer;
 import 'package:donbug/screens/employer/staff_detail_screen.dart';
+import 'package:donbug/screens/web/web_common.dart';
+import 'package:donbug/widgets/common.dart';
+import 'package:donbug/screens/web/web_pos_qr_screen.dart';
 import 'package:donbug/screens/web/web_shell.dart';
 import 'package:donbug/theme.dart';
 
@@ -390,8 +395,126 @@ void main() {
     }
   });
 
-  testWidgets('웹 셸', (tester) async {
-    await pumpAt(tester, const WebShell(), const Size(1440, 1024));
+  testWidgets('웹 셸: 모든 메뉴가 오류 없이 그려진다', (tester) async {
+    await pumpAt(tester, const WebShell(), const Size(1440, 1024), store: employerStore());
+    await visitTabs(tester, ['직원 관리', '인건비', '서류·컴플라이언스', '공지', 'AI 노무 도우미', '대시보드', '근무표']);
+    await tester.tap(find.text('다른 보기'));
+    await tester.pumpAndSettle();
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('웹 대시보드: 대타 승인 → 근무표에 반영', (tester) async {
+    final store = await pumpAt(tester, const WebShell(), const Size(1440, 1024),
+        store: employerStore());
+    final req = store.pendingSubs.firstWhere((r) => r.status == SubStatus.accepted);
+    await tester.tap(find.widgetWithText(WebButton, '승인'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('승인').last);
+    await tester.pumpAndSettle();
+    expect(store.subById(req.id)!.status, SubStatus.approved);
+    expect(store.shiftById(req.shiftId)!.staffId, req.acceptedId);
+  });
+
+  testWidgets('웹 직원 관리: 행을 누르면 모바일 상세 패널, 뒤로 가면 닫힘', (tester) async {
+    await pumpAt(tester, const WebShell(), const Size(1440, 1024), store: employerStore());
+    await tester.tap(find.text('직원 관리'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('상세 ›').first);
+    await tester.pumpAndSettle();
+    expect(find.byType(StaffDetailScreen), findsOneWidget);
+    await tester.tap(find.descendant(of: find.byType(AppHeader), matching: find.byType(InkWell)).first);
+    await tester.pumpAndSettle();
+    expect(find.byType(StaffDetailScreen), findsNothing);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('웹 근무표: 직원을 칸에 끌어다 놓으면 배정', (tester) async {
+    final store = await pumpAt(tester, const WebShell(), const Size(1440, 1024),
+        store: employerStore());
+    await tester.tap(find.text('근무표'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('›'));
+    await tester.pumpAndSettle();
+    final before = store.state.shifts.length;
+    // 다음 주 일요일 마지막 파트 칸(마지막 DragTarget)으로, 그날 근무가 없는 직원을 끌어 놓는다.
+    final sunday = mondayOf(store.today).add(const Duration(days: 13));
+    final free = store.activeStaff
+        .firstWhere((m) => store.shiftsOn(sunday).every((s) => s.staffId != m.id));
+    final name = store.personOf(free).name;
+    final from = tester.getCenter(find.descendant(
+        of: find.byType(Draggable<String>), matching: find.text(name)));
+    final to = tester.getCenter(find.byType(DragTarget<String>).last);
+    final g = await tester.startGesture(from);
+    await g.moveBy(const Offset(-20, 0));
+    await g.moveTo(to);
+    await g.up();
+    await tester.pumpAndSettle();
+    expect(store.state.shifts.length, before + 1);
+    expect(store.shiftsOn(sunday).where((s) => s.staffId == free.id), hasLength(1));
+  });
+
+  testWidgets('웹 공지: 미확인자 리마인드', (tester) async {
+    final store = await pumpAt(tester, const WebShell(), const Size(1440, 1024),
+        store: employerStore());
+    await tester.tap(find.text('공지'));
+    await tester.pumpAndSettle();
+    final n = store.storeNotices.first;
+    await tester.tap(find.text('미확인자 리마인드'));
+    await tester.pumpAndSettle();
+    expect(store.noticeById(n.id)!.remindedAt, isNotNull);
+  });
+
+  testWidgets('웹 POS: QR 을 누르면 다음 근무자 출근', (tester) async {
+    final store = employerStore();
+    await pumpAt(tester, const WebPosQrScreen(), const Size(1440, 1024), store: store);
+    final waiting =
+        store.shiftsOn(store.today).where((s) => store.attendanceFor(s.id) == null).length;
+    await tester.tap(find.text('QR'));
+    await tester.pump();
+    expect(find.textContaining('출근 완료'), findsOneWidget);
+    expect(
+        store.shiftsOn(store.today).where((s) => store.attendanceFor(s.id) == null).length,
+        waiting - 1);
+    await tester.pump(const Duration(seconds: 4));
+    expect(find.textContaining('출근 완료'), findsNothing);
+  });
+
+  testWidgets('웹 패널: 모바일 화면들이 패널 안에서 열리고 닫힌다', (tester) async {
+    final store = await pumpAt(tester, const WebShell(), const Size(1440, 1024),
+        store: employerStore());
+    final ctx = tester.element(find.byType(WebShell));
+    final subin = subinId(store);
+    final t = store.today;
+    final pages = <String, Widget>{
+      'notifications': const NotificationCenterScreen(onOpen: employerTarget),
+      'attendance': const AttendanceScreen(),
+      'subs': const SubstituteApprovalScreen(),
+      'code': const StoreCodeScreen(),
+      'approval': const StaffApprovalScreen(),
+      'payroll': EmployerPayrollDetailScreen(staffId: subin, month: DateTime(t.year, t.month)),
+      'docs': EmployerStaffDocumentsScreen(staffId: subin),
+      'contract': const EmployerContractWriteScreen(),
+      'notice': const Scaffold(body: EmployerNoticeScreen()),
+      'template': const ScheduleTemplateScreen(),
+      'shiftAdd': ShiftAddScreen(date: t),
+    };
+    for (final e in pages.entries) {
+      showMobilePanel(ctx, e.value);
+      await tester.pumpAndSettle();
+      expect(tester.takeException(), isNull, reason: e.key);
+      expect(find.byWidget(e.value), findsOneWidget, reason: e.key);
+      await tester.tap(find.byTooltip('닫기'));
+      await tester.pumpAndSettle();
+      expect(find.byWidget(e.value), findsNothing, reason: e.key);
+    }
+
+    // 화면을 모두 닫는 이동(pushAndRemoveUntil)은 패널을 닫는다.
+    showMobilePanel(ctx, const StaffApprovalScreen());
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('대시보드로 이동'));
+    await tester.pumpAndSettle();
+    expect(find.byType(StaffApprovalScreen), findsNothing);
+    expect(find.byType(EmployerShell), findsNothing);
     expect(tester.takeException(), isNull);
   });
 }

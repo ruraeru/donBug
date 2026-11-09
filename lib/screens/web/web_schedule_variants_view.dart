@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../../theme.dart';
+import '../../widgets/common.dart';
 import 'web_schedule_common.dart';
 import 'web_schedule_daily_timeline.dart';
 import 'web_schedule_flex_board.dart';
@@ -8,6 +10,7 @@ import 'web_schedule_weekly_calendar.dart';
 import 'web_schedule_weekly_matrix.dart';
 
 /// 웹 근무표 변형 W2-A~E (Figma 섹션 53:2). 사이드바 없는 콘텐츠 영역만.
+/// 디자인 시안이라 데이터에 연결하지 않고 예시 데이터([webWeekCodes] 등)로 그린다.
 /// 높이가 정해진 곳(예: 셸의 Expanded)에 넣는다.
 class WebScheduleVariantsView extends StatefulWidget {
   const WebScheduleVariantsView({super.key});
@@ -33,6 +36,9 @@ class _WebScheduleVariantsViewState extends State<WebScheduleVariantsView> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            const NoteBox('근무표 개편 디자인 시안이에요. 예시 데이터로 보여요. 실제 근무표는 기본 보기에서 편집해요.',
+                color: AppColors.accent, background: AppColors.accentSoft),
+            const SizedBox(height: 16),
             SingleChildScrollView(
               scrollDirection: Axis.horizontal,
               child: WebSegmented(

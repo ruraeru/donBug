@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 
+import '../../data/app_scope.dart';
 import '../../theme.dart';
+import '../../widgets/common.dart';
 import 'web_ai_assistant_screen.dart';
 import 'web_common.dart';
 import 'web_dashboard_screen.dart';
@@ -22,14 +24,11 @@ class WebShell extends StatefulWidget {
 
 class _WebShellState extends State<WebShell> {
   static const _menu = ['대시보드', '근무표', '직원 관리', '인건비', '서류·컴플라이언스', '공지', 'AI 노무 도우미'];
-  static const _noticeIndex = 5;
-
   int _page = 0;
   bool _altSchedule = false;
 
   Widget _content() => switch (_page) {
-        0 => WebDashboardScreen(
-            onWriteNotice: () => setState(() => _page = _noticeIndex)),
+        0 => WebDashboardScreen(onNavigate: (i) => setState(() => _page = i)),
         1 => Column(children: [
             Padding(
               padding: const EdgeInsets.fromLTRB(32, 12, 32, 0),
@@ -54,6 +53,17 @@ class _WebShellState extends State<WebShell> {
         5 => const WebNoticeScreen(),
         _ => const WebAiAssistantScreen(),
       };
+
+  Future<void> _resetDemo(BuildContext context) async {
+    final ok = await showConfirmDialog(
+      context,
+      title: '데모 데이터를 초기화할까요?',
+      message: '바꾼 내용이 모두 사라지고 처음 데이터로 돌아가요.',
+      confirmLabel: '초기화',
+      confirmVariant: AppButtonVariant.danger,
+    );
+    if (ok && context.mounted) AppScope.read(context).resetDemo();
+  }
 
   @override
   Widget build(BuildContext context) => Scaffold(
@@ -90,6 +100,11 @@ class _WebShellState extends State<WebShell> {
                           MaterialPageRoute(builder: (_) => const WebPosQrScreen())),
                     ),
                   ),
+                  TextButton(
+                    onPressed: () => _resetDemo(context),
+                    child: Text('데모 데이터 초기화',
+                        style: AppText.style(12, FontWeight.w500, AppColors.textTertiary)),
+                  ),
                 ]),
               ),
             ),
@@ -117,7 +132,7 @@ class _Logo extends StatelessWidget {
           const SizedBox(width: 10),
           Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
             Text('돈벌래', style: AppText.style(16, FontWeight.w700)),
-            Text('카페 커푸치노',
+            Text(AppScope.of(context).store.name,
                 style: AppText.style(11, FontWeight.w400, AppColors.textSecondary)),
           ]),
         ]),

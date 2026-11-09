@@ -4,7 +4,7 @@ Flutter app (돈벌래 - 스마트 매장 관리 앱). 소상공인 사장님·�
 
 현재 상태: **프로토타입**. 백엔드·실제 로그인 없이 기기 안 데이터(`lib/data/`)로 동작한다.
 - 모바일 알바생·사장님 화면은 전부 데이터에 연결돼 있다.
-- 웹(`lib/screens/web/`)은 아직 하드코딩 화면이다. store 만 주입돼 있고, 연결은 다음 단계다.
+- 웹(`lib/screens/web/`)도 사장님 W1–W6, POS W8–W9 가 데이터에 연결돼 있다. 근무표 변형 A–E("다른 보기")만 디자인 시안이라 예시 데이터다.
 - AI 노무 도우미(모바일 B6, 웹 W7)는 "추후 개발 예정" 안내만 있다. 모바일 B6 은 진입 경로가 없다.
 
 ## Design (Figma)
@@ -56,7 +56,7 @@ Flutter SDK는 PATH에 없음. 프로젝트 루트의 로컬 SDK 사용 (`/flutt
 
 - `lib/main.dart`
   - prefs 에서 상태를 읽어 `AppStore` 를 만들고 `MyApp(store:)` 을 `AppScope` 로 감싼다.
-  - 웹이면 `WebShell`. 그 밖에는 로그인 상태면 역할 셸(`EmployeeShell` / `EmployerShell`), 아니면 `LoginScreen`.
+  - 웹이면 역할을 사장님으로 고정하고 로그인 없이 `WebShell`. 그 밖에는 로그인 상태면 역할 셸(`EmployeeShell` / `EmployerShell`), 아니면 `LoginScreen`.
 - `lib/data/` — 프로토타입 데이터 계층
   - `models.dart`: `Person`(보건증은 사람 단위), `Store`, `Staff`(매장별 소속. 가입 신청 = `status: pending`, 계약서 포함), `Shift`, `Attendance`, `SubstituteRequest`, `Notice`, `AppNotification`, `Session`, `AppState`. 수동 JSON 직렬화.
   - `app_store.dart`: `AppStore extends ChangeNotifier`. 조회·파생값(내 근무, 출근 상태, 대타, 급여, 인건비, 안 읽은 수)과 모든 액션(출퇴근, 대타, 근무표, 직원, 공지, 서류, 매장, 세션, 데모). 액션마다 관련자에게 `AppNotification` 을 만든다.
@@ -74,7 +74,11 @@ Flutter SDK는 PATH에 없음. 프로젝트 루트의 로컬 SDK 사용 (`/flutt
 - `lib/widgets/tab_shell.dart` — 하단 탭 셸. `TabShell.of(context)?.select(i)`로 탭 전환.
 - `lib/screens/employee/` — 알바생 화면. 전용 위젯은 `employee_parts.dart`(`CheckLine`, `ShiftHeroCard`, `TabTitle`, `SignaturePad`, `shiftStatus`).
 - `lib/screens/employer/` — 사장님 화면. 전용 위젯은 `employer_parts.dart`(`SegmentedPicker`, `CountStepper`, `SmallButton`, `SuccessStepsScaffold`, `showWageDialog`, `pickStaff`, `pickTime`, `partColors`, `attStyle`, `employerTarget`).
-- `lib/screens/web/` — 사장님 웹(W1–W7)과 POS QR(W8–W9). 웹 공용은 `web_common.dart`, 근무표 변형(A–E)은 `web_schedule_*.dart`. 아직 하드코딩.
+- `lib/screens/web/` — 사장님 웹(W1–W7)과 POS QR(W8–W9).
+  - 웹 공용은 `web_common.dart`: `WebPage`, `WebTable`(`onRowTap`), `webStaffCell`, `showMobilePanel`.
+  - 상세·작성 흐름은 모바일 사장님 화면을 `showMobilePanel` 로 폰 크기 패널에 띄워 재사용한다. 패널 안 이동은 패널 안에서만 일어나고, 첫 화면에서 뒤로 가거나 화면을 모두 닫으면 패널이 닫힌다.
+  - 근무표(W2): 직원을 칸에 끌어다 놓으면 그 파트 시간으로 배정, 칸의 이름을 누르면 삭제.
+  - 근무표 변형(A–E)은 `web_schedule_*.dart`. 디자인 시안이라 데이터에 연결하지 않는다.
 - `assets/icons/` — Figma에서 받은 SVG (`flutter_svg`). `assets/fonts/` — Noto Sans KR 400/500/700 (OFL).
 
 ## 프로토타입 데이터 규칙
@@ -97,7 +101,8 @@ Flutter SDK는 PATH에 없음. 프로젝트 루트의 로컬 SDK 사용 (`/flutt
   - 시급은 최저임금 미만으로 저장할 수 없다.
 - 인건비 추이의 2달 전 이전은 `Store.monthlyTotals` 상수다.
 - 데모 장치
-  - 역할 전환·초기화: `DemoMenu`(알바생 MY, 사장님 매장 설정)
+  - 역할 전환·초기화: `DemoMenu`(알바생 MY, 사장님 매장 설정). 웹은 사이드바 "데모 데이터 초기화"
+  - POS QR(웹 W8): QR 을 누르면 오늘 아직 출근하지 않은 다음 근무자가 출근
   - "동료 수락 (데모)" 버튼: 대타 요청 현황
   - "사장님이 승인한 것으로 (데모)" 버튼: 가입 대기
   - 탭하면 성공하는 모의 동작: QR 스캔, 보건증 사진
