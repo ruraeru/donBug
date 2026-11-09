@@ -24,6 +24,9 @@ class AiLaborAssistantScreen extends StatelessWidget {
       body: ListView(
         padding: const EdgeInsets.fromLTRB(20, 8, 20, 12),
         children: [
+          const NoteBox('추후 개발 예정인 기능이에요. 아래 화면은 예시예요.',
+              color: AppColors.accent, background: AppColors.accentSoft),
+          const SizedBox(height: 14),
           _Bubble(
             ai: true,
             child: Text('안녕하세요! 노동법이나 매장 관리, 궁금한 걸 편하게 물어보세요.',

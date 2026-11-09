@@ -33,6 +33,8 @@ class _WebAiAssistantScreenState extends State<WebAiAssistantScreen> {
         title: 'AI 노무 도우미',
         subtitle: 'Gemini 기반 · 5인 미만 사업장 노무 질의응답',
         children: [
+          const NoteBox('추후 개발 예정인 기능이에요. 아래 화면은 예시예요.',
+              color: AppColors.accent, background: AppColors.accentSoft),
           WebSplit(
             rightWidth: 320,
             gap: 20,

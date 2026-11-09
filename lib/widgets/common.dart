@@ -81,7 +81,7 @@ class Pill extends StatelessWidget {
       );
 }
 
-enum AppButtonVariant { primary, soft, surface, outline }
+enum AppButtonVariant { primary, soft, surface, outline, danger }
 
 /// 가로 꽉 찬 radius 14 버튼.
 class AppButton extends StatelessWidget {
@@ -111,6 +111,7 @@ class AppButton extends StatelessWidget {
       AppButtonVariant.soft => (AppColors.primarySoft, AppColors.primary),
       AppButtonVariant.surface => (AppColors.surface, AppColors.primary),
       AppButtonVariant.outline => (AppColors.surface, AppColors.textPrimary),
+      AppButtonVariant.danger => (AppColors.dangerSoft, AppColors.danger),
     };
     return Material(
       color: bg,
@@ -502,3 +503,55 @@ class FieldBox extends StatelessWidget {
         child: Text(value, style: AppText.style(15)),
       );
 }
+
+/// 취소 / 확인 두 버튼 다이얼로그. 확인을 누르면 true.
+Future<bool> showConfirmDialog(
+  BuildContext context, {
+  required String title,
+  required String message,
+  required String confirmLabel,
+  AppButtonVariant confirmVariant = AppButtonVariant.primary,
+}) async =>
+    await showDialog<bool>(
+      context: context,
+      builder: (context) => Dialog(
+        backgroundColor: AppColors.surface,
+        surfaceTintColor: Colors.transparent,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(20, 24, 20, 20),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(title, style: AppText.style(18, FontWeight.w700)),
+              const SizedBox(height: 8),
+              Text(message,
+                  style: AppText.style(
+                      14, FontWeight.w400, AppColors.textSecondary)),
+              const SizedBox(height: 20),
+              Row(
+                children: [
+                  Expanded(
+                    child: AppButton('취소',
+                        variant: AppButtonVariant.outline,
+                        verticalPadding: 13,
+                        fontSize: 15,
+                        onPressed: () => Navigator.pop(context, false)),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: AppButton(confirmLabel,
+                        variant: confirmVariant,
+                        verticalPadding: 13,
+                        fontSize: 15,
+                        onPressed: () => Navigator.pop(context, true)),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    ) ??
+    false;
