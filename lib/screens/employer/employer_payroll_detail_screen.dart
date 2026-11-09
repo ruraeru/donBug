@@ -1,77 +1,68 @@
 import 'package:flutter/material.dart';
 
+import '../../data/app_scope.dart';
+import '../../data/format.dart';
 import '../../theme.dart';
 import '../../widgets/common.dart';
 import 'employer_payroll_settings_screen.dart';
 
 /// 직원 급여 상세 (Figma 48:101).
 class EmployerPayrollDetailScreen extends StatelessWidget {
-  const EmployerPayrollDetailScreen({super.key});
+  const EmployerPayrollDetailScreen({super.key, required this.staffId, required this.month});
+
+  final String staffId;
+  final DateTime month;
 
   @override
-  Widget build(BuildContext context) => Scaffold(
-        appBar: const AppHeader('수빈 · 5월 급여'),
-        body: ListView(
-          padding: const EdgeInsets.fromLTRB(20, 8, 20, 16),
-          children: [
-            AppCard(
-              color: AppColors.primary,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text('실수령 예정액',
-                      style: AppText.style(13, FontWeight.w500, AppColors.onPrimary)),
-                  const SizedBox(height: 6),
-                  Text('₩ 1,120,400',
-                      style: AppText.style(34, FontWeight.w700, AppColors.onPrimary)),
-                  const SizedBox(height: 6),
-                  Text('세전 ₩1,158,700 − 공제 ₩38,300 (3.3%)',
-                      style: AppText.style(13, FontWeight.w400, AppColors.onPrimary)),
-                ],
-              ),
+  Widget build(BuildContext context) {
+    final store = AppScope.of(context);
+    final s = store.staffById(staffId);
+    if (s == null) return const MissingScreen(title: '급여 상세');
+    final current = month.year == store.today.year && month.month == store.today.month;
+    final p = store.payslip(s.id, month.year, month.month, projected: current);
+    final edited = store.state.attendance
+        .where((a) =>
+            a.staffId == s.id &&
+            a.editReason != null &&
+            (store.shiftById(a.shiftId)?.date.startsWith(ym(month)) ?? false))
+        .length;
+    return Scaffold(
+      appBar: AppHeader('${store.personOf(s).name} · ${month.month}월 급여'),
+      body: ListView(
+        padding: const EdgeInsets.fromLTRB(20, 8, 20, 16),
+        children: [
+          AppCard(
+            color: AppColors.primary,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(current ? '실수령 예정액 (예정 근무 포함)' : '실수령액',
+                    style: AppText.style(13, FontWeight.w500, AppColors.onPrimary)),
+                const SizedBox(height: 6),
+                Text(won(p.net), style: AppText.style(34, FontWeight.w700, AppColors.onPrimary)),
+                const SizedBox(height: 6),
+                Text('세전 ${won(p.gross)} − 공제 ${won(p.deduction)} (${s.deduction.short})',
+                    style: AppText.style(13, FontWeight.w400, AppColors.onPrimary)),
+              ],
             ),
-            const SizedBox(height: 14),
-            AppCard(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text('지급 내역',
-                      style: AppText.style(14, FontWeight.w700, AppColors.textSecondary)),
-                  const SizedBox(height: 12),
-                  const KeyValueRow('기본급 (88시간 × 10,030원)', '882,640원', valueWeight: FontWeight.w400),
-                  const SizedBox(height: 12),
-                  const KeyValueRow('주휴수당', '150,540원', valueWeight: FontWeight.w400),
-                  const SizedBox(height: 12),
-                  const KeyValueRow('야간·연장 가산', '125,520원', valueWeight: FontWeight.w400),
-                  const SizedBox(height: 12),
-                  const KeyValueRow('휴일 가산', '0원', valueWeight: FontWeight.w400),
-                  const SizedBox(height: 12),
-                  const Divider(height: 1, color: AppColors.border),
-                  const SizedBox(height: 12),
-                  const KeyValueRow('세전 합계', '1,158,700원'),
-                ],
-              ),
-            ),
-            const SizedBox(height: 14),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-              decoration: BoxDecoration(
-                color: AppColors.infoSoft,
-                borderRadius: BorderRadius.circular(14),
-              ),
-              child: Text(
-                '근태 기록(QR 인증 · 연장 12분 포함)을 기준으로 자동 계산된 금액이에요.',
-                style: AppText.style(13, FontWeight.w400, AppColors.info),
-              ),
-            ),
-          ],
-        ),
-        bottomNavigationBar: BottomBar.button(
-          '급여 설정 변경',
-          onPressed: () => Navigator.push(
-            context,
-            MaterialPageRoute(builder: (_) => const EmployerPayrollSettingsScreen()),
           ),
+          const SizedBox(height: 14),
+          PayBreakdown(slip: p, staff: s, title: '지급 · 공제 내역'),
+          const SizedBox(height: 14),
+          NoteBox(
+            '근태 기록(QR 인증${edited > 0 ? ' · 수동 수정 $edited건' : ''})을 기준으로 자동 계산된 금액이에요.',
+            color: AppColors.info,
+            background: AppColors.infoSoft,
+          ),
+        ],
+      ),
+      bottomNavigationBar: BottomBar.button(
+        '급여 설정 변경',
+        onPressed: () => Navigator.push(
+          context,
+          MaterialPageRoute(builder: (_) => EmployerPayrollSettingsScreen(staffId: s.id)),
         ),
-      );
+      ),
+    );
+  }
 }

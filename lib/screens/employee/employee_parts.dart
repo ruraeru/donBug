@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import '../../data/app_store.dart';
 import '../../data/format.dart';
 import '../../data/models.dart';
-import '../../data/payroll.dart';
 import '../../theme.dart';
 import '../../widgets/common.dart';
 
@@ -135,86 +134,6 @@ class TabTitle extends StatelessWidget {
 }
 
 
-/// '‹ 5월 ›' 월 이동.
-class MonthNav extends StatelessWidget {
-  const MonthNav({super.key, required this.month, required this.onChanged, this.max});
-
-  final DateTime month;
-  final ValueChanged<DateTime> onChanged;
-
-  /// 이 달 이후로는 못 간다.
-  final DateTime? max;
-
-  @override
-  Widget build(BuildContext context) {
-    final canNext = max == null || DateTime(month.year, month.month + 1).isBefore(
-        DateTime(max!.year, max!.month + 1));
-    Widget arrow(String t, bool on, int d) => InkWell(
-          onTap: on ? () => onChanged(DateTime(month.year, month.month + d)) : null,
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 8),
-            child: Text(t,
-                style: AppText.style(
-                    22, FontWeight.w400, on ? AppColors.textPrimary : AppColors.border)),
-          ),
-        );
-    return Row(mainAxisSize: MainAxisSize.min, children: [
-      arrow('‹', true, -1),
-      Pill('${month.month}월'),
-      arrow('›', canNext, 1),
-    ]);
-  }
-}
-
-/// 급여 내역 카드 (급여 탭 · 명세서 공용).
-class PayBreakdown extends StatelessWidget {
-  const PayBreakdown({super.key, required this.slip, required this.staff, this.title});
-
-  final Payslip slip;
-  final Staff staff;
-  final String? title;
-
-  @override
-  Widget build(BuildContext context) {
-    const divider = Divider(height: 1, color: AppColors.border);
-    const regular = FontWeight.w500;
-    final estimate = staff.deduction == Deduction.insurance ? ' · 예상' : '';
-    return AppCard(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          if (title != null) ...[
-            Text(title!, style: AppText.style(15, FontWeight.w700)),
-            const SizedBox(height: 14),
-          ],
-          KeyValueRow('기본급 (${hours(slip.minutes)} × ${wonText(staff.wage)})', won(slip.base),
-              valueWeight: regular),
-          const SizedBox(height: 14),
-          KeyValueRow('주휴수당', won(slip.weeklyHoliday), valueWeight: regular),
-          if (slip.premium > 0) ...[
-            const SizedBox(height: 14),
-            KeyValueRow('야간·연장 가산', won(slip.premium), valueWeight: regular),
-          ],
-          const SizedBox(height: 14),
-          divider,
-          const SizedBox(height: 14),
-          KeyValueRow('총 급여', won(slip.gross), valueWeight: regular),
-          const SizedBox(height: 14),
-          KeyValueRow('${staff.deduction.label}$estimate', won(-slip.deduction),
-              valueWeight: regular, valueColor: AppColors.danger),
-          const SizedBox(height: 14),
-          divider,
-          const SizedBox(height: 14),
-          KeyValueRow('실수령액', won(slip.net),
-              labelStyle: AppText.style(16, FontWeight.w700),
-              valueSize: 18,
-              valueColor: AppColors.primary),
-        ],
-      ),
-    );
-  }
-}
-
 /// 손가락으로 그리는 서명 칸(데모: 획이 있는지만 쓴다).
 class SignaturePad extends StatefulWidget {
   const SignaturePad({super.key, required this.onChanged});
@@ -297,18 +216,4 @@ class _InkPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(_InkPainter old) => true;
-}
-
-/// 보건증 상태 칩.
-Pill certPill(int? daysLeft) {
-  if (daysLeft == null) {
-    return const Pill('미등록', color: AppColors.danger, background: AppColors.dangerSoft);
-  }
-  if (daysLeft < 0) {
-    return const Pill('만료됨', color: AppColors.danger, background: AppColors.dangerSoft);
-  }
-  final label = daysLeft == 0 ? '만료 D-Day' : '만료 D-$daysLeft';
-  return daysLeft <= 30
-      ? Pill(label, color: AppColors.danger, background: AppColors.dangerSoft)
-      : Pill(label);
 }

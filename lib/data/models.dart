@@ -91,6 +91,7 @@ class Store {
     this.isSmall = true,
     this.noticeRequiredDefault = true,
     this.substitutePush = true,
+    this.defaultDeduction = Deduction.biz33,
     required this.parts,
     Map<String, int>? monthlyTotals,
   }) : monthlyTotals = monthlyTotals ?? {};
@@ -105,6 +106,9 @@ class Store {
   bool isSmall;
   bool noticeRequiredDefault;
   bool substitutePush;
+
+  /// 직원 가입 승인 때 기본으로 고르는 공제.
+  Deduction defaultDeduction;
   List<PartTemplate> parts;
 
   /// 'yyyy-MM' → 지난 달 인건비 합계(추이 차트용 상수).
@@ -119,6 +123,7 @@ class Store {
         'isSmall': isSmall,
         'noticeRequiredDefault': noticeRequiredDefault,
         'substitutePush': substitutePush,
+        'defaultDeduction': defaultDeduction.name,
         'parts': [for (final p in parts) p.toJson()],
         'monthlyTotals': monthlyTotals,
       };
@@ -132,6 +137,7 @@ class Store {
         isSmall: j['isSmall'],
         noticeRequiredDefault: j['noticeRequiredDefault'],
         substitutePush: j['substitutePush'],
+        defaultDeduction: _enum(Deduction.values, j['defaultDeduction'], Deduction.biz33),
         parts: [for (final p in j['parts']) PartTemplate.fromJson(p)],
         monthlyTotals: (j['monthlyTotals'] as Map).cast<String, int>(),
       );

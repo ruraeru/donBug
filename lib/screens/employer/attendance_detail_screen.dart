@@ -1,14 +1,73 @@
 import 'package:flutter/material.dart';
 
+import '../../data/app_scope.dart';
+import '../../data/format.dart';
 import '../../theme.dart';
 import '../../widgets/common.dart';
+import 'employer_parts.dart';
 
-/// 근태 상세 · 수정 (Figma 47:453).
-class AttendanceDetailScreen extends StatelessWidget {
-  const AttendanceDetailScreen({super.key});
+/// 근태 상세 · 수정 (Figma 47:453). 출근 기록이 없으면 새로 만든다.
+class AttendanceDetailScreen extends StatefulWidget {
+  const AttendanceDetailScreen({super.key, required this.shiftId});
+
+  final String shiftId;
+
+  @override
+  State<AttendanceDetailScreen> createState() => _AttendanceDetailScreenState();
+}
+
+class _AttendanceDetailScreenState extends State<AttendanceDetailScreen> {
+  final _reason = TextEditingController();
+  int? _in;
+  int? _out;
+
+  @override
+  void initState() {
+    super.initState();
+    final store = AppScope.read(context);
+    final s = store.shiftById(widget.shiftId);
+    if (s == null) return;
+    final a = store.attendanceFor(s.id);
+    final day = parseYmd(s.date);
+    int minutesOf(String iso) => DateTime.parse(iso).difference(day).inMinutes;
+    _in = a == null ? s.startMin : minutesOf(a.clockIn);
+    _out = a?.clockOut == null ? s.endAbs : minutesOf(a!.clockOut!);
+    _reason.text = a?.editReason ?? '';
+  }
+
+  @override
+  void dispose() {
+    _reason.dispose();
+    super.dispose();
+  }
+
+  void _save() {
+    final store = AppScope.read(context);
+    final s = store.shiftById(widget.shiftId)!;
+    if (_reason.text.trim().isEmpty) return showToast(context, '수정 사유를 입력해 주세요');
+    var out = _out!;
+    if (out <= _in!) out += 1440;
+    final day = parseYmd(s.date);
+    final inAt = day.add(Duration(minutes: _in!));
+    final outAt = day.add(Duration(minutes: out));
+    final a = store.attendanceFor(s.id);
+    if (a == null) {
+      store.createAttendance(s.id, clockIn: inAt, clockOut: outAt, reason: _reason.text.trim());
+    } else {
+      store.editAttendance(a.id, clockIn: inAt, clockOut: outAt, reason: _reason.text.trim());
+    }
+    Navigator.pop(context);
+    showToast(context, '근태 기록을 저장했어요');
+  }
 
   @override
   Widget build(BuildContext context) {
+    final store = AppScope.of(context);
+    final s = store.shiftById(widget.shiftId);
+    if (s == null) return const MissingScreen(title: '근태 상세');
+    final a = store.attendanceFor(s.id);
+    final late = store.lateMinutes(s);
+    final (label, fg, bg) = attStyle(store.attendanceStatus(s));
     final small = AppText.style(12, FontWeight.w400, AppColors.textSecondary);
     return Scaffold(
       appBar: const AppHeader('근태 상세 · 수정'),
@@ -20,32 +79,32 @@ class AttendanceDetailScreen extends StatelessWidget {
               children: [
                 Row(
                   children: [
-                    const LetterAvatar('수',
-                        color: AppColors.danger, background: AppColors.dangerSoft),
+                    MemberAvatar(store.staffById(s.staffId)!),
                     const SizedBox(width: 12),
                     Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text('수빈 · 오픈', style: AppText.style(16, FontWeight.w700)),
-                          Text('5/14(수) 예정 10:00 – 16:00', style: small),
+                          Text('${store.nameOf(s.staffId)} · ${s.part}',
+                              style: AppText.style(16, FontWeight.w700)),
+                          Text('${shiftDay(s)} 예정 ${shiftTime(s)}', style: small),
                         ],
                       ),
                     ),
-                    const Pill('지각 12분',
-                        color: AppColors.danger, background: AppColors.dangerSoft),
+                    Pill(late > 0 ? '지각 $late분' : label, color: fg, background: bg),
                   ],
                 ),
                 const SizedBox(height: 12),
                 const Divider(height: 1, color: AppColors.border),
                 const SizedBox(height: 12),
-                const KeyValueRow('실제 출근', '10:12'),
+                KeyValueRow('실제 출근', a == null ? '-' : clock(DateTime.parse(a.clockIn))),
                 const SizedBox(height: 12),
-                const KeyValueRow('실제 퇴근', '16:05'),
+                KeyValueRow('실제 퇴근',
+                    a?.clockOut == null ? (a == null ? '-' : '근무 중') : clock(DateTime.parse(a!.clockOut!))),
                 const SizedBox(height: 12),
-                const KeyValueRow('인증 방식', 'QR'),
+                KeyValueRow('인증 방식', a == null ? '-' : (a.editReason == null ? 'QR' : 'MANUAL (수정됨)')),
                 const SizedBox(height: 12),
-                const KeyValueRow('연장 근무', '5분'),
+                KeyValueRow('연장 근무', a == null ? '-' : duration(store.overtimeMinutes(a))),
               ],
             ),
           ),
@@ -54,19 +113,31 @@ class AttendanceDetailScreen extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('기록 수정',
+                Text(a == null ? '기록 직접 입력' : '기록 수정',
                     style: AppText.style(14, FontWeight.w700, AppColors.textSecondary)),
                 const SizedBox(height: 12),
                 Row(
                   children: [
-                    Expanded(child: _timeField('출근', '10:00', small)),
+                    Expanded(
+                      child: LabeledField('출근',
+                          child: FieldBox(hm(_in!), onTap: () async {
+                            final m = await pickTime(context, _in!);
+                            if (m != null) setState(() => _in = m);
+                          })),
+                    ),
                     const SizedBox(width: 12),
-                    Expanded(child: _timeField('퇴근', '16:05', small)),
+                    Expanded(
+                      child: LabeledField('퇴근',
+                          child: FieldBox(hm(_out!), onTap: () async {
+                            final m = await pickTime(context, _out!);
+                            if (m != null) setState(() => _out = m);
+                          })),
+                    ),
                   ],
                 ),
                 const SizedBox(height: 12),
-                _greyBox(Text('수정 사유 (필수): 지하철 지연, 사전 연락 받음',
-                    style: AppText.style(13, FontWeight.w400, AppColors.textSecondary))),
+                LabeledField('수정 사유 (필수)',
+                    child: AppTextField(controller: _reason, hint: '예: 지하철 지연, 사전 연락 받음')),
               ],
             ),
           ),
@@ -78,28 +149,7 @@ class AttendanceDetailScreen extends StatelessWidget {
           ),
         ],
       ),
-      bottomNavigationBar: BottomBar(children: [
-        AppButton('수정 저장', onPressed: () => Navigator.pop(context)),
-      ]),
+      bottomNavigationBar: BottomBar(children: [AppButton('수정 저장', onPressed: _save)]),
     );
   }
-
-  Widget _timeField(String label, String value, TextStyle labelStyle) => Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(label, style: labelStyle),
-          const SizedBox(height: 6),
-          _greyBox(Text(value, style: AppText.style(15, FontWeight.w700))),
-        ],
-      );
-
-  Widget _greyBox(Widget child) => Container(
-        width: double.infinity,
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-        decoration: BoxDecoration(
-          color: AppColors.bg,
-          borderRadius: BorderRadius.circular(12),
-        ),
-        child: child,
-      );
 }

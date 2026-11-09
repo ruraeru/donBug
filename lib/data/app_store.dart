@@ -698,7 +698,7 @@ class AppStore extends ChangeNotifier {
     s
       ..status = StaffStatus.active
       ..wage = wage
-      ..deduction = deduction ?? s.deduction
+      ..deduction = deduction ?? storeById(s.storeId)!.defaultDeduction
       ..joinedAt = ymd(today);
     _notifyStaff(s.id, 'join', '${storeById(s.storeId)!.name} 가입이 승인됐어요',
         body: '시급 ${wonText(wage)}', refId: s.id);
@@ -842,12 +842,17 @@ class AppStore extends ChangeNotifier {
 
   /// 사장님 매장을 만든다. 데모 사장님은 이미 매장이 있으므로 그 매장 정보를 바꾼다.
   /// shortcut: 사장님 1인 1매장. 여러 매장을 운영하게 하려면 매장 목록·전환이 필요하다.
-  Store createStore({required String name, required String address, required bool isSmall}) {
+  Store createStore(
+      {required String name,
+      required String address,
+      required bool isSmall,
+      Deduction deduction = Deduction.biz33}) {
     final st = storeById(session.ownerStoreId)!;
     st
       ..name = name
       ..address = address
-      ..isSmall = isSmall;
+      ..isSmall = isSmall
+      ..defaultDeduction = deduction;
     _commit();
     return st;
   }

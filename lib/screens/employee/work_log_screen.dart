@@ -5,7 +5,6 @@ import '../../data/format.dart';
 import '../../data/payroll.dart';
 import '../../theme.dart';
 import '../../widgets/common.dart';
-import 'employee_parts.dart';
 
 /// 일자별 근무 내역 (실제 출퇴근 기록).
 class WorkLogScreen extends StatefulWidget {

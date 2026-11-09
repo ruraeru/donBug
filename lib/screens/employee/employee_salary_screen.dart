@@ -4,7 +4,6 @@ import '../../data/app_scope.dart';
 import '../../data/format.dart';
 import '../../theme.dart';
 import '../../widgets/common.dart';
-import 'employee_parts.dart';
 import 'payslip_detail_screen.dart';
 
 /// A5 급여 정산 (탭 루트). 이번 달은 예정 근무까지 포함한 예상치.
