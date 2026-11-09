@@ -7,6 +7,20 @@ import '../../widgets/common.dart';
 class StaffDetailScreen extends StatelessWidget {
   const StaffDetailScreen({super.key});
 
+  Future<void> _remove(BuildContext context) async {
+    final ok = await showConfirmDialog(
+      context,
+      title: '수빈님을 매장에서 내보낼까요?',
+      message: '근무표와 직원 목록에서 빠져요. 다시 함께하려면 매장 코드로 재가입해야 해요.',
+      confirmLabel: '내보내기',
+      confirmVariant: AppButtonVariant.danger,
+    );
+    if (!ok || !context.mounted) return;
+    final messenger = ScaffoldMessenger.of(context);
+    Navigator.pop(context);
+    messenger.showSnackBar(const SnackBar(content: Text('수빈님을 매장에서 내보냈어요')));
+  }
+
   @override
   Widget build(BuildContext context) => Scaffold(
         appBar: const AppHeader('수빈'),
@@ -71,22 +85,9 @@ class StaffDetailScreen extends StatelessWidget {
         ),
         bottomNavigationBar: BottomBar(children: [
           const AppButton('급여 설정'),
-          Material(
-            color: AppColors.dangerSoft,
-            borderRadius: BorderRadius.circular(14),
-            clipBehavior: Clip.antiAlias,
-            child: InkWell(
-              onTap: () {},
-              child: SizedBox(
-                height: 54,
-                child: Center(
-                  child: Text('매장에서 내보내기',
-                      style: AppText.style(
-                          16, FontWeight.w700, AppColors.danger)),
-                ),
-              ),
-            ),
-          ),
+          AppButton('매장에서 내보내기',
+              variant: AppButtonVariant.danger,
+              onPressed: () => _remove(context)),
         ]),
       );
 }

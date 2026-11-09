@@ -4,6 +4,7 @@ import '../../theme.dart';
 import '../../widgets/common.dart';
 import 'attendance_screen.dart';
 import 'staff_management_screen.dart';
+import 'store_settings_screen.dart';
 import 'substitute_approval_screen.dart';
 
 /// B1 사장님 대시보드 (Figma 47:139, 대타 알림 변형 47:502 — 레이아웃 동일).
@@ -24,15 +25,26 @@ class EmployerDashboardScreen extends StatelessWidget {
               Row(
                 children: [
                   Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text('카페 커푸치노', style: AppText.style(22, FontWeight.w700)),
-                        const SizedBox(height: 2),
-                        Text('사장님 · 5/14(수)',
-                            style: AppText.style(
-                                13, FontWeight.w400, AppColors.textSecondary)),
-                      ],
+                    // 매장 이름 → 매장 설정 (Figma에 진입 경로가 없어 임시 배치).
+                    child: InkWell(
+                      onTap: () => _push(context, const StoreSettingsScreen()),
+                      borderRadius: BorderRadius.circular(8),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(children: [
+                            Text('카페 커푸치노',
+                                style: AppText.style(22, FontWeight.w700)),
+                            const SizedBox(width: 2),
+                            const AppIcon('chevron_right',
+                                size: 22, color: AppColors.textTertiary),
+                          ]),
+                          const SizedBox(height: 2),
+                          Text('사장님 · 5/14(수)',
+                              style: AppText.style(
+                                  13, FontWeight.w400, AppColors.textSecondary)),
+                        ],
+                      ),
                     ),
                   ),
                   const AppIcon('bell'),

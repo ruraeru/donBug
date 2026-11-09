@@ -8,6 +8,21 @@ import 'substitute_done_screen.dart';
 class SubstituteApprovalScreen extends StatelessWidget {
   const SubstituteApprovalScreen({super.key});
 
+  Future<void> _reject(BuildContext context) async {
+    final ok = await showConfirmDialog(
+      context,
+      title: '대타 요청을 거절할까요?',
+      message: '5/14(수) 18:00 – 22:00 근무는 수빈님이 그대로 맡아요. '
+          '수빈님과 지민님에게 결과를 알려요.',
+      confirmLabel: '거절하기',
+      confirmVariant: AppButtonVariant.danger,
+    );
+    if (!ok || !context.mounted) return;
+    final messenger = ScaffoldMessenger.of(context);
+    Navigator.pop(context);
+    messenger.showSnackBar(const SnackBar(content: Text('대타 요청을 거절했어요')));
+  }
+
   @override
   Widget build(BuildContext context) {
     final tertiary = AppText.style(12, FontWeight.w400, AppColors.textTertiary);
@@ -86,7 +101,8 @@ class SubstituteApprovalScreen extends StatelessWidget {
                       child: AppButton('거절',
                           variant: AppButtonVariant.outline,
                           verticalPadding: 13,
-                          fontSize: 14),
+                          fontSize: 14,
+                          onPressed: () => _reject(context)),
                     ),
                     const SizedBox(width: 10),
                     Expanded(
