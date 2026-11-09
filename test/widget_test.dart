@@ -25,7 +25,15 @@ import 'package:donbug/screens/employer/attendance_detail_screen.dart';
 import 'package:donbug/screens/employer/attendance_screen.dart';
 import 'package:donbug/screens/employer/employer_payroll_detail_screen.dart';
 import 'package:donbug/screens/employer/employer_payroll_settings_screen.dart';
+import 'package:donbug/screens/employer/employer_contract_write_screen.dart';
+import 'package:donbug/screens/employer/employer_documents_screen.dart';
+import 'package:donbug/screens/employer/employer_health_cert_alert_screen.dart';
+import 'package:donbug/screens/employer/employer_notice_screen.dart';
 import 'package:donbug/screens/employer/employer_shell.dart';
+import 'package:donbug/screens/employer/employer_signature_request_screen.dart';
+import 'package:donbug/screens/employer/employer_staff_documents_screen.dart';
+import 'package:donbug/screens/employer/notice_read_status_screen.dart';
+import 'package:donbug/screens/employer/notice_result_screen.dart';
 import 'package:donbug/screens/employer/schedule_template_screen.dart';
 import 'package:donbug/screens/employer/shift_add_screen.dart';
 import 'package:donbug/screens/employer/staff_approval_screen.dart';
@@ -321,6 +329,60 @@ void main() {
       'template': const ScheduleTemplateScreen(),
       'shiftAdd': ShiftAddScreen(date: store.today),
       'notifications': const NotificationCenterScreen(),
+    };
+    for (final e in pages.entries) {
+      await pumpAt(tester, e.value, const Size(390, 844), store: store);
+      expect(tester.takeException(), isNull, reason: e.key);
+    }
+  });
+
+  testWidgets('역할 간: 사장님 공지 발행 → 알바생 확인 → 확인 현황 반영', (tester) async {
+    final store = await pumpAt(tester, const EmployerNoticeScreen(), const Size(390, 844),
+        store: employerStore());
+    await tester.enterText(find.byType(TextField).at(0), '냉장고 정리');
+    await tester.enterText(find.byType(TextField).at(1), '퇴근 전 유통기한 확인');
+    await tester.tap(find.text('전체 발송'));
+    await tester.pumpAndSettle();
+    expect(find.text('공지를 발송했어요'), findsOneWidget);
+    final n = store.storeNotices.firstWhere((x) => x.title == '냉장고 정리');
+
+    store.switchRole(Role.employee);
+    store.markNoticeRead(n.id);
+    store.switchRole(Role.employer);
+
+    await pumpAt(tester, NoticeReadStatusScreen(noticeId: n.id), const Size(390, 844), store: store);
+    expect(find.text('1 / 5명 (20%)'), findsOneWidget);
+    await tester.tap(find.text('미확인자에게 리마인드'));
+    await tester.pumpAndSettle();
+    expect(find.text('리마인드를 보냈어요'), findsOneWidget);
+  });
+
+  testWidgets('사장님: 근로계약서 작성 → 서명 요청', (tester) async {
+    final store = employerStore();
+    final seo = store.activeStaff.firstWhere((x) => store.personOf(x).name == '서연');
+    await openPage(tester, EmployerContractWriteScreen(staffId: seo.id), store: store);
+    await tester.tap(find.text('서명 요청 보내기'));
+    await tester.pumpAndSettle();
+    expect(find.text('서명 요청을 보냈어요'), findsOneWidget);
+    expect(seo.contract!.ownerSignedAt, isNotNull);
+    expect(seo.contract!.employeeSignedAt, isNull);
+  });
+
+  testWidgets('사장님 서류 · 공지 화면들이 오류 없이 그려진다', (tester) async {
+    final store = employerStore();
+    final subin = subinId(store);
+    final notice = store.storeNotices.first;
+    final pages = <String, Widget>{
+      'docs': const EmployerDocumentsScreen(),
+      'staffDocs': EmployerStaffDocumentsScreen(staffId: subin),
+      'certAlert': EmployerHealthCertAlertScreen(staffId: subin),
+      'contract': const EmployerContractWriteScreen(),
+      'signature': EmployerSignatureRequestScreen(staffId: subin),
+      'notice': const EmployerNoticeScreen(),
+      'readStatus': NoticeReadStatusScreen(noticeId: notice.id),
+      'published': NoticeResultScreen(NoticeResult.published, noticeId: notice.id),
+      'reminded': NoticeResultScreen(NoticeResult.reminded,
+          noticeId: notice.id, remindedNames: const ['하윤', '서연']),
     };
     for (final e in pages.entries) {
       await pumpAt(tester, e.value, const Size(390, 844), store: store);

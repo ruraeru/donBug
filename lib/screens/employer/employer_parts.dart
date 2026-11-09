@@ -8,7 +8,8 @@ import '../../data/payroll.dart';
 import '../../theme.dart';
 import '../../widgets/common.dart';
 import 'staff_approval_screen.dart';
-import 'staff_management_screen.dart';
+import 'employer_documents_screen.dart';
+import 'employer_staff_documents_screen.dart';
 import 'substitute_approval_screen.dart';
 
 /// 흰 트랙 안 선택 칩(5인 미만/이상, 파트 등).
@@ -347,6 +348,9 @@ Future<Staff?> pickStaff(BuildContext context, List<Staff> candidates, {required
 Widget? employerTarget(BuildContext context, AppNotification n) => switch (n.type) {
       'sub' => const SubstituteApprovalScreen(),
       'join' => const StaffApprovalScreen(),
-      'cert' || 'contract' => const StaffManagementScreen(),
+      'cert' => AppScope.read(context).staffById(n.refId) == null
+          ? const EmployerDocumentsScreen()
+          : EmployerStaffDocumentsScreen(staffId: n.refId!),
+      'contract' => const EmployerDocumentsScreen(),
       _ => null,
     };
