@@ -5,7 +5,6 @@ import '../../data/format.dart';
 import '../../theme.dart';
 import '../../widgets/common.dart';
 import 'contract_sign_screen.dart';
-import 'employee_parts.dart';
 import 'health_cert_register_screen.dart';
 import 'payslip_detail_screen.dart';
 

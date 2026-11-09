@@ -1,148 +1,126 @@
 import 'package:flutter/material.dart';
 
+import '../../data/app_scope.dart';
+import '../../data/format.dart';
+import '../../data/models.dart';
+import '../../data/payroll.dart';
 import '../../theme.dart';
 import '../../widgets/common.dart';
+import 'employer_parts.dart';
 
-/// 급여 설정 (Figma 48:136). 저장 시 인건비 대시보드로 복귀.
+/// 급여 설정 (Figma 48:136). 저장하면 이전 화면으로.
 class EmployerPayrollSettingsScreen extends StatefulWidget {
-  const EmployerPayrollSettingsScreen({super.key});
+  const EmployerPayrollSettingsScreen({super.key, required this.staffId});
+
+  final String staffId;
 
   @override
-  State<EmployerPayrollSettingsScreen> createState() =>
-      _EmployerPayrollSettingsScreenState();
+  State<EmployerPayrollSettingsScreen> createState() => _EmployerPayrollSettingsScreenState();
 }
 
-class _EmployerPayrollSettingsScreenState
-    extends State<EmployerPayrollSettingsScreen> {
-  static const _deductions = ['3.3%', '4대보험', '없음'];
+class _EmployerPayrollSettingsScreenState extends State<EmployerPayrollSettingsScreen> {
+  final _wage = TextEditingController();
   int _deduction = 0;
   bool _weeklyAllowance = true;
   bool _premium = false;
 
   @override
-  Widget build(BuildContext context) => Scaffold(
-        appBar: const AppHeader('급여 설정'),
-        body: ListView(
-          padding: const EdgeInsets.fromLTRB(20, 8, 20, 16),
-          children: [
-            AppCard(
-              child: Row(
-                children: [
-                  const LetterAvatar('수',
-                      size: 40,
-                      color: AppColors.accent,
-                      background: AppColors.accentSoft),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text('수빈', style: AppText.style(16, FontWeight.w700)),
-                        Text('오픈 · 주 3일',
-                            style: AppText.style(
-                                12, FontWeight.w400, AppColors.textSecondary)),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 14),
-            const LabeledField('시급', child: FieldBox('10,030원')),
-            const SizedBox(height: 14),
-            Text('공제 유형',
-                style: AppText.style(14, FontWeight.w700, AppColors.textSecondary)),
-            const SizedBox(height: 8),
-            Container(
-              padding: const EdgeInsets.all(4),
-              decoration: BoxDecoration(
-                color: AppColors.surface,
-                borderRadius: BorderRadius.circular(14),
-              ),
-              child: Row(
-                children: [
-                  for (var i = 0; i < _deductions.length; i++) ...[
-                    if (i > 0) const SizedBox(width: 4),
-                    Expanded(child: _segment(i)),
-                  ],
-                ],
-              ),
-            ),
-            const SizedBox(height: 14),
-            _toggleCard('주휴수당 자동 적용', '주 15시간 이상 · 개근 조건 자동 판별',
-                _weeklyAllowance, (v) => setState(() => _weeklyAllowance = v)),
-            const SizedBox(height: 14),
-            _toggleCard('야간·연장·휴일 가산', '5인 미만 사업장은 법적으로 미적용', _premium,
-                (v) => setState(() => _premium = v)),
-          ],
-        ),
-        bottomNavigationBar: BottomBar.button(
-          '저장',
-          // 설정 → 급여 상세 → 대시보드
-          onPressed: () => Navigator.of(context)
-            ..pop()
-            ..pop(),
-        ),
-      );
-
-  Widget _segment(int i) {
-    final selected = i == _deduction;
-    return GestureDetector(
-      onTap: () => setState(() => _deduction = i),
-      child: Container(
-        height: 40,
-        alignment: Alignment.center,
-        decoration: BoxDecoration(
-          color: selected ? AppColors.primary : Colors.transparent,
-          borderRadius: BorderRadius.circular(11),
-        ),
-        child: Text(_deductions[i],
-            style: AppText.style(14, FontWeight.w700,
-                selected ? AppColors.onPrimary : AppColors.textTertiary)),
-      ),
-    );
+  void initState() {
+    super.initState();
+    final s = AppScope.read(context).staffById(widget.staffId);
+    if (s != null) {
+      _wage.text = '${s.wage}';
+      _deduction = s.deduction.index;
+      _weeklyAllowance = s.weeklyHolidayAuto;
+      _premium = s.premium;
+    }
   }
 
-  Widget _toggleCard(
-          String title, String sub, bool value, ValueChanged<bool> onChanged) =>
-      AppCard(
-        radius: 16,
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-        onTap: () => onChanged(!value),
-        child: Row(
-          children: [
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(title, style: AppText.style(15, FontWeight.w700)),
-                  const SizedBox(height: 2),
-                  Text(sub,
-                      style: AppText.style(
-                          12, FontWeight.w400, AppColors.textSecondary)),
-                ],
-              ),
+  @override
+  void dispose() {
+    _wage.dispose();
+    super.dispose();
+  }
+
+  void _save() {
+    final w = int.tryParse(_wage.text.replaceAll(RegExp(r'[^0-9]'), ''));
+    if (w == null || w < minimumWage2026) {
+      return showToast(context, '시급은 2026 최저임금 ${wonText(minimumWage2026)} 이상이어야 해요');
+    }
+    AppScope.read(context).updateStaff(widget.staffId,
+        wage: w,
+        deduction: Deduction.values[_deduction],
+        weeklyHolidayAuto: _weeklyAllowance,
+        premium: _premium);
+    Navigator.pop(context);
+    showToast(context, '급여 설정을 저장했어요');
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final store = AppScope.of(context);
+    final s = store.staffById(widget.staffId);
+    if (s == null) return const MissingScreen(title: '급여 설정');
+    final small = store.store.isSmall;
+    final weekly = store
+        .shiftsOfStaff(s.id)
+        .where((x) => mondayOf(parseYmd(x.date)) == mondayOf(store.today))
+        .length;
+    return Scaffold(
+      appBar: const AppHeader('급여 설정'),
+      body: ListView(
+        padding: const EdgeInsets.fromLTRB(20, 8, 20, 16),
+        children: [
+          AppCard(
+            child: Row(
+              children: [
+                MemberAvatar(s),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(store.personOf(s).name, style: AppText.style(16, FontWeight.w700)),
+                      Text('${s.part} · 이번 주 $weekly일',
+                          style: AppText.style(12, FontWeight.w400, AppColors.textSecondary)),
+                    ],
+                  ),
+                ),
+              ],
             ),
-            const SizedBox(width: 12),
-            // Figma 48×28 커스텀 스위치
-            AnimatedContainer(
-              duration: const Duration(milliseconds: 150),
-              width: 48,
-              height: 28,
-              padding: const EdgeInsets.all(3),
-              alignment: value ? Alignment.centerRight : Alignment.centerLeft,
-              decoration: BoxDecoration(
-                color: value ? AppColors.primary : AppColors.border,
-                borderRadius: BorderRadius.circular(14),
-              ),
-              child: Container(
-                width: 22,
-                height: 22,
-                decoration: const BoxDecoration(
-                    color: AppColors.surface, shape: BoxShape.circle),
-              ),
+          ),
+          const SizedBox(height: 14),
+          LabeledField('시급 (원)',
+              child: AppTextField(controller: _wage, keyboardType: TextInputType.number)),
+          const SizedBox(height: 6),
+          Text('2026 최저임금 ${wonText(minimumWage2026)}',
+              style: AppText.style(12, FontWeight.w400, AppColors.textTertiary)),
+          const SizedBox(height: 14),
+          LabeledField(
+            '공제 유형',
+            child: SegmentedPicker(
+              options: [for (final d in Deduction.values) d.short],
+              selected: _deduction,
+              onChanged: (i) => setState(() => _deduction = i),
             ),
-          ],
-        ),
-      );
+          ),
+          const SizedBox(height: 14),
+          ToggleCard(
+            title: '주휴수당 자동 적용',
+            subtitle: '주 15시간 이상이면 자동 계산 (대타 근무 제외)',
+            value: _weeklyAllowance,
+            onChanged: (v) => setState(() => _weeklyAllowance = v),
+          ),
+          const SizedBox(height: 14),
+          ToggleCard(
+            title: '야간·연장 가산',
+            subtitle: small ? '5인 미만 사업장은 법적으로 미적용 (매장 설정에서 변경)' : '야간(22–06)·하루 8시간 초과분 0.5배',
+            value: _premium && !small,
+            onChanged: small ? null : (v) => setState(() => _premium = v),
+          ),
+        ],
+      ),
+      bottomNavigationBar: BottomBar.button('저장', onPressed: _save),
+    );
+  }
 }

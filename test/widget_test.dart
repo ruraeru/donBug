@@ -3,6 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 
 import 'package:donbug/data/app_scope.dart';
 import 'package:donbug/data/app_store.dart';
+import 'package:donbug/data/models.dart';
 import 'package:donbug/main.dart';
 import 'package:donbug/screens/employee/contract_sign_screen.dart';
 import 'package:donbug/screens/employee/employee_shell.dart';
@@ -20,7 +21,20 @@ import 'package:donbug/screens/employee/store_switch_screen.dart';
 import 'package:donbug/screens/employee/substitute_detail_screen.dart';
 import 'package:donbug/screens/employee/substitute_status_screen.dart';
 import 'package:donbug/screens/employee/work_log_screen.dart';
+import 'package:donbug/screens/employer/attendance_detail_screen.dart';
+import 'package:donbug/screens/employer/attendance_screen.dart';
+import 'package:donbug/screens/employer/employer_payroll_detail_screen.dart';
+import 'package:donbug/screens/employer/employer_payroll_settings_screen.dart';
 import 'package:donbug/screens/employer/employer_shell.dart';
+import 'package:donbug/screens/employer/schedule_template_screen.dart';
+import 'package:donbug/screens/employer/shift_add_screen.dart';
+import 'package:donbug/screens/employer/staff_approval_screen.dart';
+import 'package:donbug/screens/employer/staff_management_screen.dart';
+import 'package:donbug/screens/employer/store_code_screen.dart' as employer;
+import 'package:donbug/screens/employer/store_create_screen.dart';
+import 'package:donbug/screens/employer/store_settings_screen.dart';
+import 'package:donbug/screens/employer/substitute_approval_screen.dart';
+import 'package:donbug/screens/employer/substitute_done_screen.dart' as employer;
 import 'package:donbug/screens/employer/staff_detail_screen.dart';
 import 'package:donbug/screens/web/web_shell.dart';
 import 'package:donbug/theme.dart';
@@ -30,6 +44,10 @@ final testNow = DateTime(2026, 5, 14, 14, 30);
 
 AppStore testStore() => AppStore.seeded(now: testNow);
 
+AppStore employerStore() => testStore()..switchRole(Role.employer);
+
+String subinId(AppStore s) => s.activeStaff.firstWhere((x) => s.personOf(x).name == '수빈').id;
+
 Future<AppStore> pumpAt(WidgetTester tester, Widget home, Size size,
     {AppStore? store}) async {
   final s = store ?? testStore();
@@ -37,7 +55,27 @@ Future<AppStore> pumpAt(WidgetTester tester, Widget home, Size size,
   tester.view.devicePixelRatio = 1;
   addTearDown(tester.view.reset);
   await tester.pumpWidget(
-      AppScope(store: s, child: MaterialApp(theme: appTheme, home: home)));
+      AppScope(store: s, child: MaterialApp(key: UniqueKey(), theme: appTheme, home: home)));
+  await tester.pumpAndSettle();
+  return s;
+}
+
+/// 스스로 닫히는 화면용: 빈 화면 위에 [page]를 push 한다.
+Future<AppStore> openPage(WidgetTester tester, Widget page, {AppStore? store}) async {
+  final s = await pumpAt(
+      tester,
+      Scaffold(
+        body: Builder(
+          builder: (context) => TextButton(
+            onPressed: () =>
+                Navigator.push(context, MaterialPageRoute(builder: (_) => page)),
+            child: const Text('open'),
+          ),
+        ),
+      ),
+      const Size(390, 844),
+      store: store);
+  await tester.tap(find.text('open'));
   await tester.pumpAndSettle();
   return s;
 }
@@ -64,19 +102,21 @@ void main() {
   });
 
   testWidgets('사장님 탭 화면', (tester) async {
-    await pumpAt(tester, const EmployerShell(), const Size(390, 844));
+    await pumpAt(tester, const EmployerShell(), const Size(390, 844), store: employerStore());
     await visitTabs(tester, ['근무표', '인건비', '서류', '공지', '홈']);
   });
 
   testWidgets('대시보드 매장 이름 → 매장 설정', (tester) async {
-    await pumpAt(tester, const EmployerShell(), const Size(390, 844));
+    await pumpAt(tester, const EmployerShell(), const Size(390, 844), store: employerStore());
     await tester.tap(find.text('카페 커푸치노'));
     await tester.pumpAndSettle();
     expect(find.text('매장 설정'), findsOneWidget);
   });
 
   testWidgets('대타 거절: 취소하면 남고, 확인하면 닫히고 스낵바', (tester) async {
-    await pumpAt(tester, const EmployerShell(), const Size(390, 844));
+    final store = await pumpAt(tester, const EmployerShell(), const Size(390, 844),
+        store: employerStore());
+    final req = store.pendingSubs.firstWhere((r) => r.status == SubStatus.accepted);
     await tester.tap(find.text('지원자 확인하고 확정'));
     await tester.pumpAndSettle();
 
@@ -92,29 +132,20 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('대타 승인'), findsNothing);
     expect(find.text('대타 요청을 거절했어요'), findsOneWidget);
+    expect(req.status, SubStatus.rejected);
   });
 
   testWidgets('직원 상세 내보내기 → 확인 후 닫힘', (tester) async {
-    await pumpAt(
-        tester,
-        Scaffold(
-          body: Builder(
-            builder: (context) => TextButton(
-              onPressed: () => Navigator.push(context,
-                  MaterialPageRoute(builder: (_) => const StaffDetailScreen())),
-              child: const Text('open'),
-            ),
-          ),
-        ),
-        const Size(390, 844));
-    await tester.tap(find.text('open'));
-    await tester.pumpAndSettle();
+    final store = employerStore();
+    final id = subinId(store);
+    await openPage(tester, StaffDetailScreen(staffId: id), store: store);
     await tester.tap(find.text('매장에서 내보내기'));
     await tester.pumpAndSettle();
     expect(find.text('수빈님을 매장에서 내보낼까요?'), findsOneWidget);
     await tester.tap(find.text('내보내기'));
     await tester.pumpAndSettle();
     expect(find.text('수빈님을 매장에서 내보냈어요'), findsOneWidget);
+    expect(store.staffById(id)!.status, StaffStatus.left);
   });
 
   testWidgets('알바생: 출근 → 퇴근 기록', (tester) async {
@@ -204,6 +235,92 @@ void main() {
       'joinPending': const JoinPendingScreen(storeId: 'st-cafe'),
       'kakao': const KakaoConsentScreen(),
       'missing': const ShiftDetailScreen(shiftId: 'nope'),
+    };
+    for (final e in pages.entries) {
+      await pumpAt(tester, e.value, const Size(390, 844), store: store);
+      expect(tester.takeException(), isNull, reason: e.key);
+    }
+  });
+
+  testWidgets('역할 간: 알바생 대타 신청 → 동료 수락 → 사장님 승인 → 근무자 교체', (tester) async {
+    final store = testStore();
+    final shift = store.myUpcomingShifts.firstWhere((s) => s.date != '2026-05-14');
+    final me = store.myStaff!.id;
+    final r = store.requestSubstitute(shift.id, reason: '치과 진료');
+    expect(store.simulatePeerAccept(r.id), isTrue);
+    store.switchRole(Role.employer);
+
+    await pumpAt(tester, const SubstituteApprovalScreen(), const Size(390, 844), store: store);
+    expect(find.textContaining('요청 · 치과 진료'), findsOneWidget);
+    await tester.tap(find.text('승인하고 반영').first);
+    await tester.pumpAndSettle();
+    expect(find.text('대타가 확정됐어요'), findsOneWidget);
+
+    expect(r.status, SubStatus.approved);
+    expect(shift.staffId, isNot(me));
+    store.switchRole(Role.employee);
+    expect(store.myShifts.contains(shift), isFalse);
+  });
+
+  testWidgets('사장님: 가입 승인 → 시급 입력 → 재직', (tester) async {
+    final store = await pumpAt(tester, const StaffApprovalScreen(), const Size(390, 844),
+        store: employerStore());
+    final d = store.pendingStaff.single;
+    await tester.tap(find.text('승인하고 시급 설정'));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byType(TextField), '9000');
+    await tester.tap(find.text('승인'));
+    await tester.pumpAndSettle();
+    expect(find.textContaining('최저임금'), findsOneWidget); // 최저임금 미만 막음
+    await tester.enterText(find.byType(TextField), '10800');
+    await tester.tap(find.text('승인'));
+    await tester.pumpAndSettle();
+    expect(d.active, isTrue);
+    expect(d.wage, 10800);
+    expect(find.text('대기 중인 가입 신청이 없어요'), findsOneWidget);
+  });
+
+  testWidgets('사장님: 근태 직접 입력 · 근무 추가', (tester) async {
+    final store = employerStore();
+    final waiting = store.shiftsOn(store.today).firstWhere((s) => store.attendanceFor(s.id) == null);
+    await openPage(tester, AttendanceDetailScreen(shiftId: waiting.id), store: store);
+    await tester.tap(find.text('수정 저장'));
+    await tester.pumpAndSettle();
+    expect(find.text('수정 사유를 입력해 주세요'), findsOneWidget);
+    await tester.enterText(find.byType(TextField), '태그 오류로 수기 입력');
+    await tester.tap(find.text('수정 저장'));
+    await tester.pumpAndSettle();
+    expect(store.attendanceFor(waiting.id)?.editReason, '태그 오류로 수기 입력');
+
+    final before = store.shiftsOn(store.today).length;
+    await openPage(tester, ShiftAddScreen(date: store.today), store: store);
+    await tester.tap(find.text('지민'));
+    await tester.tap(find.text('근무 등록'));
+    await tester.pumpAndSettle();
+    expect(store.shiftsOn(store.today).length, before + 1);
+  });
+
+  testWidgets('사장님 화면들이 오류 없이 그려진다', (tester) async {
+    final store = employerStore();
+    final subin = subinId(store);
+    final shift = store.shiftsOn(store.today).first;
+    final approved = store.storeSubs.firstWhere((r) => r.status == SubStatus.approved);
+    final pages = <String, Widget>{
+      'attendance': const AttendanceScreen(),
+      'attDetail': AttendanceDetailScreen(shiftId: shift.id),
+      'approval': const SubstituteApprovalScreen(),
+      'subDone': employer.SubstituteDoneScreen(requestId: approved.id),
+      'payDetail': EmployerPayrollDetailScreen(staffId: subin, month: DateTime(2026, 5)),
+      'paySettings': EmployerPayrollSettingsScreen(staffId: subin),
+      'staff': const StaffManagementScreen(),
+      'staffDetail': StaffDetailScreen(staffId: subin),
+      'staffApproval': const StaffApprovalScreen(),
+      'storeCreate': const StoreCreateScreen(),
+      'storeCode': const employer.StoreCodeScreen(),
+      'storeSettings': const StoreSettingsScreen(),
+      'template': const ScheduleTemplateScreen(),
+      'shiftAdd': ShiftAddScreen(date: store.today),
+      'notifications': const NotificationCenterScreen(),
     };
     for (final e in pages.entries) {
       await pumpAt(tester, e.value, const Size(390, 844), store: store);

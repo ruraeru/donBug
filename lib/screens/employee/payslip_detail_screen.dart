@@ -4,7 +4,6 @@ import '../../data/app_scope.dart';
 import '../../data/format.dart';
 import '../../theme.dart';
 import '../../widgets/common.dart';
-import 'employee_parts.dart';
 import 'work_log_screen.dart';
 
 /// 급여 명세서 상세.
