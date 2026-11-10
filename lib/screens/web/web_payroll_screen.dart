@@ -4,8 +4,8 @@ import '../../data/app_scope.dart';
 import '../../data/format.dart';
 import '../../data/models.dart';
 import '../../theme.dart';
+import '../../data/payroll.dart';
 import '../../widgets/common.dart';
-import '../employer/employer_payroll_detail_screen.dart';
 import 'web_common.dart';
 
 /// W4 인건비·급여 정산 (콘텐츠 영역). 이번 달은 남은 예정 근무까지 포함한 예상치.
@@ -50,7 +50,10 @@ class _WebPayrollScreenState extends State<WebPayrollScreen> {
       subtitle: '${month.year}년 ${month.month}월 · 근태 기록 기준 자동 계산'
           '${current ? ' · 남은 근무는 예정대로 계산' : ''}',
       actions: [
-        MonthNav(month: month, max: thisMonth, onChanged: (m) => setState(() => _month = m)),
+        SizedBox(
+          height: 42,
+          child: MonthNav(month: month, max: thisMonth, onChanged: (m) => setState(() => _month = m)),
+        ),
         WebButton('PDF 내보내기', style: WebButtonStyle.outline, onPressed: later),
         WebButton('정산 확정', onPressed: later),
       ],
@@ -74,8 +77,7 @@ class _WebPayrollScreenState extends State<WebPayrollScreen> {
                 WebTable(
                   columns: const ['직원', '근무시간', '기본급', '주휴', '가산', '공제', '실수령'],
                   flex: const [130, 100, 120, 100, 100, 100, 120],
-                  onRowTap: (i) => showMobilePanel(
-                      context, EmployerPayrollDetailScreen(staffId: rows[i].$1.id, month: month)),
+                  onRowTap: (i) => _showDetail(context, rows[i].$1, rows[i].$2, month),
                   rows: [
                     for (final (s, p) in rows)
                       [
@@ -173,4 +175,35 @@ class _Stat extends StatelessWidget {
           ],
         ),
       );
+}
+
+/// 직원 한 명의 그 달 급여 내역 + 근무 기록.
+Future<void> _showDetail(BuildContext context, Staff s, Payslip slip, DateTime month) {
+  final store = AppScope.read(context);
+  return showWebDialog<void>(
+    context,
+    title: '${store.personOf(s).fullName} · ${month.month}월 급여',
+    width: 560,
+    builder: (ctx, _) => Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+      PayBreakdown(slip: slip, staff: s),
+      const SizedBox(height: 16),
+      Text('근무 기록 ${slip.entries.length}건', style: AppText.style(14, FontWeight.w700)),
+      const SizedBox(height: 8),
+      for (final e in slip.entries)
+        Padding(
+          padding: const EdgeInsets.symmetric(vertical: 6),
+          child: Row(children: [
+            Expanded(child: Text(md(e.day), style: AppText.style(13, FontWeight.w500))),
+            Text('${clock(e.start)}–${clock(e.end)}${e.planned ? ' (예정)' : ''}',
+                style: AppText.style(13, FontWeight.w400, AppColors.textSecondary)),
+            const SizedBox(width: 16),
+            SizedBox(
+              width: 70,
+              child: Text(hours(e.minutes),
+                  textAlign: TextAlign.right, style: AppText.style(13, FontWeight.w700)),
+            ),
+          ]),
+        ),
+    ]),
+  );
 }

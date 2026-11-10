@@ -6,21 +6,13 @@ import '../../data/format.dart';
 import '../../data/models.dart';
 import '../../theme.dart';
 import '../../widgets/common.dart';
-import '../employee/notification_center_screen.dart';
-import '../employer/attendance_detail_screen.dart';
-import '../employer/attendance_screen.dart';
 import '../employer/employer_parts.dart';
-import '../employer/employer_staff_documents_screen.dart';
-import '../employer/substitute_approval_screen.dart';
 import 'web_common.dart';
 import 'web_documents_screen.dart';
-
-/// 웹 메뉴 번호 (WebShell 순서).
-abstract final class WebMenu {
-  static const payroll = 3;
-  static const documents = 4;
-  static const notice = 5;
-}
+import 'web_notice_screen.dart';
+import 'web_shell.dart';
+import 'web_shift_dialog.dart';
+import 'web_staff_screen.dart';
 
 /// 보건증 주의 대상: 미등록 · 만료 · 30일 이내. 급한 순.
 List<(Staff, int?)> certAlerts(AppStore store) => [
@@ -38,10 +30,7 @@ String certLabel(int? left) => switch (left) {
 
 /// W1 사장님 웹 대시보드 (콘텐츠 영역).
 class WebDashboardScreen extends StatefulWidget {
-  const WebDashboardScreen({super.key, this.onNavigate});
-
-  /// 다른 웹 메뉴로 이동([WebMenu]). WebShell 이 연결.
-  final ValueChanged<int>? onNavigate;
+  const WebDashboardScreen({super.key});
 
   @override
   State<WebDashboardScreen> createState() => _WebDashboardScreenState();
@@ -65,20 +54,19 @@ class _WebDashboardScreenState extends State<WebDashboardScreen> {
     final waiting = statuses.where((s) => s == AttStatus.waiting).length;
     final subs = store.pendingSubs;
     final certs = certAlerts(store);
-    final go = widget.onNavigate ?? (_) {};
+    void go(int page) => WebShell.open(context, page);
     return WebPage(
       title: '안녕하세요, 사장님',
       subtitle: '${store.store.name} · ${t.year}년 ${t.month}월 ${t.day}일 ${weekday(t)}요일',
       gap: 16,
       actions: [
-        WebButton('+ 공지 작성', onPressed: () => go(WebMenu.notice)),
+        WebButton('+ 공지 작성', onPressed: () => showNoticeDialog(context)),
         Material(
           color: AppColors.surface,
           shape: const CircleBorder(side: BorderSide(color: AppColors.border)),
           child: IconButton(
             tooltip: '알림',
-            onPressed: () => showMobilePanel(
-                context, const NotificationCenterScreen(onOpen: employerTarget)),
+            onPressed: () => _showNotifications(context),
             icon: CountBadge(
                 count: store.unreadNotificationCount, child: const AppIcon('bell')),
           ),
@@ -92,7 +80,7 @@ class _WebDashboardScreenState extends State<WebDashboardScreen> {
               fg: AppColors.onPrimary,
               onTap: () => go(WebMenu.payroll)),
           _Kpi('오늘 근무', '${statuses.length}명', '출근 $present · 대기 $waiting',
-              onTap: () => showMobilePanel(context, const AttendanceScreen())),
+              onTap: () => showTodayAttendance(context)),
           _Kpi(
               '대타 승인 대기',
               '${subs.length}건',
@@ -100,7 +88,7 @@ class _WebDashboardScreenState extends State<WebDashboardScreen> {
                   ? '진행 중인 요청 없음'
                   : '${subs.map((r) => store.nameOf(r.requesterId)).toSet().join(' · ')} 요청',
               bg: AppColors.accentSoft,
-              onTap: () => showMobilePanel(context, const SubstituteApprovalScreen())),
+              onTap: () => go(WebMenu.substitute)),
           certs.isEmpty
               ? _Kpi('보건증 만료 임박', '없음', '30일 이내 만료 없음',
                   onTap: () => go(WebMenu.documents))
@@ -109,7 +97,7 @@ class _WebDashboardScreenState extends State<WebDashboardScreen> {
                   certLabel(certs.first.$2),
                   '${store.nameOf(certs.first.$1.id)}님'
                       '${certs.length > 1 ? ' 외 ${certs.length - 1}명' : ''}'
-                      ' · ${store.personOf(certs.first.$1).certAlertDays.join('·')}일 전 알림',
+                      ' · ${store.personOf(certs.first.$1).certAlertDays.where((d) => d > 0).join('·')}일 전 알림',
                   bg: AppColors.dangerSoft,
                   valueColor: AppColors.danger,
                   onTap: () => go(WebMenu.documents)),
@@ -123,7 +111,7 @@ class _WebDashboardScreenState extends State<WebDashboardScreen> {
           right: Column(children: [
             _SubstituteCard(subs),
             const SizedBox(height: 16),
-            _RiskCard(certs: certs, onNavigate: go),
+            _RiskCard(certs: certs),
           ]),
         ),
       ],
@@ -197,7 +185,7 @@ class _WeekCard extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(children: [
-            Expanded(child: Text('주간 근무표', style: AppText.style(17, FontWeight.w700))),
+            Expanded(child: Text('이번 주 근무표', style: AppText.style(17, FontWeight.w700))),
             arrow('‹', -1),
             const SizedBox(width: 4),
             Text('${monday.month}/${monday.day} – ${sunday.month}/${sunday.day}',
@@ -257,7 +245,7 @@ class _WeekCard extends StatelessWidget {
     final label = '${_shortRange(shift)}${sub ? ' 대타' : ''}';
     return Center(
       child: InkWell(
-        onTap: () => showMobilePanel(context, AttendanceDetailScreen(shiftId: shift.id)),
+        onTap: () => showShiftDialog(context, shift: shift, date: day),
         borderRadius: BorderRadius.circular(10),
         child: FittedBox(
           fit: BoxFit.scaleDown,
@@ -326,7 +314,7 @@ class _SubstituteCard extends StatelessWidget {
           Row(children: [
             Expanded(child: Text('대타 승인 대기', style: AppText.style(15, FontWeight.w700))),
             InkWell(
-              onTap: () => showMobilePanel(context, const SubstituteApprovalScreen()),
+              onTap: () => WebShell.open(context, WebMenu.substitute),
               child: Text('전체 보기 ›',
                   style: AppText.style(12, FontWeight.w500, AppColors.primary)),
             ),
@@ -383,10 +371,11 @@ class _SubItem extends StatelessWidget {
 }
 
 class _RiskCard extends StatelessWidget {
-  const _RiskCard({required this.certs, required this.onNavigate});
+  const _RiskCard({required this.certs});
 
   final List<(Staff, int?)> certs;
-  final ValueChanged<int> onNavigate;
+
+  void onNavigate(BuildContext context, int page) => WebShell.open(context, page);
 
   @override
   Widget build(BuildContext context) {
@@ -402,7 +391,7 @@ class _RiskCard extends StatelessWidget {
           AppColors.dangerSoft,
           left == null ? '보건증 미등록' : '보건증 만료 ${certLabel(left)}',
           '${store.personOf(s).name}님 · 갱신 후 사진 등록 필요',
-          onTap: () => showMobilePanel(context, EmployerStaffDocumentsScreen(staffId: s.id)),
+          onTap: () => showStaffSheet(context, s.id),
         ),
       if (unsigned.isNotEmpty)
         _Risk(
@@ -411,14 +400,14 @@ class _RiskCard extends StatelessWidget {
           '전자 근로계약서 미서명 ${unsigned.length}건',
           '${store.personOf(unsigned.first).name}님'
               '${unsigned.length > 1 ? ' 외 ${unsigned.length - 1}명' : ''} · 서명 요청 보내기',
-          onTap: () => onNavigate(WebMenu.documents),
+          onTap: () => onNavigate(context, WebMenu.documents),
         ),
       _Risk(
         AppColors.info,
         AppColors.infoSoft,
         '노무 체크리스트 $done/${checklist.length} 완료',
-        store.store.isSmall ? '5인 미만 · 가산수당 미적용' : '5인 이상 · 가산수당 적용',
-        onTap: () => onNavigate(WebMenu.documents),
+        store.store.isSmall ? '5인 미만 · 가산수당 미적용' : '5인 이상 · 가산수당 · 연차 적용',
+        onTap: () => onNavigate(context, WebMenu.documents),
       ),
     ];
     return AppCard(
@@ -466,3 +455,181 @@ class _Risk extends StatelessWidget {
         ]),
       );
 }
+
+/// 알림 목록. 누르면 읽음 처리하고 관련 메뉴로 간다.
+Future<void> _showNotifications(BuildContext context) {
+  final store = AppScope.read(context);
+  int? target(AppNotification n) => switch (n.type) {
+        'sub' => WebMenu.substitute,
+        'join' => WebMenu.staff,
+        'cert' || 'contract' => WebMenu.documents,
+        'notice' => WebMenu.notice,
+        _ => null,
+      };
+  return showWebDialog<void>(
+    context,
+    title: '알림',
+    builder: (ctx, set) {
+      final list = AppScope.of(ctx).myNotifications;
+      return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+        if (list.isEmpty) const EmptyNote('새 알림이 없어요'),
+        for (final n in list.take(20))
+          InkWell(
+            borderRadius: BorderRadius.circular(10),
+            onTap: () {
+              store.markNotificationRead(n.id);
+              Navigator.pop(ctx);
+              final page = target(n);
+              if (page != null) WebShell.open(context, page);
+            },
+            child: Padding(
+              padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 6),
+              child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                Container(
+                  width: 8,
+                  height: 8,
+                  margin: const EdgeInsets.only(top: 6, right: 10),
+                  decoration: BoxDecoration(
+                      color: n.read ? Colors.transparent : AppColors.danger, shape: BoxShape.circle),
+                ),
+                Expanded(
+                  child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                    Text(n.title,
+                        style: AppText.style(14, n.read ? FontWeight.w500 : FontWeight.w700)),
+                    if (n.body.isNotEmpty)
+                      Text(n.body,
+                          style: AppText.style(12, FontWeight.w400, AppColors.textSecondary)),
+                  ]),
+                ),
+                Text(relative(DateTime.parse(n.createdAt), store.now),
+                    style: AppText.style(11, FontWeight.w400, AppColors.textTertiary)),
+              ]),
+            ),
+          ),
+      ]);
+    },
+    actions: (ctx, set) => [
+      WebButton('모두 읽음',
+          style: WebButtonStyle.outline,
+          onPressed: store.unreadNotificationCount == 0
+              ? null
+              : () => set(store.markAllNotificationsRead)),
+    ],
+  );
+}
+
+/// 오늘 근무 · 출근 현황. 기록이 틀리면 바로 고친다.
+Future<void> showTodayAttendance(BuildContext context) {
+  final store = AppScope.read(context);
+  return showWebDialog<void>(
+    context,
+    title: '오늘 근무 · ${md(store.today)}',
+    width: 520,
+    builder: (ctx, set) {
+      final s = AppScope.of(ctx);
+      final list = s.shiftsOn(s.today);
+      return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+        if (list.isEmpty) const EmptyNote('오늘 근무가 없어요'),
+        for (final shift in list)
+          Padding(
+            padding: const EdgeInsets.only(bottom: 10),
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+              decoration:
+                  BoxDecoration(color: AppColors.bg, borderRadius: BorderRadius.circular(12)),
+              child: Row(children: [
+                MemberAvatar(s.staffById(shift.staffId)!, size: 32),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                    Text('${s.nameOf(shift.staffId)} · ${shift.part}',
+                        style: AppText.style(14, FontWeight.w700)),
+                    Text(_attText(s, shift),
+                        style: AppText.style(12, FontWeight.w400, AppColors.textSecondary)),
+                  ]),
+                ),
+                Builder(builder: (_) {
+                  final (label, fg, bg) = attStyle(s.attendanceStatus(shift));
+                  return Pill(label, color: fg, background: bg);
+                }),
+                const SizedBox(width: 8),
+                WebButton('수정',
+                    height: 32,
+                    fontSize: 12,
+                    radius: 10,
+                    style: WebButtonStyle.outline,
+                    onPressed: () => _editAttendance(ctx, shift)),
+              ]),
+            ),
+          ),
+      ]);
+    },
+  );
+}
+
+String _attText(AppStore s, Shift shift) {
+  final a = s.attendanceFor(shift.id);
+  final plan = '예정 ${shiftTime(shift)}';
+  if (a == null) return plan;
+  final out = a.clockOut == null ? '근무 중' : '${clock(DateTime.parse(a.clockOut!))} 퇴근';
+  return '$plan · ${clock(DateTime.parse(a.clockIn))} 출근 · $out';
+}
+
+/// 출퇴근 기록 직접 입력 · 수정. 사유는 직원에게 알림으로 간다.
+Future<void> _editAttendance(BuildContext context, Shift shift) {
+  final store = AppScope.read(context);
+  final a = store.attendanceFor(shift.id);
+  final day = parseYmd(shift.date);
+  var inMin = a == null ? shift.startMin : _minOf(DateTime.parse(a.clockIn), day);
+  int? outMin = a?.clockOut == null ? null : _minOf(DateTime.parse(a!.clockOut!), day);
+  final reason = TextEditingController();
+  String? error;
+  return showWebDialog<void>(
+    context,
+    title: '${store.nameOf(shift.staffId)} · ${shiftDay(shift)} 근태 ${a == null ? '입력' : '수정'}',
+    builder: (ctx, set) => Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+      webPair(
+        webField(
+            '출근',
+            FieldBox(hm(inMin), onTap: () async {
+              final v = await pickTime(ctx, inMin);
+              if (v != null) set(() => inMin = v);
+            })),
+        webField(
+            '퇴근',
+            FieldBox(outMin == null ? '근무 중' : hm(outMin!), onTap: () async {
+              final v = await pickTime(ctx, outMin ?? shift.endMin);
+              if (v != null) set(() => outMin = v);
+            })),
+      ),
+      const SizedBox(height: 16),
+      webField('수정 사유', AppTextField(controller: reason, hint: '예: 출근 태깅 누락')),
+      if (error != null) ...[
+        const SizedBox(height: 10),
+        Text(error!, style: AppText.style(13, FontWeight.w500, AppColors.danger)),
+      ],
+    ]),
+    actions: (ctx, set) => [
+      WebButton('취소', style: WebButtonStyle.outline, onPressed: () => Navigator.pop(ctx)),
+      WebButton('저장', onPressed: () {
+        if (reason.text.trim().isEmpty) return set(() => error = '수정 사유를 적어 주세요');
+        final clockIn = day.add(Duration(minutes: inMin));
+        DateTime? clockOut;
+        if (outMin != null) {
+          clockOut = day.add(Duration(minutes: outMin!));
+          if (!clockOut.isAfter(clockIn)) clockOut = clockOut.add(const Duration(days: 1));
+        }
+        if (a == null) {
+          store.createAttendance(shift.id,
+              clockIn: clockIn, clockOut: clockOut, reason: reason.text.trim());
+        } else {
+          store.editAttendance(a.id,
+              clockIn: clockIn, clockOut: clockOut, reason: reason.text.trim());
+        }
+        Navigator.pop(ctx);
+      }),
+    ],
+  );
+}
+
+int _minOf(DateTime t, DateTime day) => t.difference(day).inMinutes;

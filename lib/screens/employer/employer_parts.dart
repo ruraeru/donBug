@@ -221,6 +221,7 @@ class SuccessStepsScaffold extends StatelessWidget {
       '오픈' => (AppColors.primary, AppColors.primarySoft),
       '미들' => (AppColors.info, AppColors.infoSoft),
       '마감' => (AppColors.accent, AppColors.accentSoft),
+      '직원' => (AppColors.purple, AppColors.purpleSoft),
       _ => (AppColors.danger, AppColors.dangerSoft),
     };
 

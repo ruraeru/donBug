@@ -6,7 +6,6 @@ import '../../data/format.dart';
 import '../../data/models.dart';
 import '../../theme.dart';
 import '../../widgets/common.dart';
-import '../employer/employer_notice_screen.dart';
 import 'web_common.dart';
 
 /// W6 공지 관리 (콘텐츠 영역). 목록에서 고르면 오른쪽에 확인 현황이 나온다.
@@ -24,9 +23,10 @@ class _WebNoticeScreenState extends State<WebNoticeScreen> {
       ? const Pill('필독', color: AppColors.danger, background: AppColors.dangerSoft)
       : const Pill('일반', color: AppColors.textSecondary, background: AppColors.bg);
 
-  /// 공지 작성은 모바일 공지 탭(작성 폼 + 목록)을 패널로 연다.
-  void _write() => showMobilePanel(
-      context, const Scaffold(backgroundColor: AppColors.bg, body: EmployerNoticeScreen()));
+  Future<void> _write() async {
+    final id = await showNoticeDialog(context);
+    if (id != null && mounted) setState(() => _selectedId = id);
+  }
 
   void _remind(Notice n) {
     final count = AppScope.read(context).remindUnread(n.id);
@@ -187,4 +187,62 @@ class _NoticeItem extends StatelessWidget {
           ),
         ),
       );
+}
+
+/// 공지 작성 창. 올리면 새 공지 id 를 돌려준다.
+Future<String?> showNoticeDialog(BuildContext context) {
+  final store = AppScope.read(context);
+  const categories = ['일반', '중요', '노무'];
+  final title = TextEditingController(), body = TextEditingController();
+  var category = categories.first;
+  var required = store.store.noticeRequiredDefault;
+  String? error;
+  return showWebDialog<String>(
+    context,
+    title: '공지 작성',
+    width: 560,
+    builder: (ctx, set) => Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+      webField('제목', AppTextField(controller: title, hint: '예: 마감 청소 방법 안내')),
+      const SizedBox(height: 14),
+      webField('내용', AppTextField(controller: body, maxLines: 6, hint: '직원에게 알릴 내용을 적어 주세요')),
+      const SizedBox(height: 14),
+      Row(children: [
+        WebSegmented(
+          labels: categories,
+          selected: categories.indexOf(category),
+          onChanged: (i) => set(() => category = categories[i]),
+        ),
+        const Spacer(),
+        InkWell(
+          onTap: () => set(() => required = !required),
+          child: Row(children: [
+            Checkbox(
+                value: required,
+                activeColor: AppColors.primary,
+                onChanged: (v) => set(() => required = v ?? false)),
+            Text('필독 (확인 현황 추적)', style: AppText.style(14)),
+          ]),
+        ),
+      ]),
+      const SizedBox(height: 6),
+      Text('재직 직원 ${store.activeStaff.length}명에게 알림이 가요',
+          style: AppText.style(12, FontWeight.w400, AppColors.textTertiary)),
+      if (error != null) ...[
+        const SizedBox(height: 10),
+        Text(error!, style: AppText.style(13, FontWeight.w500, AppColors.danger)),
+      ],
+    ]),
+    actions: (ctx, set) => [
+      WebButton('취소', style: WebButtonStyle.outline, onPressed: () => Navigator.pop(ctx)),
+      WebButton('올리기', onPressed: () {
+        if (title.text.trim().isEmpty || body.text.trim().isEmpty) {
+          return set(() => error = '제목과 내용을 입력해 주세요');
+        }
+        final n = store.publishNotice(
+            title: title.text.trim(), body: body.text.trim(), required: required, category: category);
+        Navigator.pop(ctx, n.id);
+        showToast(context, '공지를 올렸어요');
+      }),
+    ],
+  );
 }

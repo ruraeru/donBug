@@ -4,7 +4,7 @@ Flutter app (돈벌래 - 스마트 매장 관리 앱). 소상공인 사장님·�
 
 현재 상태: **프로토타입**. 백엔드·실제 로그인 없이 기기 안 데이터(`lib/data/`)로 동작한다.
 - 모바일 알바생·사장님 화면은 전부 데이터에 연결돼 있다.
-- 웹(`lib/screens/web/`)도 사장님 W1–W6, POS W8–W9 가 데이터에 연결돼 있다. 근무표 변형 A–E("다른 보기")만 디자인 시안이라 예시 데이터다.
+- 웹(`lib/screens/web/`)도 사장님 W1–W6, 대타 승인, POS W8–W9 가 데이터에 연결돼 있다. 근무표는 Figma v3 오토스케줄 W2(`151:9248`) 기준이다.
 - AI 노무 도우미(모바일 B6, 웹 W7)는 "추후 개발 예정" 안내만 있다. 모바일 B6 은 진입 경로가 없다.
 
 ## Design (Figma)
@@ -58,7 +58,8 @@ Flutter SDK는 PATH에 없음. 프로젝트 루트의 로컬 SDK 사용 (`/flutt
   - prefs 에서 상태를 읽어 `AppStore` 를 만들고 `MyApp(store:)` 을 `AppScope` 로 감싼다.
   - 웹이면 역할을 사장님으로 고정하고 로그인 없이 `WebShell`. 그 밖에는 로그인 상태면 역할 셸(`EmployeeShell` / `EmployerShell`), 아니면 `LoginScreen`.
 - `lib/data/` — 프로토타입 데이터 계층
-  - `models.dart`: `Person`(보건증은 사람 단위), `Store`, `Staff`(매장별 소속. 가입 신청 = `status: pending`, 계약서 포함), `Shift`, `Attendance`, `SubstituteRequest`, `Notice`, `AppNotification`, `Session`, `AppState`. 수동 JSON 직렬화.
+  - `models.dart`: `Person`(보건증은 사람 단위), `Store`(`scheduleConfirmedAt`), `Staff`(매장별 소속. 가입 신청 = `status: pending`, 계약서 포함, `kind`: 매니저·정직원·알바·연소자), `Shift`(`kind`: 근무·연차·휴무, `timeTbd`: 시간 미정), `Attendance`, `SubstituteRequest`, `Notice`, `AppNotification`, `Session`, `AppState`. 수동 JSON 직렬화.
+  - 매니저·정직원(`StaffKind.flex`)은 유동 근무: 파트 대신 `part: '직원'` 으로 시간을 직접 정한다.
   - `app_store.dart`: `AppStore extends ChangeNotifier`. 조회·파생값(내 근무, 출근 상태, 대타, 급여, 인건비, 안 읽은 수)과 모든 액션(출퇴근, 대타, 근무표, 직원, 공지, 서류, 매장, 세션, 데모). 액션마다 관련자에게 `AppNotification` 을 만든다.
   - `seed.dart`: `buildSeed(now)`. 지난달 1일이 있는 주부터 다음 주까지 근무·출근 기록을 만든다.
   - `payroll.dart`: 급여 순수 함수(`computePayslip`, `weeklyHolidayPay`, `deductionOf`), `minimumWage2026 = 10320`.
@@ -74,23 +75,28 @@ Flutter SDK는 PATH에 없음. 프로젝트 루트의 로컬 SDK 사용 (`/flutt
 - `lib/widgets/tab_shell.dart` — 하단 탭 셸. `TabShell.of(context)?.select(i)`로 탭 전환.
 - `lib/screens/employee/` — 알바생 화면. 전용 위젯은 `employee_parts.dart`(`CheckLine`, `ShiftHeroCard`, `TabTitle`, `SignaturePad`, `shiftStatus`).
 - `lib/screens/employer/` — 사장님 화면. 전용 위젯은 `employer_parts.dart`(`SegmentedPicker`, `CountStepper`, `SmallButton`, `SuccessStepsScaffold`, `showWageDialog`, `pickStaff`, `pickTime`, `partColors`, `attStyle`, `employerTarget`).
-- `lib/screens/web/` — 사장님 웹(W1–W7)과 POS QR(W8–W9).
-  - 웹 공용은 `web_common.dart`: `WebPage`, `WebTable`(`onRowTap`), `webStaffCell`, `showMobilePanel`.
-  - 상세·작성 흐름은 모바일 사장님 화면을 `showMobilePanel` 로 폰 크기 패널에 띄워 재사용한다. 패널 안 이동은 패널 안에서만 일어나고, 첫 화면에서 뒤로 가거나 화면을 모두 닫으면 패널이 닫힌다.
-  - 근무표(W2): 직원을 칸에 끌어다 놓으면 그 파트 시간으로 배정, 칸의 이름을 누르면 삭제.
-  - 근무표 변형(A–E)은 `web_schedule_*.dart`. 디자인 시안이라 데이터에 연결하지 않는다.
-- `assets/icons/` — Figma에서 받은 SVG (`flutter_svg`). `assets/fonts/` — Noto Sans KR 400/500/700 (OFL).
+- `lib/screens/web/` — 사장님 웹(W1–W7, 대타 승인)과 POS QR(W8–W9).
+  - `web_shell.dart`: 폭 1100 이상 사이드바, 800–1100 아이콘 레일, 800 미만 상단 바 + 서랍. 메뉴 이동은 `WebShell.open(context, WebMenu.xxx)`.
+  - 웹 공용은 `web_common.dart`: `WebPage`(제목 + 액션, 안 들어가면 액션이 아래 줄), `WebButton`, `WebRow`, `WebSplit`, `WebTable`(`onRowTap`, 좁으면 가로 스크롤), `WebSegmented`, `WebSelect`, `showWebDialog`, `showWebSheet`, `webField`/`webPair`, `DashedBorderPainter`.
+  - 상세·작성은 웹 전용 창이다: 근무 추가·수정(`web_shift_dialog.dart`), 직원 상세 시트·직원 초대(`web_staff_screen.dart`), 계약서 작성(`web_documents_screen.dart`), 공지 작성(`web_notice_screen.dart`), 알림·오늘 근무·근태 수정(`web_dashboard_screen.dart`).
+  - 근무표(`web_schedule_screen.dart` + `web_schedule_views.dart`): 한 달·파트별·인원별·일간. 빈 칸 클릭 = 추가, 블록 클릭 = 수정, 블록 드래그 = 이동(겹침·지난 날짜 막음). 되돌리기·자동 채우기·확정하기.
+- `assets/icons/` — Figma에서 받은 SVG (`flutter_svg`). `assets/images/app_icon.svg` — 로고 App Icon(Figma `186:174`). `assets/fonts/` — Noto Sans KR 400/500/700 (OFL).
 
 ## 프로토타입 데이터 규칙
 
 - 화면은 상수를 두지 말고 `AppScope.of(context)` 값으로 그린다. 바꾸는 일은 `AppStore` 액션으로만 한다(화면에서 모델 직접 수정 금지). 탭에 남는 로컬 사본 상태(`_working` 같은)를 두지 않는다.
 - 상세 화면은 id 를 받는다(`ShiftDetailScreen(shiftId:)` 등). 대상이 없으면 `MissingScreen`.
 - 근무 날짜는 `'yyyy-MM-dd'` + `startMin`/`endMin`(하루 기준 분, `end <= start` 면 야간). 시각만 ISO 문자열.
+- 근무 조회는 두 갈래다. `shiftsOn`·`shiftsOfStaff` 는 실제 근무(`Shift.isWork`: 근무 + 시간 확정)만 → 출퇴근·근태·급여·대타는 이것만 쓴다. 근무표 표시는 `scheduleOn`·`scheduleOfStaff`(연차·휴무·미정 포함).
+- 연차는 소정 시간만큼 유급(`payslip`), 휴무·미정은 0원.
+- 근무표 액션(`addShift`·`updateShift`·`deleteShift`·`autoFill`·`applyTemplate`)은 직전 상태를 되돌리기 스택(메모리)에 쌓는다.
 - id 는 `AppState.nextId` 카운터(`'s12'`). 시드의 사람·매장은 고정 id (`p-taewoo`, `p-owner`, `st-cafe`, `st-moa`).
 - 저장: SharedPreferences 키 `donbug.state` 에 JSON 한 덩어리. **모델 스키마를 바꾸면 `AppState.version` 을 올린다** (다르면 저장본을 버리고 시드로 시작).
 - 시드는 실제 오늘 기준이다.
-  - 알바생(김태우)은 오늘 근무가 항상 있다.
-  - 카페 커푸치노: `CAFE-8K2D`, 5인 미만, 데모 사장님 소유. 직원 지민·수빈·하윤·태우·서연, 가입 대기 도현.
+  - 알바생(김태우)은 오늘 근무가 항상 있다(미들 14–20, 오늘 포함 격일 3일).
+  - 카페 커푸치노: `CAFE-8K2D`, 5인 이상(재직 7명), 데모 사장님 소유. 매니저 지훈(유동 근무), 알바 지민·수빈·하윤·태우·서연, 연소자 유나, 가입 대기 도현.
+  - 근무: 지난달 1일이 든 주부터 다음 주(또는 이번 달 끝 주)까지. 파트(오픈 10–16 · 미들 14–20 · 마감 18–22)마다 필요 1명을 매일 채운다. 일부러 남긴 것: 다음 주 일요일 마감 빈칸(자동 채우기 시연), 지훈 다음 주 토요일 시간 미정, 지훈 이번 주 연차 1건.
+  - 보건증: 수빈 D-12, 태우 D-25, 도현 미등록. 계약서 직원 미서명: 태우·서연.
   - 편의점 모아: `MOA-27QX`, 태우 야간. 사장님 화면 없음.
   - 진행 중 대타 2건: 수빈 → 지민 수락(승인 대기), 하윤(지원 대기).
 - 급여 규칙(근사)
@@ -99,7 +105,7 @@ Flutter SDK는 PATH에 없음. 프로젝트 루트의 로컬 SDK 사용 (`/flutt
   - 가산(5인 이상 + 직원 설정): 야간·8시간 초과분에 0.5배 추가.
   - 공제: 3.3%(원 단위 내림), 4대보험 근사 9.4%(화면에 "예상" 표기), 없음.
   - 시급은 최저임금 미만으로 저장할 수 없다.
-- 인건비 추이의 2달 전 이전은 `Store.monthlyTotals` 상수다.
+- 인건비 추이의 2달 전 이전은 `Store.monthlyTotals` 상수다. 시드가 근무 패턴으로 낸 월 인건비에 작은 변동을 줘 만든다.
 - 데모 장치
   - 역할 전환·초기화: `DemoMenu`(알바생 MY, 사장님 매장 설정). 웹은 사이드바 "데모 데이터 초기화"
   - POS QR(웹 W8): QR 을 누르면 오늘 아직 출근하지 않은 다음 근무자가 출근
@@ -112,11 +118,13 @@ Flutter SDK는 PATH에 없음. 프로젝트 루트의 로컬 SDK 사용 (`/flutt
 ## Tests
 
 - `test/widget_test.dart`
-  - `pumpAt(tester, home, size, store:)`: 고정 시각 2026-05-14(수) 14:30 시드 store 를 주입한다.
+  - `pumpAt(tester, home, size, store:)`: 고정 시각 2026-05-14(목) 14:30 시드 store 를 주입한다.
   - `openPage`: 스스로 닫히는 화면용. 빈 화면 위에 push 한다.
   - `employerStore()`, `subinId()` 헬퍼.
 - `test/app_store_test.dart`: 액션 상태 전이, JSON 왕복, 날짜별 시드 생성.
 - `test/payroll_test.dart`: 급여 경계값.
+- `test/web_screens_test.dart`: 웹 메뉴 × 폭(1440·1280·1024·800) 넘침 검사 + 근무표·직원·대타·공지·POS 상호작용.
+  - 화면 확인용 스크린샷: `SHOTS_DIR=<폴더> ./flutter/bin/flutter test test/web_screens_test.dart --update-goldens` (실제 폰트로 PNG 저장, 커밋하지 않음). 이 서버엔 화면이 없으니 UI 를 고치면 이걸로 본다.
 - 근무 중 카드는 1초 타이머가 있어 `pumpAndSettle` 대신 `pump(Duration)` 을 쓴다.
 
 ## Conventions

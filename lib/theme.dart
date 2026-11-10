@@ -17,6 +17,10 @@ class AppColors {
   static const dangerSoft = Color(0xFFFDECEC);
   static const info = Color(0xFF3B82F6);
   static const infoSoft = Color(0xFFE8F0FE);
+
+  /// 직원(유동) 근무 · 매니저 칩.
+  static const purple = Color(0xFF8B5CF6);
+  static const purpleSoft = Color(0xFFF0EAFE);
   static const kakao = Color(0xFFFEE500);
 }
 

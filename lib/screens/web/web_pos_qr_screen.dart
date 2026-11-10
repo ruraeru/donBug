@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 
 import '../../data/app_scope.dart';
 import '../../data/app_store.dart';
@@ -115,15 +116,9 @@ class _WebPosQrScreenState extends State<WebPosQrScreen> {
                 GestureDetector(
                   onTap: () => Navigator.of(context).popUntil((r) => r.isFirst),
                   child: Row(children: [
-                    Container(
-                      width: 40,
-                      height: 40,
-                      alignment: Alignment.center,
-                      decoration: BoxDecoration(
-                          color: AppColors.primary,
-                          borderRadius: BorderRadius.circular(12)),
-                      child: Text('₩',
-                          style: AppText.style(18, FontWeight.w700, AppColors.onPrimary)),
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(12),
+                      child: SvgPicture.asset('assets/images/app_icon.svg', width: 40, height: 40),
                     ),
                     const SizedBox(width: 12),
                     Column(crossAxisAlignment: CrossAxisAlignment.start, children: [

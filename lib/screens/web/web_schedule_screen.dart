@@ -2,16 +2,14 @@ import 'package:flutter/material.dart';
 
 import '../../data/app_scope.dart';
 import '../../data/format.dart';
-import '../../data/models.dart';
 import '../../theme.dart';
 import '../../widgets/common.dart';
 import '../employer/employer_parts.dart';
-import '../employer/schedule_template_screen.dart';
-import '../employer/shift_add_screen.dart';
 import 'web_common.dart';
+import 'web_schedule_views.dart';
 
-/// W2 근무표 편집 (콘텐츠 영역). 오른쪽 직원을 끌어다 칸에 놓으면 그 파트 시간으로 배정,
-/// 칸의 이름을 누르면 삭제.
+/// W2 근무표 (Figma v3 오토스케줄 151:9248): 한 달 · 파트별 · 인원별 · 일간.
+/// 빈 칸을 누르면 근무 추가, 블록을 누르면 수정, 끌어 놓으면 이동. 바뀐 내용은 바로 저장된다.
 class WebScheduleScreen extends StatefulWidget {
   const WebScheduleScreen({super.key});
 
@@ -20,250 +18,205 @@ class WebScheduleScreen extends StatefulWidget {
 }
 
 class _WebScheduleScreenState extends State<WebScheduleScreen> {
-  /// 이번 주 기준 몇 주 떨어졌는지.
-  int _week = 0;
+  static const _views = ['한 달', '파트별', '인원별', '일간'];
 
-  void _assign(String staffId, DateTime day, PartTemplate part) {
-    final store = AppScope.read(context);
-    final name = store.nameOf(staffId);
-    if (day.isBefore(store.today)) {
-      return showToast(context, '지난 날짜에는 배정할 수 없어요');
-    }
-    final draft = Shift(
-      id: '',
-      storeId: store.store.id,
-      staffId: staffId,
-      date: ymd(day),
-      startMin: part.startMin,
-      endMin: part.endMin,
-      part: part.name,
-    );
-    if (store.overlappingShift(staffId, draft) case final other?) {
-      return showToast(context, '$name님은 ${shiftDay(other)} ${shiftTime(other)}에 이미 근무가 있어요');
-    }
-    store.addShift(
-        date: day,
-        startMin: part.startMin,
-        endMin: part.endMin,
-        part: part.name,
-        staffIds: [staffId]);
-    showToast(context, '$name님을 ${md(day)} ${part.name}에 배정했어요');
+  int _view = 1;
+
+  /// 고른 날. 달 · 주 · 요일은 모두 여기서 나온다.
+  DateTime? _day;
+
+  List<DateTime> _weeks(DateTime month) {
+    final first = DateTime(month.year, month.month);
+    final last = DateTime(month.year, month.month + 1, 0);
+    return [for (var m = mondayOf(first); !m.isAfter(last); m = m.add(const Duration(days: 7))) m];
   }
 
-  Future<void> _delete(Shift s) async {
+  void _moveMonth(DateTime day, int d) {
+    final m = DateTime(day.year, day.month + d);
+    final today = AppScope.read(context).today;
+    // 이번 달로 오면 오늘, 아니면 그 달 1일.
+    setState(() => _day = m.year == today.year && m.month == today.month ? today : m);
+  }
+
+  void _autoFill(List<DateTime> mondays) {
     final store = AppScope.read(context);
+    final n = mondays.fold(0, (sum, m) => sum + store.autoFill(m));
+    showToast(context, n == 0 ? '채울 빈 칸이 없어요' : '빈 칸 $n개를 채웠어요');
+  }
+
+  Future<void> _confirm(DateTime month) async {
+    final store = AppScope.read(context);
+    final tbd = store.tbdCount(month.year, month.month);
+    if (tbd > 0) return showToast(context, '시간 미정 $tbd건을 먼저 정해 주세요');
     final ok = await showConfirmDialog(
       context,
-      title: '근무를 삭제할까요?',
-      message: '${store.nameOf(s.staffId)} · ${shiftDay(s)} ${shiftTime(s)}',
-      confirmLabel: '삭제',
-      confirmVariant: AppButtonVariant.danger,
+      title: '${month.month}월 근무표를 확정할까요?',
+      message: '재직 직원 ${store.activeStaff.length}명에게 확정 알림을 보내요.',
+      confirmLabel: '확정하기',
     );
-    if (ok && mounted) store.deleteShift(s.id);
+    if (!ok || !mounted) return;
+    store.confirmSchedule(month.year, month.month);
+    showToast(context, '${month.month}월 근무표를 확정했어요');
   }
 
   @override
   Widget build(BuildContext context) {
     final store = AppScope.of(context);
-    final monday = mondayOf(store.today).add(Duration(days: 7 * _week));
-    final days = [for (var i = 0; i < 7; i++) monday.add(Duration(days: i))];
-    final sunday = days.last;
-    int weekMinutes(Staff s) => store
-        .shiftsOfStaff(s.id)
-        .where((x) => !parseYmd(x.date).isBefore(monday) && !parseYmd(x.date).isAfter(sunday))
-        .fold(0, (sum, x) => sum + x.scheduledMinutes);
-    final addDate = monday.isBefore(store.today) ? store.today : monday;
-    return WebPage(
-      title: '근무표 편집',
-      subtitle: '${monday.year}.${monday.month}.${monday.day} – ${sunday.month}.${sunday.day}'
-          ' · 직원을 끌어다 칸에 놓으면 배정돼요',
-      actions: [
-        WebButton('‹', style: WebButtonStyle.outline, onPressed: () => setState(() => _week--)),
-        WebButton('이번 주',
-            style: WebButtonStyle.outline, onPressed: () => setState(() => _week = 0)),
-        WebButton('›', style: WebButtonStyle.outline, onPressed: () => setState(() => _week++)),
-        WebButton('템플릿 복사',
-            style: WebButtonStyle.outline,
-            onPressed: () => showMobilePanel(context, const ScheduleTemplateScreen())),
-        WebButton('+ 근무 추가',
-            onPressed: () => showMobilePanel(context, ShiftAddScreen(date: addDate))),
-      ],
-      children: [
-        WebSplit(
-          rightWidth: 280,
-          gap: 20,
-          left: AppCard(
-            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 22),
-            child: Column(children: [
-              SizedBox(
-                height: 30,
-                child: Row(children: [
-                  const SizedBox(width: 84),
-                  for (final d in days) ...[
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: Container(
-                        alignment: Alignment.center,
-                        decoration: BoxDecoration(
-                          color: d == store.today ? AppColors.primary : null,
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                        child: Text(
-                          '${weekday(d)} ${d.day}',
-                          style: d == store.today
-                              ? AppText.style(13, FontWeight.w700, AppColors.onPrimary)
-                              : AppText.style(13, FontWeight.w400, AppColors.textSecondary),
-                        ),
-                      ),
-                    ),
-                  ],
-                ]),
-              ),
-              for (final part in store.store.parts) ...[
-                const SizedBox(height: 10),
-                Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                  SizedBox(
-                    width: 84,
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(part.name, style: AppText.style(15, FontWeight.w700)),
-                          const SizedBox(height: 2),
-                          Text(range(part.startMin, part.endMin).replaceAll(' ', ''),
-                              style:
-                                  AppText.style(11, FontWeight.w400, AppColors.textSecondary)),
-                          Text('필요 ${part.need}명',
-                              style:
-                                  AppText.style(11, FontWeight.w400, AppColors.textTertiary)),
-                        ],
-                      ),
-                    ),
-                  ),
-                  for (final d in days) ...[
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: DragTarget<String>(
-                        onAcceptWithDetails: (e) => _assign(e.data, d, part),
-                        builder: (context, hover, _) => _Slot(
-                          shifts: store.shiftsOn(d).where((x) => x.part == part.name).toList(),
-                          need: part.need,
-                          part: part.name,
-                          hover: hover.isNotEmpty,
-                          onTapShift: _delete,
-                        ),
-                      ),
-                    ),
-                  ],
-                ]),
-              ],
-            ]),
-          ),
-          right: AppCard(
-            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 22),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text('직원 (끌어서 배정)', style: AppText.style(15, FontWeight.w700)),
-                if (store.activeStaff.isEmpty) const EmptyNote('재직 중인 직원이 없어요'),
-                for (final s in store.activeStaff) ...[
-                  const SizedBox(height: 12),
-                  Draggable<String>(
-                    data: s.id,
-                    feedback: Material(
-                      color: Colors.transparent,
-                      child: Pill(store.personOf(s).name),
-                    ),
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                      decoration: BoxDecoration(
-                          color: AppColors.bg, borderRadius: BorderRadius.circular(12)),
-                      child: Row(children: [
-                        MemberAvatar(s, size: 32),
-                        const SizedBox(width: 10),
-                        Expanded(
-                            child: Text(store.personOf(s).name,
-                                style: AppText.style(14, FontWeight.w700))),
-                        Text('주 ${hours(weekMinutes(s))}',
-                            style: AppText.style(12, FontWeight.w400, AppColors.textSecondary)),
-                      ]),
-                    ),
-                  ),
-                ],
-              ],
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-}
+    final day = _day ?? store.today;
+    final month = DateTime(day.year, day.month);
+    final last = DateTime(day.year, day.month + 1, 0);
+    final weeks = _weeks(month);
+    final monday = mondayOf(day);
+    final tbd = store.tbdCount(month.year, month.month);
 
-class _Slot extends StatelessWidget {
-  const _Slot({
-    required this.shifts,
-    required this.need,
-    required this.part,
-    required this.hover,
-    required this.onTapShift,
-  });
-
-  final List<Shift> shifts;
-  final int need;
-  final String part;
-  final bool hover;
-  final ValueChanged<Shift> onTapShift;
-
-  @override
-  Widget build(BuildContext context) {
-    final store = AppScope.of(context);
-    final (fg, bg) = partColors(part);
-    final short = shifts.length < need;
-    return Container(
-      constraints: const BoxConstraints(minHeight: 150),
-      padding: const EdgeInsets.all(6),
-      decoration: BoxDecoration(
-        color: hover ? AppColors.primarySoft : AppColors.bg,
-        borderRadius: BorderRadius.circular(12),
-        border: hover
-            ? Border.all(color: AppColors.primary)
-            : short
-                ? Border.all(color: AppColors.danger)
-                : null,
+    final title = Row(mainAxisSize: MainAxisSize.min, children: [
+      _Arrow('‹', '이전 달', () => _moveMonth(day, -1)),
+      Flexible(
+        child: Text('근무표 · ${month.year}년 ${month.month}월',
+            overflow: TextOverflow.ellipsis, style: AppText.style(28, FontWeight.w700)),
       ),
-      child: Column(children: [
-        for (final s in shifts) ...[
-          Tooltip(
-            message: '${shiftTime(s)} · 눌러서 삭제',
+      _Arrow('›', '다음 달', () => _moveMonth(day, 1)),
+      if (tbd > 0) ...[
+        const SizedBox(width: 6),
+        WebTag('미정 $tbd건',
+            color: AppColors.danger,
+            background: AppColors.dangerSoft,
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3)),
+      ],
+    ]);
+
+    final weekTabs = SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      child: WebSegmented(
+        labels: [
+          for (final (i, m) in weeks.indexed)
+            '${i + 1}주차 · ${_weekRange(m, month, last)}',
+        ],
+        selected: weeks.indexOf(monday).clamp(0, weeks.length - 1),
+        onChanged: (i) => setState(() {
+          final m = weeks[i];
+          _day = m.isBefore(month) ? month : m;
+        }),
+      ),
+    );
+
+    final dayTabs = LayoutBuilder(builder: (context, c) {
+      final days = [for (var i = 0; i < 7; i++) monday.add(Duration(days: i))];
+      return Row(children: [
+        for (final (i, d) in days.indexed) ...[
+          if (i > 0) const SizedBox(width: 8),
+          Expanded(
             child: Material(
-              color: store.pendingSubFor(s.id) != null ? AppColors.accentSoft : bg,
-              borderRadius: BorderRadius.circular(8),
+              color: d == day ? AppColors.primary : AppColors.surface,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(10),
+                side: BorderSide(color: d == day ? AppColors.primary : AppColors.border),
+              ),
               child: InkWell(
-                onTap: () => onTapShift(s),
-                borderRadius: BorderRadius.circular(8),
-                child: Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.symmetric(vertical: 7),
-                  alignment: Alignment.center,
-                  child: Text(
-                    '${store.nameOf(s.staffId)}${s.isSubstitute ? ' (대타)' : ''}',
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: AppText.style(12, FontWeight.w700,
-                        store.pendingSubFor(s.id) != null ? AppColors.accent : fg),
+                onTap: () => setState(() => _day = d),
+                borderRadius: BorderRadius.circular(10),
+                child: SizedBox(
+                  height: 40,
+                  child: Center(
+                    child: Text('${weekday(d)} ${d.month}/${d.day}',
+                        style: AppText.style(13, FontWeight.w700,
+                            d == day ? AppColors.onPrimary : dayColor(d))),
                   ),
                 ),
               ),
             ),
           ),
-          const SizedBox(height: 6),
         ],
-        if (short)
-          Text('인원 부족 ${shifts.length}/$need',
-              textAlign: TextAlign.center,
-              style: AppText.style(11, FontWeight.w400, AppColors.danger)),
-      ]),
+      ]);
+    });
+
+    final view = switch (_view) {
+      0 => MonthView(
+          month: month,
+          onOpenDay: (d) => setState(() {
+            _day = d;
+            _view = 3;
+          })),
+      1 => PartWeekView(monday: monday),
+      2 => PeopleWeekView(monday: monday),
+      _ => DayTimelineView(day: day),
+    };
+
+    final help = switch (_view) {
+      0 => '날짜를 누르면 그날 타임라인으로 가요',
+      1 => '블록을 다른 파트·요일 칸으로 끌어 옮겨요 · 빈 칸 클릭으로 추가',
+      2 => '블록을 다른 사람·요일 칸으로 끌어 옮겨요 · 빈 칸 클릭으로 추가',
+      _ => '블록을 누르면 출퇴근 시간을 바꿔요 · 회색은 영업 외 시간',
+    };
+
+    return WebPage(
+      title: '근무표',
+      titleWidget: title,
+      subtitle: '${month.year}.${month.month}.1 – ${month.month}.${last.day}'
+          ' · 직원 ${store.flexStaff.length}명(유동 근무) · 알바생 ${store.partStaff.length}명(파트 근무)'
+          '${store.store.scheduleConfirmedAt == null ? '' : ' · ${relative(DateTime.parse(store.store.scheduleConfirmedAt!), store.now)} 확정'}',
+      gap: 16,
+      actions: [
+        WebSegmented(
+            labels: _views, selected: _view, onChanged: (i) => setState(() => _view = i)),
+        WebButton('되돌리기',
+            icon: Icons.undo_rounded,
+            tooltip: '되돌리기',
+            style: WebButtonStyle.outline,
+            onPressed: store.canUndo ? store.undo : null),
+        WebButton('다시하기',
+            icon: Icons.redo_rounded,
+            tooltip: '다시하기',
+            style: WebButtonStyle.outline,
+            onPressed: store.canRedo ? store.redo : null),
+        WebButton('자동 채우기',
+            style: WebButtonStyle.soft,
+            onPressed: () => _autoFill(_view == 0 ? weeks : [monday])),
+        const WebButton('저장', tooltip: '바뀐 내용은 바로 저장돼요', style: WebButtonStyle.outline),
+        WebButton('확정하기', onPressed: () => _confirm(month)),
+      ],
+      children: [
+        if (_view != 0) weekTabs,
+        if (_view == 3) dayTabs,
+        view,
+        Wrap(
+          spacing: 16,
+          runSpacing: 8,
+          alignment: WrapAlignment.spaceBetween,
+          children: [
+            Wrap(spacing: 14, runSpacing: 6, children: [
+              for (final p in store.store.parts) WebLegend(partColors(p.name).$1, p.name),
+              const WebLegend(AppColors.purple, '직원 근무'),
+              const WebLegend(AppColors.danger, '시간 미정', dashed: true),
+              const WebLegend(AppColors.textTertiary, '연차·휴무'),
+              const WebLegend(AppColors.accent, '대타 모집'),
+            ]),
+            Text(help, style: AppText.style(12, FontWeight.w400, AppColors.textTertiary)),
+          ],
+        ),
+      ],
     );
   }
+
+  /// 그 달 안으로 자른 주 범위 '11/2–11/8' (한 날이면 '11/1').
+  static String _weekRange(DateTime monday, DateTime month, DateTime last) {
+    var a = monday, b = monday.add(const Duration(days: 6));
+    if (a.isBefore(month)) a = month;
+    if (b.isAfter(last)) b = last;
+    return a == b ? '${a.month}/${a.day}' : '${a.month}/${a.day}–${b.month}/${b.day}';
+  }
+}
+
+class _Arrow extends StatelessWidget {
+  const _Arrow(this.glyph, this.tooltip, this.onTap);
+
+  final String glyph, tooltip;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) => IconButton(
+        tooltip: tooltip,
+        onPressed: onTap,
+        icon: Text(glyph, style: AppText.style(22, FontWeight.w400, AppColors.textSecondary)),
+      );
 }

@@ -634,9 +634,10 @@ class CountBadge extends StatelessWidget {
       );
 }
 
-/// 화면 아래에 짧은 안내를 띄운다.
-void showToast(BuildContext context, String text) =>
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(text)));
+/// 화면 아래에 짧은 안내를 띄운다. 이미 떠 있는 것은 바로 바꾼다(연달아 누를 때 줄 서지 않게).
+void showToast(BuildContext context, String text) => ScaffoldMessenger.of(context)
+  ..hideCurrentSnackBar()
+  ..showSnackBar(SnackBar(content: Text(text)));
 
 /// 취소 / 확인 두 버튼 다이얼로그. 확인을 누르면 true.
 Future<bool> showConfirmDialog(
