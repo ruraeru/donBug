@@ -3,8 +3,10 @@ import 'package:flutter/services.dart';
 
 import '../../data/app_scope.dart';
 import '../../data/app_store.dart';
+import '../../data/models.dart';
 import '../../theme.dart';
 import '../../widgets/common.dart';
+import '../../widgets/demo_menu.dart';
 import 'join_pending_screen.dart';
 
 /// 매장 코드 입력. [addMode]: MY 에서 다른 매장 추가 가입.
@@ -35,6 +37,8 @@ class _StoreCodeScreenState extends State<StoreCodeScreen> {
       case JoinResult.notFound:
         showToast(context, '매장 코드를 찾을 수 없어요');
       case JoinResult.alreadyMember:
+        // 로그인 직후(매장 가입)면 그 매장 홈으로 들어간다. MY 의 추가 가입은 안내만.
+        if (!widget.addMode && store.switchStore(st!.id)) return openShell(context, Role.employee);
         showToast(context, '이미 가입한 매장이에요');
       case JoinResult.requested:
       case JoinResult.alreadyPending:
@@ -62,7 +66,7 @@ class _StoreCodeScreenState extends State<StoreCodeScreen> {
             ),
             const SizedBox(height: 16),
             const NoteBox(
-              '매장 코드는 사장님 앱의 [매장 설정]에서 확인할 수 있어요. 여러 매장에서 일하면 코드를 추가로 입력하세요.\n데모 매장 코드: BAKE-5TQ1',
+              '매장 코드는 사장님 앱의 [매장 설정]에서 확인할 수 있어요. 여러 매장에서 일하면 코드를 추가로 입력하세요.\n데모 매장 코드: CAFE-8K2D(가입됨) · BAKE-5TQ1',
               color: AppColors.textSecondary,
               background: AppColors.surface,
             ),
