@@ -88,6 +88,7 @@ Flutter SDK는 PATH에 없음. 프로젝트 루트의 로컬 SDK 사용 (`/flutt
   - 웹 공용은 `web_common.dart`: `WebPage`(제목 + 액션, 안 들어가면 액션이 아래 줄), `WebButton`, `WebRow`, `WebSplit`, `WebTable`(`onRowTap`, 좁으면 가로 스크롤), `WebSegmented`, `WebSelect`, `showWebDialog`, `showWebSheet`, `webField`/`webPair`, `DashedBorderPainter`.
   - 상세·작성은 웹 전용 창이다: 근무 추가·수정(`web_shift_dialog.dart`), 직원 상세 시트·직원 초대(`web_staff_screen.dart`), 계약서 작성(`web_documents_screen.dart`), 공지 작성(`web_notice_screen.dart`), 알림·오늘 근무·근태 수정(`web_dashboard_screen.dart`).
   - 근무표(`web_schedule_screen.dart` + `web_schedule_views.dart`): 한 달·파트별·인원별·일간. 빈 칸 클릭 = 추가, 블록 클릭 = 수정, 블록 드래그 = 이동(겹침·지난 날짜 막음). 되돌리기·자동 채우기·확정하기.
+  - 근무표 만들기(`web_schedule_create_dialog.dart`): 이번 달·다음 달을 자동 배정(자기 파트 먼저, 주 근무 적은 순) 또는 지난주 반복으로 한 번에 짠다. 파트별 필요 인원·근무자 제외·주 최대 근무, 미리보기(새 근무·못 채운 칸·예상 인건비·직원별 시간). 되돌리기 한 번에 취소.
 - `assets/icons/` — Figma에서 받은 SVG (`flutter_svg`). `assets/images/app_icon.svg` — 로고 App Icon(Figma `186:174`). `assets/fonts/` — Noto Sans KR 400/500/700 (OFL).
 
 ## 프로토타입 데이터 규칙

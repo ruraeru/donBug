@@ -114,6 +114,22 @@ Future<void> _shot(WidgetTester tester, String name) async {
 }
 
 void main() {
+  testWidgets('실제 데이터: 다음 달 자동 배정으로 만들면 6월 근무가 생긴다', (tester) async {
+    await tester.runAsync(_loadFonts);
+    final store = AppStore(buildSeed(_now), now: () => _now);
+    await _pump(tester, store, const Size(1440, 900));
+    await _openDialog(tester);
+    await tester.tap(find.text('다음 달'));
+    await tester.pumpAndSettle();
+    await _shot(tester, 'real_dialog_next_month');
+    int june() => store.state.shifts.where((x) => x.date.startsWith('2026-06')).length;
+    final before = june();
+    await tester.tap(find.widgetWithText(InkWell, '근무표 만들기').last);
+    await tester.pumpAndSettle();
+    expect(june(), greaterThan(before));
+    await _shot(tester, 'real_after_create');
+  });
+
   testWidgets('헤더 버튼으로 창이 열리고 설정을 바꾸면 planSchedule 인자가 바뀐다', (tester) async {
     final store = _Spy();
     await _pump(tester, store, const Size(1440, 900));
@@ -155,7 +171,9 @@ void main() {
   });
 
   testWidgets('새 근무 0건이면 만들기가 비활성', (tester) async {
-    final store = _Spy(); // 기본 구현은 빈 결과
+    final store = _Spy(
+        fake: (f, t) => SchedulePlan(
+            from: f, to: t, shifts: const [], unfilled: 0, minutesByStaff: const {}, cost: 0));
     await _pump(tester, store, const Size(1440, 900));
     await _openDialog(tester);
     final btn = find.widgetWithText(InkWell, '근무표 만들기').last;

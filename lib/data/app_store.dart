@@ -855,7 +855,7 @@ class AppStore extends ChangeNotifier {
   /// 근무표 만들기(웹): [from]–[to] 의 오늘 이후 날짜에 파트별 [needs](store.parts 순서) 만큼 근무를 짠다.
   /// 상태는 바꾸지 않고 미리보기만 돌려준다.
   /// - [copyLastWeek]: 오늘이 든 주의 바로 전 주 근무(연차·휴무 제외, 재직자만)를 요일마다 반복한 뒤 빈칸을 채운다
-  /// - 빈칸은 파트 근무자 중 그 주 근무가 적은 사람부터(autoFill 과 같은 규칙). [excludeStaffIds] 는 빼고,
+  /// - 빈칸은 그 파트가 자기 파트인 근무자 먼저, 그다음 그 주 근무가 적은 사람부터. [excludeStaffIds] 는 빼고,
   ///   그 주 소정 분이 [weeklyMaxMin] 을 넘게 되는 사람은 건너뛴다
   /// - 이미 있는 근무 · 겹치는 시간은 그대로 두고 피한다
   SchedulePlan planSchedule({
@@ -934,7 +934,11 @@ class AppStore extends ChangeNotifier {
                     !overlaps(m.id, d) &&
                     weekMin(m.id, day) + d.scheduledMinutes <= weeklyMaxMin)
                 .toList()
-              ..sort((a, b) => weekMin(a.id, day).compareTo(weekMin(b.id, day)));
+              // 자기 파트 근무자 먼저, 그다음 그 주 근무가 적은 사람.
+              ..sort((a, b) {
+                final home = (a.part == p.name ? 0 : 1).compareTo(b.part == p.name ? 0 : 1);
+                return home != 0 ? home : weekMin(a.id, day).compareTo(weekMin(b.id, day));
+              });
             if (free.isEmpty) {
               unfilled += need - have;
               break;

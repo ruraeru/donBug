@@ -101,4 +101,12 @@ void main() {
     expect(s.applySchedulePlan(plan, needs: [0, 0, 0]), 0);
     expect(s.canUndo, isFalse);
   });
+
+  test('자동 배정은 자기 파트 근무자부터 쓴다', () {
+    final s = AppStore(buildSeed(DateTime(2026, 5, 14, 14, 30)), now: () => DateTime(2026, 5, 14, 14, 30));
+    final plan = s.planSchedule(
+        from: DateTime(2026, 6, 1), to: DateTime(2026, 6, 30), needs: [for (final p in s.store.parts) p.need]);
+    final own = plan.shifts.where((x) => s.staffById(x.staffId)!.part == x.part).length;
+    expect(own / plan.shifts.length, greaterThan(0.8));
+  });
 }
