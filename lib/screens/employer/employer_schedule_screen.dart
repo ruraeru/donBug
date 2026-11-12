@@ -52,12 +52,12 @@ class _EmployerScheduleScreenState extends State<EmployerScheduleScreen> {
               ),
             ],
           ),
-          const SizedBox(height: 10),
+          const SizedBox(height: 12),
           Row(children: [
             IconButton(
               tooltip: '이전 주',
               onPressed: () => setState(() => _day = day.subtract(const Duration(days: 7))),
-              icon: Text('‹', style: AppText.style(24)),
+              icon: const Icon(Icons.chevron_left_rounded, size: 28),
             ),
             Expanded(
               child: Text('${md(monday)} – ${md(monday.add(const Duration(days: 6)))}',
@@ -67,14 +67,14 @@ class _EmployerScheduleScreenState extends State<EmployerScheduleScreen> {
             IconButton(
               tooltip: '다음 주',
               onPressed: () => setState(() => _day = day.add(const Duration(days: 7))),
-              icon: Text('›', style: AppText.style(24)),
+              icon: const Icon(Icons.chevron_right_rounded, size: 28),
             ),
           ]),
           const SizedBox(height: 8),
           Row(
             children: [
               for (var i = 0; i < 7; i++) ...[
-                if (i > 0) const SizedBox(width: 6),
+                if (i > 0) const SizedBox(width: 8),
                 Expanded(child: _dayChip(store, monday.add(Duration(days: i)), day)),
               ],
             ],
@@ -84,7 +84,7 @@ class _EmployerScheduleScreenState extends State<EmployerScheduleScreen> {
             _partCard(store, part, shifts.where((s) => s.part == part).toList()),
           ],
           const SizedBox(height: 12),
-          AppButton('+ 근무 추가', onPressed: () => _push(ShiftAddScreen(date: day))),
+          AppButton('근무 추가', onPressed: () => _push(ShiftAddScreen(date: day))),
         ],
       ),
     );
@@ -94,21 +94,20 @@ class _EmployerScheduleScreenState extends State<EmployerScheduleScreen> {
     final template = store.store.parts.where((p) => p.name == part).firstOrNull;
     final need = template?.need ?? 0;
     final short = need - list.length;
-    final (fg, bg) = partColors(part);
     final time = list.isNotEmpty
         ? shiftTime(list.first)
         : template == null
             ? ''
             : range(template.startMin, template.endMin);
     return AppCard(
-      padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
+      padding: const EdgeInsets.all(16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
-              Pill(part, color: fg, background: bg),
-              const SizedBox(width: 8),
+              PartLabel(part),
+              const SizedBox(width: 12),
               Expanded(child: Text(time, style: AppText.style(16, FontWeight.w500))),
               Text(
                 need == 0
@@ -119,7 +118,7 @@ class _EmployerScheduleScreenState extends State<EmployerScheduleScreen> {
               ),
             ],
           ),
-          const SizedBox(height: 10),
+          const SizedBox(height: 12),
           if (list.isEmpty)
             Text('배정된 근무자가 없어요',
                 style: AppText.style(14, FontWeight.w400, AppColors.textTertiary))

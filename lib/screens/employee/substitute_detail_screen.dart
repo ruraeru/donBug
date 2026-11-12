@@ -62,6 +62,7 @@ class SubstituteDetailScreen extends StatelessWidget {
           ShiftHeroCard(
             date: shiftDay(s),
             chip: '대타 구해요',
+            alert: true,
             time: shiftTime(s),
             caption: shiftCaption(s),
           ),
@@ -105,7 +106,7 @@ class SubstituteDetailScreen extends StatelessWidget {
           ),
           const SizedBox(height: 16),
           const NoteBox('대타 근무는 주휴수당 계산에서 제외돼요. 사장님 승인 후 확정됩니다.',
-              color: AppColors.accent, background: AppColors.accentSoft),
+              color: AppColors.textSecondary, background: AppColors.surface),
         ],
       ),
       bottomNavigationBar: BottomBar(child: button),

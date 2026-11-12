@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 
 import '../../theme.dart';
 import 'kakao_consent_screen.dart';
@@ -20,18 +21,7 @@ class LoginScreen extends StatelessWidget {
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      Container(
-                        width: 88,
-                        height: 88,
-                        alignment: Alignment.center,
-                        decoration: BoxDecoration(
-                          color: AppColors.primary,
-                          borderRadius: BorderRadius.circular(28),
-                        ),
-                        child: Text('₩',
-                            style: AppText.style(
-                                44, FontWeight.w500, AppColors.onPrimary)),
-                      ),
+                      SvgPicture.asset('assets/images/app_icon.svg', width: 88, height: 88),
                       const SizedBox(height: 16),
                       Text('돈벌래', style: AppText.style(34, FontWeight.w500)),
                       const SizedBox(height: 16),

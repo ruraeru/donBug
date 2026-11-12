@@ -32,9 +32,9 @@ class JoinApprovedScreen extends StatelessWidget {
               child: Column(
                 children: [
                   KeyValueRow('소속 매장', st.name),
-                  const SizedBox(height: 14),
+                  const SizedBox(height: 12),
                   KeyValueRow('시급', wonText(m.wage)),
-                  const SizedBox(height: 14),
+                  const SizedBox(height: 12),
                   KeyValueRow('급여 공제', m.deduction.label),
                 ],
               ),

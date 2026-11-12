@@ -166,7 +166,7 @@ class _RequestCard extends StatelessWidget {
                   showToast(context, ok ? '동료가 대타를 수락했어요' : '수락할 수 있는 동료가 없어요');
                 },
               ),
-              const SizedBox(height: 10),
+              const SizedBox(height: 12),
             ],
             AppButton(
               '요청 취소',

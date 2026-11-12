@@ -36,7 +36,7 @@ class _WorkLogScreenState extends State<WorkLogScreen> {
           for (final e in logs) ...[
             AppCard(
               radius: 16,
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
               child: Row(
                 children: [
                   Expanded(
@@ -63,7 +63,7 @@ class _WorkLogScreenState extends State<WorkLogScreen> {
                 ],
               ),
             ),
-            const SizedBox(height: 10),
+            const SizedBox(height: 12),
           ],
           AppCard(
             child: Column(

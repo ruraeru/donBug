@@ -6,6 +6,7 @@ import '../../data/format.dart';
 import '../../data/models.dart';
 import '../../theme.dart';
 import '../../widgets/common.dart';
+import '../employer/employer_parts.dart';
 import 'employee_parts.dart';
 import 'leave_request_screen.dart';
 import 'shift_detail_screen.dart';
@@ -48,7 +49,7 @@ class _EmployeeScheduleScreenState extends State<EmployeeScheduleScreen> {
                   _weekOffset--;
                   _day = null;
                 }),
-                icon: Text('‹', style: AppText.style(24)),
+                icon: const Icon(Icons.chevron_left_rounded),
               ),
               Expanded(
                 child: Text(
@@ -62,7 +63,7 @@ class _EmployeeScheduleScreenState extends State<EmployeeScheduleScreen> {
                   _weekOffset++;
                   _day = null;
                 }),
-                icon: Text('›', style: AppText.style(24)),
+                icon: const Icon(Icons.chevron_right_rounded),
               ),
             ]),
           ),
@@ -126,7 +127,7 @@ class _EmployeeScheduleScreenState extends State<EmployeeScheduleScreen> {
       child: InkWell(
         onTap: () => setState(() => _day = selected ? null : d),
         child: Padding(
-          padding: const EdgeInsets.symmetric(vertical: 10),
+          padding: const EdgeInsets.symmetric(vertical: 12),
           child: Column(
             children: [
               Text(weekday(d),
@@ -159,7 +160,7 @@ class _EmployeeScheduleScreenState extends State<EmployeeScheduleScreen> {
     final d = parseYmd(s.date);
     return AppCard(
       radius: 16,
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       onTap: () => Navigator.push(
         context,
         MaterialPageRoute(builder: (_) => ShiftDetailScreen(shiftId: s.id)),
@@ -172,20 +173,33 @@ class _EmployeeScheduleScreenState extends State<EmployeeScheduleScreen> {
               Text('${d.day}', style: AppText.style(20, FontWeight.w500)),
             ],
           ),
-          const SizedBox(width: 14),
+          const SizedBox(width: 12),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('${shiftTime(s)} · ${s.part}', style: AppText.style(15, FontWeight.w500)),
+                Wrap(crossAxisAlignment: WrapCrossAlignment.center, children: [
+                  Text(shiftTime(s), style: AppText.style(15, FontWeight.w500)),
+                  const SizedBox(width: 8),
+                  Padding(
+                      padding: const EdgeInsets.only(right: 4),
+                      child: Container(
+                      width: 8,
+                      height: 8,
+                      decoration: BoxDecoration(color: partColors(s.part).$1, shape: BoxShape.circle))),
+                  Text(s.part, style: AppText.style(15, FontWeight.w500)),
+                ]),
                 const SizedBox(height: 2),
                 Text(store.store.name,
                     style: AppText.style(12, FontWeight.w400, AppColors.textSecondary)),
               ],
             ),
           ),
-          const SizedBox(width: 14),
-          Pill(status, color: fg, background: bg),
+          const SizedBox(width: 12),
+          if (bg == Colors.transparent)
+            Text(status, style: AppText.style(13, FontWeight.w400, AppColors.textSecondary))
+          else
+            Pill(status, color: fg, background: bg),
         ],
       ),
     );

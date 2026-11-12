@@ -44,7 +44,7 @@ class _ScheduleTemplateScreenState extends State<ScheduleTemplateScreen> {
                 Text('파트별 필요 인원',
                     style: AppText.style(14, FontWeight.w500, AppColors.textSecondary)),
                 for (var i = 0; i < parts.length; i++) ...[
-                  const SizedBox(height: 14),
+                  const SizedBox(height: 16),
                   Row(
                     children: [
                       Expanded(child: Text(parts[i].name, style: AppText.style(15, FontWeight.w500))),
@@ -55,7 +55,7 @@ class _ScheduleTemplateScreenState extends State<ScheduleTemplateScreen> {
               ],
             ),
           ),
-          const SizedBox(height: 14),
+          const SizedBox(height: 16),
           LabeledField(
             '이번 주 적용 방식',
             child: Column(
@@ -78,7 +78,7 @@ class _ScheduleTemplateScreenState extends State<ScheduleTemplateScreen> {
     return GestureDetector(
       onTap: () => setState(() => _template = i),
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
         decoration: BoxDecoration(
           color: AppColors.surface,
           borderRadius: BorderRadius.circular(14),
@@ -96,7 +96,7 @@ class _ScheduleTemplateScreenState extends State<ScheduleTemplateScreen> {
                 ],
               ),
             ),
-            if (on) Text('✓', style: AppText.style(16, FontWeight.w500, AppColors.primary)),
+            if (on) const Icon(Icons.check_rounded, size: 20, color: AppColors.primary),
           ],
         ),
       ),

@@ -44,11 +44,11 @@ class DemoMenu extends StatelessWidget {
         Row(children: [
           Text('데모', style: AppText.style(14, FontWeight.w500, AppColors.textSecondary)),
           const SizedBox(width: 8),
-          const Pill('시연용', color: AppColors.info, background: AppColors.infoSoft),
+          const Pill('시연용', color: AppColors.textSecondary, background: AppColors.bg),
         ]),
         const SizedBox(height: 10),
         PersonRow(
-          avatar: const LetterAvatar('전', color: AppColors.info, background: AppColors.infoSoft),
+          avatar: const LetterAvatar('전', color: AppColors.textSecondary, background: AppColors.bg),
           title: other == Role.employer ? '사장님 화면으로 전환' : '알바생 화면으로 전환',
           subtitle: '같은 데이터로 다른 역할을 확인해요',
           trailing: chevron,
@@ -57,7 +57,7 @@ class DemoMenu extends StatelessWidget {
         const SizedBox(height: 12),
         PersonRow(
           avatar: const LetterAvatar('초',
-              color: AppColors.danger, background: AppColors.dangerSoft),
+              color: AppColors.textSecondary, background: AppColors.bg),
           title: '데모 데이터 초기화',
           subtitle: '처음 상태로 되돌려요',
           trailing: chevron,

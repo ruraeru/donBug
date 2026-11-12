@@ -55,25 +55,25 @@ class _EmployerLaborCostScreenState extends State<EmployerLaborCostScreen> {
               children: [
                 AppCard(
                   color: AppColors.primary,
-                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
+                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(current ? '이번 달 예상 인건비' : '${month.month}월 인건비',
                           style: AppText.style(13, FontWeight.w500, AppColors.onPrimary)),
-                      const SizedBox(height: 6),
+                      const SizedBox(height: 8),
                       Text(won(total), style: AppText.style(30, FontWeight.w500, AppColors.onPrimary)),
-                      const SizedBox(height: 6),
+                      const SizedBox(height: 8),
                       Text('세전 · 주휴수당 포함 · 지난달 대비 ${diff >= 0 ? '+' : ''}$diff%',
                           style: AppText.style(12, FontWeight.w400, AppColors.onPrimary)),
                     ],
                   ),
                 ),
-                const SizedBox(height: 14),
+                const SizedBox(height: 16),
                 _chart(bars),
-                const SizedBox(height: 14),
+                const SizedBox(height: 16),
                 AppCard(
-                  padding: const EdgeInsets.fromLTRB(18, 14, 18, 6),
+                  padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
                   child: Column(
                     children: [
                       Padding(
@@ -85,7 +85,7 @@ class _EmployerLaborCostScreenState extends State<EmployerLaborCostScreen> {
                                   style: AppText.style(15, FontWeight.w500)),
                             ),
                             Text('전체 ${workers.length}명',
-                                style: AppText.style(12, FontWeight.w500, AppColors.primary)),
+                                style: AppText.style(12, FontWeight.w400, AppColors.textSecondary)),
                           ],
                         ),
                       ),
@@ -132,7 +132,7 @@ class _EmployerLaborCostScreenState extends State<EmployerLaborCostScreen> {
   Widget _chart(List<(DateTime, int)> bars) {
     final max = bars.fold(1, (m, b) => b.$2 > m ? b.$2 : m);
     return AppCard(
-      padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
+      padding: const EdgeInsets.all(16),
       child: Column(
         children: [
           Row(
@@ -161,19 +161,19 @@ class _EmployerLaborCostScreenState extends State<EmployerLaborCostScreen> {
   Widget _bar((DateTime, int) b, int max, {required bool current}) => Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Text('${(b.$2 / 1e6).toStringAsFixed(1)}M',
+          Text('${comma((b.$2 / 10000).round())}만',
               style: AppText.style(10, current ? FontWeight.w500 : FontWeight.w400,
                   current ? AppColors.primary : AppColors.textTertiary)),
-          const SizedBox(height: 6),
+          const SizedBox(height: 8),
           Container(
             width: 30,
             height: 4 + 76 * b.$2 / max,
             decoration: BoxDecoration(
-              color: current ? AppColors.primary : AppColors.primarySoft,
-              borderRadius: BorderRadius.circular(8),
+              color: current ? AppColors.primary : AppColors.border,
+              borderRadius: const BorderRadius.vertical(top: Radius.circular(4)),
             ),
           ),
-          const SizedBox(height: 6),
+          const SizedBox(height: 8),
           Text('${b.$1.month}월',
               style: AppText.style(11, current ? FontWeight.w500 : FontWeight.w400,
                   current ? AppColors.textPrimary : AppColors.textTertiary)),

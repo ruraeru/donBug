@@ -56,8 +56,8 @@ class EmployerDocumentsScreen extends StatelessWidget {
                       Row(
                         children: [
                           Expanded(child: Text('노무 체크리스트', style: AppText.style(15, FontWeight.w500))),
-                          Pill(store.store.isSmall ? '5인 미만 사업장' : '5인 이상 사업장',
-                              color: AppColors.info, background: AppColors.infoSoft),
+                          Text(store.store.isSmall ? '5인 미만 사업장' : '5인 이상 사업장',
+                              style: AppText.style(13, FontWeight.w400, AppColors.textSecondary)),
                         ],
                       ),
                       for (var i = 0; i < checks.length; i++) ...[
@@ -88,7 +88,7 @@ class EmployerDocumentsScreen extends StatelessWidget {
                                     child: Text(store.personOf(staff[i]).name,
                                         style: AppText.style(15, FontWeight.w500))),
                                 contractPill(staff[i].contract),
-                                const SizedBox(width: 6),
+                                const SizedBox(width: 8),
                                 certPill(store.certDaysLeft(store.personOf(staff[i]))),
                               ],
                             ),
@@ -115,8 +115,8 @@ class EmployerDocumentsScreen extends StatelessWidget {
   Widget _checkRow(String label, {required bool ok}) => Row(
         children: [
           AppIcon(ok ? 'check' : 'alert_circle', size: 20,
-              color: ok ? AppColors.primary : AppColors.danger),
-          const SizedBox(width: 10),
+              color: ok ? AppColors.textSecondary : AppColors.danger),
+          const SizedBox(width: 12),
           Expanded(
             child: Text(label,
                 style: ok ? AppText.style(14) : AppText.style(14, FontWeight.w500, AppColors.danger)),
@@ -126,8 +126,8 @@ class EmployerDocumentsScreen extends StatelessWidget {
 }
 
 /// 계약서 상태 칩.
-Pill contractPill(Contract? c) => c == null
+Widget contractPill(Contract? c) => c == null
     ? const Pill('계약서 없음', color: AppColors.danger, background: AppColors.dangerSoft)
     : c.signed
-        ? const Pill('계약서 완료', color: AppColors.textSecondary, background: AppColors.bg)
+        ? Text('계약서 완료', style: AppText.style(13, FontWeight.w400, AppColors.textSecondary))
         : const Pill.accent('서명 대기');

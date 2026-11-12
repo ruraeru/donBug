@@ -18,7 +18,7 @@ class AiLaborAssistantScreen extends StatelessWidget {
 
     return Scaffold(
       appBar: const AppHeader('AI 노무 도우미', actions: [
-        Pill('Gemini', color: AppColors.info, background: AppColors.infoSoft),
+        Text('Gemini', style: TextStyle(fontSize: 13, color: AppColors.textSecondary)),
         SizedBox(width: 16),
       ]),
       body: ListView(
@@ -26,19 +26,19 @@ class AiLaborAssistantScreen extends StatelessWidget {
         children: [
           const NoteBox('추후 개발 예정인 기능이에요. 아래 화면은 예시예요.',
               color: AppColors.accent, background: AppColors.accentSoft),
-          const SizedBox(height: 14),
+          const SizedBox(height: 16),
           _Bubble(
             ai: true,
-            child: Text('안녕하세요! 노동법이나 매장 관리, 궁금한 걸 편하게 물어보세요.',
+            child: Text('노동법이나 매장 관리, 궁금한 걸 편하게 물어보세요.',
                 style: AppText.style(14)),
           ),
-          const SizedBox(height: 14),
+          const SizedBox(height: 16),
           _Bubble(
             ai: false,
             child: Text('5인 미만 사업장인데 주휴수당 꼭 줘야 하나요?',
                 style: AppText.style(14, FontWeight.w500, AppColors.onPrimary)),
           ),
-          const SizedBox(height: 14),
+          const SizedBox(height: 16),
           _Bubble(
             ai: true,
             onTap: openDetail,
@@ -47,11 +47,11 @@ class AiLaborAssistantScreen extends StatelessWidget {
               children: [
                 Text('네, 주휴수당은 5인 미만 사업장도 줘야 해요.',
                     style: AppText.style(14, FontWeight.w500)),
-                const SizedBox(height: 10),
+                const SizedBox(height: 12),
                 Text('· 주 15시간 이상 일하고 정해진 근무일을 개근하면 발생해요', style: secondary),
                 Text('· 연장·야간·휴일 가산수당(1.5배)은 5인 미만이면 적용되지 않아요',
                     style: secondary),
-                const SizedBox(height: 10),
+                const SizedBox(height: 12),
                 Container(
                   width: double.infinity,
                   padding:
@@ -64,7 +64,7 @@ class AiLaborAssistantScreen extends StatelessWidget {
                     children: [
                       Text('근거',
                           style: AppText.style(
-                              11, FontWeight.w500, AppColors.info)),
+                              11, FontWeight.w500, AppColors.textSecondary)),
                       const SizedBox(width: 6),
                       Expanded(
                         child: Text('근로기준법 제55조 · 제11조',
@@ -74,26 +74,26 @@ class AiLaborAssistantScreen extends StatelessWidget {
                     ],
                   ),
                 ),
-                const SizedBox(height: 10),
+                const SizedBox(height: 12),
                 Container(
                   width: double.infinity,
                   padding:
                       const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
                   decoration: BoxDecoration(
-                    color: AppColors.primarySoft,
+                    color: AppColors.bg,
                     borderRadius: BorderRadius.circular(10),
                   ),
                   child: Text('내 매장 설정(5인 미만)에 맞춰 급여 계산에 반영 중이에요',
                       style: AppText.style(
-                          12, FontWeight.w500, AppColors.primary)),
+                          12, FontWeight.w400, AppColors.textSecondary)),
                 ),
               ],
             ),
           ),
-          const SizedBox(height: 14),
+          const SizedBox(height: 16),
           Text('이런 것도 물어보세요',
               style: AppText.style(12, FontWeight.w500, AppColors.textTertiary)),
-          const SizedBox(height: 14),
+          const SizedBox(height: 12),
           Wrap(
             spacing: 8,
             runSpacing: 8,
@@ -107,7 +107,7 @@ class AiLaborAssistantScreen extends StatelessWidget {
       bottomNavigationBar: Container(
         color: AppColors.surface,
         padding: EdgeInsets.fromLTRB(
-            20, 10, 20, 16 + MediaQuery.viewInsetsOf(context).bottom),
+            20, 12, 20, 16 + MediaQuery.viewInsetsOf(context).bottom),
         child: SafeArea(
           top: false,
           child: Column(
@@ -150,9 +150,8 @@ class AiLaborAssistantScreen extends StatelessWidget {
                           width: 36,
                           height: 36,
                           child: Center(
-                            child: Text('↑',
-                                style: AppText.style(16, FontWeight.w500,
-                                    AppColors.onPrimary)),
+                            child: const Icon(Icons.arrow_upward_rounded,
+                                size: 20, color: AppColors.onPrimary),
                           ),
                         ),
                       ),
@@ -220,7 +219,7 @@ class _Suggestion extends StatelessWidget {
         child: InkWell(
           onTap: onTap,
           child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
             child: Text(label,
                 style: AppText.style(
                     12, FontWeight.w500, AppColors.textSecondary)),

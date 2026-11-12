@@ -96,7 +96,7 @@ class _HealthCertRegisterScreenState extends State<HealthCertRegisterScreen> {
                   Text('만료 알림 받기',
                       style: AppText.style(14, FontWeight.w500, AppColors.textSecondary)),
                   for (final (d, label, caption) in _alerts) ...[
-                    const SizedBox(height: 14),
+                    const SizedBox(height: 12),
                     CheckLine(label,
                         caption: caption,
                         value: _days.contains(d),

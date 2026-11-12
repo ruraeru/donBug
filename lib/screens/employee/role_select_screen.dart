@@ -107,7 +107,7 @@ class _RoleCard extends StatelessWidget {
                         selected ? AppColors.primary : AppColors.textTertiary),
                   ),
                 ),
-                const SizedBox(width: 14),
+                const SizedBox(width: 12),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,

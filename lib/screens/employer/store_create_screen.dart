@@ -59,9 +59,9 @@ class _StoreCreateScreenState extends State<StoreCreateScreen> {
           padding: const EdgeInsets.fromLTRB(20, 8, 20, 16),
           children: [
             LabeledField('상호명', child: AppTextField(controller: _name, hint: '예: 카페 커푸치노')),
-            const SizedBox(height: 14),
+            const SizedBox(height: 16),
             LabeledField('사업장 주소', child: AppTextField(controller: _address, hint: '도로명 주소')),
-            const SizedBox(height: 14),
+            const SizedBox(height: 16),
             LabeledField(
               '상시 근로자 수',
               child: SegmentedPicker(
@@ -70,7 +70,7 @@ class _StoreCreateScreenState extends State<StoreCreateScreen> {
                 onChanged: (i) => setState(() => _size = i),
               ),
             ),
-            const SizedBox(height: 14),
+            const SizedBox(height: 16),
             LabeledField(
               '기본 급여 공제',
               child: SegmentedPicker(
@@ -79,7 +79,7 @@ class _StoreCreateScreenState extends State<StoreCreateScreen> {
                 onChanged: (i) => setState(() => _deduction = i),
               ),
             ),
-            const SizedBox(height: 14),
+            const SizedBox(height: 16),
             const NoteBox(
               '5인 미만 사업장은 연차·가산수당 적용 기준이 달라요. 이 설정에 맞춰 급여가 계산돼요.',
               color: AppColors.info,

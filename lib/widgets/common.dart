@@ -399,7 +399,7 @@ class SuccessHero extends StatelessWidget {
               decoration: const BoxDecoration(
                   color: AppColors.primarySoft, shape: BoxShape.circle),
               child:
-                  const Icon(Icons.check, size: 52, color: AppColors.primary),
+                  const Icon(Icons.check_rounded, size: 52, color: AppColors.primary),
             ),
             const SizedBox(height: 12),
             Text(title,

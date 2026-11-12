@@ -42,8 +42,7 @@ class NoticeResultScreen extends StatelessWidget {
                   color: AppColors.primarySoft,
                   shape: BoxShape.circle,
                 ),
-                child: Text('✓',
-                    style: AppText.style(44, FontWeight.w500, AppColors.primary)),
+                child: const Icon(Icons.check_rounded, size: 48, color: AppColors.primary),
               ),
               const SizedBox(height: 12),
               Text(
@@ -105,9 +104,9 @@ class _NoticeCard extends StatelessWidget {
                     style: AppText.style(12, FontWeight.w400, AppColors.textTertiary)),
               ],
             ),
-            const SizedBox(height: 10),
+            const SizedBox(height: 12),
             Text(notice.title, style: AppText.style(17, FontWeight.w500)),
-            const SizedBox(height: 10),
+            const SizedBox(height: 12),
             Text(notice.body,
                 maxLines: 3,
                 overflow: TextOverflow.ellipsis,
@@ -127,7 +126,7 @@ class _RemindCard extends StatelessWidget {
         child: Column(
           children: [
             KeyValueRow('발송 대상', '$count명'),
-            const SizedBox(height: 14),
+            const SizedBox(height: 16),
             const KeyValueRow('발송 방식', '앱 알림 (데모: 알림 센터)'),
           ],
         ),

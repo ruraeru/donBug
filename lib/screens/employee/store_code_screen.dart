@@ -65,7 +65,7 @@ class _StoreCodeScreenState extends State<StoreCodeScreen> {
                 counterText: '',
                 filled: true,
                 fillColor: AppColors.surface,
-                contentPadding: const EdgeInsets.symmetric(vertical: 14),
+                contentPadding: const EdgeInsets.symmetric(vertical: 12),
                 enabledBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(12),
                     borderSide: const BorderSide(color: AppColors.border)),
@@ -85,8 +85,8 @@ class _StoreCodeScreenState extends State<StoreCodeScreen> {
             const SizedBox(height: 16),
             const NoteBox(
               '매장 코드는 사장님 앱의 [매장 설정]에서 확인할 수 있어요. 여러 매장에서 일하면 코드를 추가로 입력하세요.\n데모 매장 코드: CAFE-8K2D · MOA-27QX',
-              color: AppColors.info,
-              background: AppColors.infoSoft,
+              color: AppColors.textSecondary,
+              background: AppColors.surface,
             ),
           ],
         ),

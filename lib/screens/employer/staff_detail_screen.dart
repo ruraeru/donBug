@@ -60,14 +60,14 @@ class StaffDetailScreen extends StatelessWidget {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(p.fullName, style: AppText.style(18, FontWeight.w500)),
-                          const SizedBox(height: 1),
+                          const SizedBox(height: 2),
                           Text('${s.part} · ${joined.year}.${joined.month.toString().padLeft(2, '0')} 입사',
                               style: AppText.style(12, FontWeight.w400, AppColors.textSecondary)),
                         ],
                       ),
                     ),
                     const SizedBox(width: 12),
-                    const Pill('재직'),
+                    Text('재직', style: AppText.style(13, FontWeight.w400, AppColors.textSecondary)),
                   ],
                 ),
                 const SizedBox(height: 12),
@@ -82,21 +82,21 @@ class StaffDetailScreen extends StatelessWidget {
               ],
             ),
           ),
-          const SizedBox(height: 14),
+          const SizedBox(height: 16),
           AppCard(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text('서류 상태', style: AppText.style(14, FontWeight.w500, AppColors.textSecondary)),
-                const SizedBox(height: 10),
+                const SizedBox(height: 12),
                 _DocRow('보건증', certPill(store.certDaysLeft(p))),
-                const SizedBox(height: 10),
+                const SizedBox(height: 12),
                 _DocRow(
                     '근로계약서',
                     c == null
-                        ? const Pill('없음', color: AppColors.textSecondary, background: AppColors.bg)
+                        ? Text('없음', style: AppText.style(13, FontWeight.w400, AppColors.textSecondary))
                         : c.signed
-                            ? const Pill('서명 완료')
+                            ? Text('서명 완료', style: AppText.style(13, FontWeight.w400, AppColors.textSecondary))
                             : const Pill.accent('서명 대기')),
               ],
             ),

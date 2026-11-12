@@ -19,12 +19,12 @@ class NotificationCenterScreen extends StatelessWidget {
   final Widget? Function(BuildContext context, AppNotification n)? onOpen;
 
   static (String, Color, Color) _style(String type) => switch (type) {
-        'sub' => ('대', AppColors.primary, AppColors.primarySoft),
-        'notice' => ('공', AppColors.info, AppColors.infoSoft),
+        'sub' => ('대', AppColors.textSecondary, AppColors.bg),
+        'notice' => ('공', AppColors.textSecondary, AppColors.bg),
         'cert' => ('건', AppColors.danger, AppColors.dangerSoft),
-        'pay' => ('급', AppColors.accent, AppColors.accentSoft),
-        'join' => ('가', AppColors.primary, AppColors.primarySoft),
-        'contract' => ('계', AppColors.info, AppColors.infoSoft),
+        'pay' => ('급', AppColors.textSecondary, AppColors.bg),
+        'join' => ('가', AppColors.textSecondary, AppColors.bg),
+        'contract' => ('계', AppColors.textSecondary, AppColors.bg),
         _ => ('알', AppColors.textSecondary, AppColors.bg),
       };
 
@@ -63,7 +63,7 @@ class NotificationCenterScreen extends StatelessWidget {
           : ListView.separated(
               padding: const EdgeInsets.fromLTRB(20, 8, 20, 16),
               itemCount: items.length,
-              separatorBuilder: (_, _) => const SizedBox(height: 10),
+              separatorBuilder: (_, _) => const SizedBox(height: 12),
               itemBuilder: (_, i) {
                 final n = items[i];
                 final (letter, fg, bg) = _style(n.type);

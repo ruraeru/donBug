@@ -87,7 +87,7 @@ class JoinPendingScreen extends StatelessWidget {
           ),
           const SizedBox(height: 16),
           const NoteBox('데모: 사장님이 승인하면 새로고침으로 확인할 수 있어요. 아래 데모 버튼으로 바로 승인할 수도 있어요.',
-              color: AppColors.info, background: AppColors.infoSoft),
+              color: AppColors.textSecondary, background: AppColors.surface),
         ],
       ),
       bottomNavigationBar: BottomBar(

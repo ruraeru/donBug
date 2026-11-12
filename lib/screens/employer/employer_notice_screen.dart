@@ -65,7 +65,6 @@ class _EmployerNoticeScreenState extends State<EmployerNoticeScreen> {
             child: Row(
               children: [
                 Expanded(child: Text('공지', style: AppText.style(24, FontWeight.w500))),
-                const Pill('새 공지'),
               ],
             ),
           ),
@@ -112,7 +111,7 @@ class _EmployerNoticeScreenState extends State<EmployerNoticeScreen> {
                               child: Text('발송 대상',
                                   style: AppText.style(13, FontWeight.w500, AppColors.textSecondary)),
                             ),
-                            Pill('전체 근로자 $targets명'),
+                            Text('전체 근로자 $targets명', style: AppText.style(13, FontWeight.w400, AppColors.textSecondary)),
                           ],
                         ),
                         const SizedBox(height: 12),
@@ -170,7 +169,7 @@ class _Input extends StatelessWidget {
           isDense: true,
           filled: true,
           fillColor: AppColors.bg,
-          contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
           border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
         ),
       );
@@ -206,7 +205,7 @@ class _NoticeRow extends StatelessWidget {
             ),
           ),
           const SizedBox(width: 12),
-          all ? Pill(label) : Pill.accent(label),
+          all ? Text(label, style: AppText.style(13, FontWeight.w400, AppColors.textSecondary)) : Pill.accent(label),
         ],
       ),
     );

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../data/app_scope.dart';
+import '../../data/app_store.dart';
 import '../../data/format.dart';
 import '../../theme.dart';
 import '../../widgets/common.dart';
@@ -67,7 +68,8 @@ class _AttendanceDetailScreenState extends State<AttendanceDetailScreen> {
     if (s == null) return const MissingScreen(title: '근태 상세');
     final a = store.attendanceFor(s.id);
     final late = store.lateMinutes(s);
-    final (label, fg, bg) = attStyle(store.attendanceStatus(s));
+    final st = store.attendanceStatus(s);
+    final (label, fg, bg) = attStyle(st);
     final small = AppText.style(12, FontWeight.w400, AppColors.textSecondary);
     return Scaffold(
       appBar: const AppHeader('근태 상세 · 수정'),
@@ -91,7 +93,12 @@ class _AttendanceDetailScreenState extends State<AttendanceDetailScreen> {
                         ],
                       ),
                     ),
-                    Pill(late > 0 ? '지각 $late분' : label, color: fg, background: bg),
+                    late > 0 || st == AttStatus.waiting || st == AttStatus.absent
+                        ? (late > 0
+                            ? Pill('지각 $late분', color: AppColors.danger, background: AppColors.dangerSoft)
+                            : Pill(label, color: fg, background: bg))
+                        : Text(label,
+                            style: AppText.style(13, FontWeight.w400, AppColors.textSecondary)),
                   ],
                 ),
                 const SizedBox(height: 12),
@@ -108,7 +115,7 @@ class _AttendanceDetailScreenState extends State<AttendanceDetailScreen> {
               ],
             ),
           ),
-          const SizedBox(height: 14),
+          const SizedBox(height: 16),
           AppCard(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -141,11 +148,11 @@ class _AttendanceDetailScreenState extends State<AttendanceDetailScreen> {
               ],
             ),
           ),
-          const SizedBox(height: 14),
+          const SizedBox(height: 16),
           const NoteBox(
             '수정하면 기록이 MANUAL로 남고 급여가 자동으로 다시 계산돼요.',
-            color: AppColors.accent,
-            background: AppColors.accentSoft,
+            color: AppColors.textSecondary,
+            background: AppColors.bg,
           ),
         ],
       ),

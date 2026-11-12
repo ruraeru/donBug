@@ -60,12 +60,16 @@ class ShiftHeroCard extends StatelessWidget {
     required this.chip,
     required this.time,
     required this.caption,
+    this.alert = false,
   });
 
   final String date;
   final String chip;
   final String time;
   final String caption;
+
+  /// true 면 손볼 상태라 칩, 아니면 회색 글자.
+  final bool alert;
 
   @override
   Widget build(BuildContext context) => AppCard(
@@ -76,7 +80,11 @@ class ShiftHeroCard extends StatelessWidget {
               children: [
                 Expanded(
                     child: Text(date, style: AppText.style(22, FontWeight.w500))),
-                Pill.accent(chip),
+                if (alert)
+                  Pill.accent(chip)
+                else
+                  Text(chip,
+                      style: AppText.style(13, FontWeight.w400, AppColors.textSecondary)),
               ],
             ),
             const SizedBox(height: 12),
@@ -103,7 +111,8 @@ class TabTitle extends StatelessWidget {
         child: Row(
           children: [
             Expanded(child: Text(title, style: AppText.style(24, FontWeight.w500))),
-            if (chip != null) Pill(chip!),
+            if (chip != null)
+              Text(chip!, style: AppText.style(13, FontWeight.w400, AppColors.textSecondary)),
           ],
         ),
       );
@@ -122,15 +131,17 @@ class TabTitle extends StatelessWidget {
       return ('근무 중', AppColors.primary, AppColors.primarySoft);
     case AttStatus.normal:
     case AttStatus.late:
-      return ('완료', AppColors.textSecondary, AppColors.bg);
+      return ('완료', AppColors.textSecondary, Colors.transparent);
     case AttStatus.absent:
       return ('미출근', AppColors.danger, AppColors.dangerSoft);
     case AttStatus.waiting:
       break;
   }
-  if (s.isSubstitute) return ('대타 확정', AppColors.info, AppColors.infoSoft);
-  if (s.date == ymd(store.today)) return ('오늘', AppColors.primary, AppColors.primarySoft);
-  return (dDay(parseYmd(s.date), store.today), AppColors.textSecondary, AppColors.bg);
+  // 정상 상태는 칩 없이 회색 글자(배경 transparent).
+  const none = Colors.transparent;
+  if (s.isSubstitute) return ('대타 확정', AppColors.textSecondary, none);
+  if (s.date == ymd(store.today)) return ('오늘', AppColors.textSecondary, none);
+  return (dDay(parseYmd(s.date), store.today), AppColors.textSecondary, none);
 }
 
 

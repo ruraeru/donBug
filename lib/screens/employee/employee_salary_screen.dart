@@ -54,9 +54,14 @@ class _EmployeeSalaryScreenState extends State<EmployeeSalaryScreen> {
                       Text(won(slip.net),
                           style: AppText.style(34, FontWeight.w500, AppColors.onPrimary)),
                       const SizedBox(height: 8),
-                      Text(
-                          '급여일 ${month.month}/25 · ${current ? '예정 포함 ' : ''}근무 ${hours(slip.minutes)}  ›',
-                          style: AppText.style(13, FontWeight.w400, AppColors.onPrimary)),
+                      Row(children: [
+                        Flexible(
+                          child: Text(
+                              '급여일 ${month.month}/25 · ${current ? '예정 포함 ' : ''}근무 ${hours(slip.minutes)}',
+                              style: AppText.style(13, FontWeight.w400, AppColors.onPrimary)),
+                        ),
+                        const Icon(Icons.chevron_right_rounded, size: 16, color: AppColors.onPrimary),
+                      ]),
                     ],
                   ),
                 ),

@@ -42,10 +42,10 @@ class NoticeReadStatusScreen extends StatelessWidget {
                           style: AppText.style(14, FontWeight.w400, AppColors.textSecondary)),
                     ),
                     Text('${read.length} / ${staff.length}명 (${(ratio * 100).round()}%)',
-                        style: AppText.style(14, FontWeight.w500, AppColors.primary)),
+                        style: AppText.style(14, FontWeight.w500)),
                   ],
                 ),
-                const SizedBox(height: 10),
+                const SizedBox(height: 12),
                 ClipRRect(
                   borderRadius: BorderRadius.circular(5),
                   child: LinearProgressIndicator(

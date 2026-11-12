@@ -75,13 +75,13 @@ class _LeaveRequestScreenState extends State<LeaveRequestScreen> {
               selected: s.id == selected,
               onTap: () => setState(() => _shiftId = s.id),
             ),
-            const SizedBox(height: 10),
+            const SizedBox(height: 12),
           ],
           const SizedBox(height: 6),
           Text('사유', style: label),
           const SizedBox(height: 16),
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
             decoration: BoxDecoration(
               color: AppColors.surface,
               border: Border.all(color: AppColors.border),
@@ -111,7 +111,7 @@ class _LeaveRequestScreenState extends State<LeaveRequestScreen> {
           const SizedBox(height: 16),
           AppCard(
             radius: 16,
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
             child: Row(
               children: [
                 Expanded(
@@ -135,7 +135,7 @@ class _LeaveRequestScreenState extends State<LeaveRequestScreen> {
           ),
           const SizedBox(height: 16),
           const NoteBox('신청하면 사장님께도 알림이 가요. 대타가 확정되면 근무표가 자동으로 바뀝니다.',
-              color: AppColors.info, background: AppColors.infoSoft),
+              color: AppColors.textSecondary, background: AppColors.surface),
         ],
       ),
       bottomNavigationBar: BottomBar(
@@ -163,7 +163,7 @@ class _ShiftOption extends StatelessWidget {
         child: InkWell(
           onTap: onTap,
           child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
             child: Row(
               children: [
                 Expanded(

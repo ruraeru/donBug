@@ -50,7 +50,7 @@ class _ContractSignScreenState extends State<ContractSignScreen> {
               children: [
                 Row(children: [
                   Expanded(child: Text('표준 근로계약서', style: AppText.style(17, FontWeight.w500))),
-                  c.signed ? const Pill('서명 완료') : const Pill.accent('서명 필요'),
+                  c.signed ? Text('서명 완료', style: AppText.style(13, FontWeight.w400, AppColors.textSecondary)) : const Pill.accent('서명 필요'),
                 ]),
                 const SizedBox(height: 12),
                 const Divider(height: 1, color: AppColors.border),
@@ -73,7 +73,7 @@ class _ContractSignScreenState extends State<ContractSignScreen> {
           const SizedBox(height: 16),
           if (c.signed)
             NoteBox('${dotDate(DateTime.parse(c.employeeSignedAt!))}에 서명했어요.',
-                color: AppColors.primary, background: AppColors.primarySoft)
+                color: AppColors.textSecondary, background: AppColors.surface)
           else ...[
             SignaturePad(onChanged: (v) => setState(() => _signed = v)),
             const SizedBox(height: 16),

@@ -70,7 +70,7 @@ class _NoticeDetailScreenState extends State<NoticeDetailScreen> {
                       style: AppText.style(14, FontWeight.w500, AppColors.textSecondary)),
                 ),
                 Text('$readCount / $active명',
-                    style: AppText.style(14, FontWeight.w500, AppColors.primary)),
+                    style: AppText.style(14, FontWeight.w500, AppColors.textSecondary)),
               ],
             ),
           ),

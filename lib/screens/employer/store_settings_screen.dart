@@ -61,7 +61,7 @@ class _StoreSettingsScreenState extends State<StoreSettingsScreen> {
           PersonRow(
             avatar: const LetterAvatar('로', color: AppColors.textSecondary, background: AppColors.bg),
             title: '로그아웃',
-            trailing: Text('›', style: AppText.style(22, FontWeight.w400, AppColors.textTertiary)),
+            trailing: const AppIcon('chevron_right', size: 20, color: AppColors.textTertiary),
             onTap: () => logoutToLogin(context),
           ),
           const SizedBox(height: 24),

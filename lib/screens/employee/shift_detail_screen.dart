@@ -4,6 +4,7 @@ import '../../data/app_scope.dart';
 import '../../data/format.dart';
 import '../../theme.dart';
 import '../../widgets/common.dart';
+import '../employer/employer_parts.dart';
 import 'employee_parts.dart';
 import 'leave_request_screen.dart';
 import 'substitute_status_screen.dart';
@@ -19,7 +20,7 @@ class ShiftDetailScreen extends StatelessWidget {
     final store = AppScope.of(context);
     final s = store.shiftById(shiftId);
     if (s == null) return const MissingScreen(title: '근무 상세');
-    final (status, _, _) = shiftStatus(store, s);
+    final (status, _, statusBg) = shiftStatus(store, s);
     final coworkers = store.shiftsOn(parseYmd(s.date)).where((x) =>
         x.staffId != s.staffId &&
         store.shiftStart(x).isBefore(store.shiftEnd(s)) &&
@@ -36,6 +37,7 @@ class ShiftDetailScreen extends StatelessWidget {
           ShiftHeroCard(
             date: shiftDay(s),
             chip: status,
+            alert: statusBg != Colors.transparent,
             time: shiftTime(s),
             caption: shiftCaption(s) + (s.isSubstitute ? ' · 대타 근무' : ''),
           ),
@@ -54,8 +56,22 @@ class ShiftDetailScreen extends StatelessWidget {
                       MemberAvatar(store.staffById(c.staffId)!),
                       const SizedBox(width: 12),
                       Expanded(
-                        child: Text('${store.nameOf(c.staffId)} · ${c.part} ${shiftTime(c)}',
-                            style: AppText.style(15, FontWeight.w500)),
+                        child: Row(children: [
+                          Text(store.nameOf(c.staffId),
+                              style: AppText.style(15, FontWeight.w500)),
+                          const SizedBox(width: 8),
+                          Container(
+                              width: 8,
+                              height: 8,
+                              decoration: BoxDecoration(
+                                  color: partColors(c.part).$1, shape: BoxShape.circle)),
+                          const SizedBox(width: 4),
+                          Flexible(
+                            child: Text('${c.part} ${shiftTime(c)}',
+                                overflow: TextOverflow.ellipsis,
+                                style: AppText.style(15, FontWeight.w400, AppColors.textSecondary)),
+                          ),
+                        ]),
                       ),
                     ],
                   ),
@@ -65,7 +81,7 @@ class ShiftDetailScreen extends StatelessWidget {
           ),
           const SizedBox(height: 16),
           const NoteBox('근무 2일 전까지 신청하면 동료에게 먼저 알림이 가요.',
-              color: AppColors.info, background: AppColors.infoSoft),
+              color: AppColors.textSecondary, background: AppColors.surface),
         ],
       ),
       bottomNavigationBar: BottomBar(

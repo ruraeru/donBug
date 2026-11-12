@@ -43,7 +43,6 @@ class EmployerStaffDocumentsScreen extends StatelessWidget {
                 const SizedBox(height: 12),
                 AppButton(
                   '갱신 요청 보내기',
-                  verticalPadding: 17,
                   // 완료 화면은 뒤로가기 대신 "서류 목록으로"로 끝나므로 교체.
                   onPressed: () {
                     AppScope.read(context).requestCertRenewal(s.id);
@@ -56,12 +55,12 @@ class EmployerStaffDocumentsScreen extends StatelessWidget {
               ],
             ),
           ),
-          const SizedBox(height: 14),
+          const SizedBox(height: 16),
           AppCard(
             child: Column(
               children: [
                 _header('근로계약서', contractPill(c)),
-                const SizedBox(height: 10),
+                const SizedBox(height: 12),
                 if (c != null)
                   KeyValueRow('계약 기간',
                       '${dotDate(parseYmd(c.start))} ~ ${dotDate(parseYmd(c.end))}',
