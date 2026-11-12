@@ -6,7 +6,6 @@ import 'package:donbug/data/app_store.dart';
 import 'package:donbug/data/format.dart';
 import 'package:donbug/data/models.dart';
 import 'package:donbug/data/seed.dart';
-import 'package:donbug/screens/web/web_schedule_create_dialog.dart';
 import 'package:donbug/screens/web/web_shell.dart';
 import 'package:donbug/theme.dart';
 import 'package:flutter/material.dart';
