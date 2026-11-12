@@ -10,7 +10,10 @@ import 'employer_parts.dart';
 
 /// 직원 가입 승인 (Figma 47:100). 온보딩 마지막 → EmployerShell.
 class StaffApprovalScreen extends StatelessWidget {
-  const StaffApprovalScreen({super.key});
+  const StaffApprovalScreen({super.key, this.onboarding = false});
+
+  /// 매장 만들기 직후 흐름이면 true — 하단에 "대시보드로 이동"을 보인다.
+  final bool onboarding;
 
   Future<void> _approve(BuildContext context, Staff s) async {
     final store = AppScope.read(context);
@@ -84,9 +87,11 @@ class StaffApprovalScreen extends StatelessWidget {
           ],
         ],
       ),
-      bottomNavigationBar: BottomBar(children: [
-        AppButton('대시보드로 이동', onPressed: () => openShell(context, Role.employer)),
-      ]),
+      bottomNavigationBar: onboarding
+          ? BottomBar(children: [
+              AppButton('대시보드로 이동', onPressed: () => openShell(context, Role.employer)),
+            ])
+          : null,
     );
   }
 }

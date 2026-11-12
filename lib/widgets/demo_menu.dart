@@ -44,7 +44,7 @@ class DemoMenu extends StatelessWidget {
         Row(children: [
           Text('데모', style: AppText.style(14, FontWeight.w500, AppColors.textSecondary)),
           const SizedBox(width: 8),
-          const Pill('시연용', color: AppColors.textSecondary, background: AppColors.bg),
+          const Pill('시연용', color: AppColors.textSecondary, background: AppColors.border),
         ]),
         const SizedBox(height: 10),
         PersonRow(

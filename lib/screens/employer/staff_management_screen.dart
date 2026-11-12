@@ -21,7 +21,7 @@ class StaffManagementScreen extends StatelessWidget {
       appBar: AppHeader('직원 관리', actions: [
         TextButton(
           onPressed: () => Navigator.push(
-              context, MaterialPageRoute(builder: (_) => const StoreCodeScreen())),
+              context, MaterialPageRoute(builder: (_) => const StoreCodeScreen(invite: true))),
           child: Text('+ 초대', style: AppText.style(14, FontWeight.w500, AppColors.primary)),
         ),
         const SizedBox(width: 8),

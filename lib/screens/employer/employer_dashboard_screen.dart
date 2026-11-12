@@ -133,7 +133,7 @@ class EmployerDashboardScreen extends StatelessWidget {
                 onTap: () => _push(context, const StaffApprovalScreen()),
                 child: Row(children: [
                   Expanded(
-                    child: Text('가입 신청 ${pending.length}명 · ${store.nameOf(pending.first.id)}님 외',
+                    child: Text('가입 신청 ${pending.length}명 · ${store.nameOf(pending.first.id)}님${pending.length > 1 ? ' 외' : ''}',
                         style: AppText.style(15, FontWeight.w500)),
                   ),
                   const AppIcon('chevron_right', size: 20, color: AppColors.textTertiary),
