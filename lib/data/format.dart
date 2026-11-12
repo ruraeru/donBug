@@ -15,8 +15,8 @@ String _comma(int n) {
   return b.toString();
 }
 
-/// '₩1,234'
-String won(int n) => n < 0 ? '-₩ ${_comma(-n)}' : '₩ ${_comma(n)}';
+/// '1,234원'. 화면 전체 금액 표기를 하나로 맞춘다.
+String won(int n) => n < 0 ? '-${_comma(-n)}원' : '${_comma(n)}원';
 
 /// '1,234원'
 String wonText(int n) => '${_comma(n)}원';

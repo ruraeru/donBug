@@ -72,7 +72,7 @@ class QrCheckInScreen extends StatelessWidget {
                       child: Text('출근 인증',
                           textAlign: TextAlign.center,
                           style: AppText.style(
-                              17, FontWeight.w700, AppColors.onPrimary)),
+                              17, FontWeight.w500, AppColors.onPrimary)),
                     ),
                     TextButton(
                       onPressed: () => showConfirmDialog(context,
@@ -101,7 +101,7 @@ class QrCheckInScreen extends StatelessWidget {
                         ),
                         child: Text('${store.store.name} · ${shiftTime(shift)} 근무',
                             style: AppText.style(
-                                13, FontWeight.w700, AppColors.onPrimary)),
+                                13, FontWeight.w500, AppColors.onPrimary)),
                       ),
                       const SizedBox(height: 20),
                       GestureDetector(
@@ -113,7 +113,7 @@ class QrCheckInScreen extends StatelessWidget {
                       Text('POS 화면의 QR 코드를\n사각형 안에 맞춰주세요\n(데모: 사각형을 탭하세요)',
                           textAlign: TextAlign.center,
                           style: AppText.style(
-                              16, FontWeight.w700, AppColors.onPrimary)),
+                              16, FontWeight.w500, AppColors.onPrimary)),
                       const SizedBox(height: 20),
                       Text('위·변조 방지를 위해 매장 안에서만 인증돼요',
                           textAlign: TextAlign.center,

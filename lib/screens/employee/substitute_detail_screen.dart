@@ -76,7 +76,7 @@ class SubstituteDetailScreen extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text('${store.nameOf(r.requesterId)}님의 요청',
-                          style: AppText.style(15, FontWeight.w700)),
+                          style: AppText.style(15, FontWeight.w500)),
                       const SizedBox(height: 1),
                       Text('사유: ${r.reason} · ${relative(DateTime.parse(r.createdAt), store.now)}',
                           style: AppText.style(12, FontWeight.w400, AppColors.textSecondary)),
@@ -92,7 +92,7 @@ class SubstituteDetailScreen extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text('내 상황 확인',
-                    style: AppText.style(14, FontWeight.w700, AppColors.textSecondary)),
+                    style: AppText.style(14, FontWeight.w500, AppColors.textSecondary)),
                 const SizedBox(height: 12),
                 KeyValueRow('이 시간 내 근무', overlap == null ? '없음' : '있음 · ${shiftTime(overlap)}',
                     valueColor: overlap == null ? AppColors.textPrimary : AppColors.danger),

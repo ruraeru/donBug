@@ -60,7 +60,7 @@ class _LeaveRequestScreenState extends State<LeaveRequestScreen> {
         .toList();
     final selected = _shiftId ?? candidates.firstOrNull?.id;
     final peers = store.activeStaff.length - 1;
-    final label = AppText.style(14, FontWeight.w700, AppColors.textSecondary);
+    final label = AppText.style(14, FontWeight.w500, AppColors.textSecondary);
     return Scaffold(
       appBar: const AppHeader('휴무 신청'),
       body: ListView(
@@ -118,7 +118,7 @@ class _LeaveRequestScreenState extends State<LeaveRequestScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text('동료에게 대타 알림 보내기', style: AppText.style(15, FontWeight.w700)),
+                      Text('동료에게 대타 알림 보내기', style: AppText.style(15, FontWeight.w500)),
                       const SizedBox(height: 2),
                       Text('같은 매장 근로자 $peers명에게 전송',
                           style: AppText.style(12, FontWeight.w400, AppColors.textSecondary)),
@@ -171,7 +171,7 @@ class _ShiftOption extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text('${shiftDay(shift)} ${shiftTime(shift)}',
-                          style: AppText.style(16, FontWeight.w700)),
+                          style: AppText.style(16, FontWeight.w500)),
                       const SizedBox(height: 2),
                       Text(shiftCaption(shift),
                           style: AppText.style(12, FontWeight.w400, AppColors.textSecondary)),

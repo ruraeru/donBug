@@ -45,7 +45,7 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
           onPressed: () => setState(() => _day = day.subtract(const Duration(days: 1))),
           icon: Text('‹', style: AppText.style(22)),
         ),
-        Text(md(day), style: AppText.style(14, FontWeight.w700, AppColors.primary)),
+        Text(md(day), style: AppText.style(14, FontWeight.w500, AppColors.primary)),
         IconButton(
           tooltip: '다음 날',
           onPressed: day == store.today
@@ -108,7 +108,7 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
         children: [
           Text(label, style: AppText.style(12, FontWeight.w400, fg)),
           const SizedBox(height: 2),
-          Text('$n', style: AppText.style(22, FontWeight.w700, fg)),
+          Text('$n', style: AppText.style(22, FontWeight.w500, fg)),
         ],
       ),
     );

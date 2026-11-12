@@ -45,7 +45,7 @@ class ShiftDetailScreen extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text('같은 시간 근무자',
-                    style: AppText.style(14, FontWeight.w700, AppColors.textSecondary)),
+                    style: AppText.style(14, FontWeight.w500, AppColors.textSecondary)),
                 if (coworkers.isEmpty) const EmptyNote('같은 시간에 근무하는 동료가 없어요'),
                 for (final c in coworkers) ...[
                   const SizedBox(height: 12),
@@ -55,7 +55,7 @@ class ShiftDetailScreen extends StatelessWidget {
                       const SizedBox(width: 12),
                       Expanded(
                         child: Text('${store.nameOf(c.staffId)} · ${c.part} ${shiftTime(c)}',
-                            style: AppText.style(15, FontWeight.w700)),
+                            style: AppText.style(15, FontWeight.w500)),
                       ),
                     ],
                   ),

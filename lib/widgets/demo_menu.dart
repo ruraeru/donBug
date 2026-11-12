@@ -42,7 +42,7 @@ class DemoMenu extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Row(children: [
-          Text('데모', style: AppText.style(14, FontWeight.w700, AppColors.textSecondary)),
+          Text('데모', style: AppText.style(14, FontWeight.w500, AppColors.textSecondary)),
           const SizedBox(width: 8),
           const Pill('시연용', color: AppColors.info, background: AppColors.infoSoft),
         ]),

@@ -49,7 +49,7 @@ class _StoreCodeScreenState extends State<StoreCodeScreen> {
         body: ListView(
           padding: const EdgeInsets.fromLTRB(20, 8, 20, 16),
           children: [
-            Text('사장님께 받은\n매장 코드를 입력해주세요', style: AppText.style(22, FontWeight.w700)),
+            Text('사장님께 받은\n매장 코드를 입력해주세요', style: AppText.style(22, FontWeight.w500)),
             const SizedBox(height: 16),
             TextField(
               controller: _code,
@@ -57,10 +57,10 @@ class _StoreCodeScreenState extends State<StoreCodeScreen> {
               textCapitalization: TextCapitalization.characters,
               maxLength: 9,
               onSubmitted: (_) => _submit(),
-              style: AppText.style(22, FontWeight.w700).copyWith(letterSpacing: 4),
+              style: AppText.style(22, FontWeight.w500).copyWith(letterSpacing: 4),
               decoration: InputDecoration(
                 hintText: 'CAFE-8K2D',
-                hintStyle: AppText.style(22, FontWeight.w700, AppColors.border)
+                hintStyle: AppText.style(22, FontWeight.w500, AppColors.border)
                     .copyWith(letterSpacing: 4),
                 counterText: '',
                 filled: true,

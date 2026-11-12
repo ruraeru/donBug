@@ -50,7 +50,7 @@ class SegmentedPicker extends StatelessWidget {
                       options[i],
                       style: AppText.style(
                         14,
-                        FontWeight.w700,
+                        FontWeight.w500,
                         i == selected
                             ? AppColors.onPrimary
                             : AppColors.textTertiary,
@@ -80,7 +80,7 @@ class CountStepper extends StatelessWidget {
           height: 32,
           alignment: Alignment.center,
           decoration: BoxDecoration(color: bg, shape: BoxShape.circle),
-          child: Text(label, style: AppText.style(16, FontWeight.w700, fg)),
+          child: Text(label, style: AppText.style(16, FontWeight.w500, fg)),
         ),
       );
 
@@ -91,7 +91,7 @@ class CountStepper extends StatelessWidget {
           _circle('−', AppColors.bg, AppColors.textSecondary,
               () => onChanged(value > 0 ? value - 1 : 0)),
           const SizedBox(width: 14),
-          Text('$value명', style: AppText.style(16, FontWeight.w700)),
+          Text('$value명', style: AppText.style(16, FontWeight.w500)),
           const SizedBox(width: 14),
           _circle('+', AppColors.primary, AppColors.onPrimary,
               () => onChanged(value + 1)),
@@ -137,7 +137,7 @@ class SmallButton extends StatelessWidget {
             height: 36,
             alignment: Alignment.center,
             padding: const EdgeInsets.symmetric(horizontal: 14),
-            child: Text(label, style: AppText.style(13, FontWeight.w700, color)),
+            child: Text(label, style: AppText.style(13, FontWeight.w500, color)),
           ),
         ),
       );
@@ -180,12 +180,12 @@ class SuccessStepsScaffold extends StatelessWidget {
                   decoration: const BoxDecoration(
                       color: AppColors.primarySoft, shape: BoxShape.circle),
                   child: Text('✓',
-                      style: AppText.style(44, FontWeight.w700, AppColors.primary)),
+                      style: AppText.style(44, FontWeight.w500, AppColors.primary)),
                 ),
                 const SizedBox(height: 12),
                 Text(title,
                     textAlign: TextAlign.center,
-                    style: AppText.style(22, FontWeight.w700)),
+                    style: AppText.style(22, FontWeight.w500)),
                 const SizedBox(height: 12),
                 Text(message,
                     textAlign: TextAlign.center,
@@ -198,7 +198,7 @@ class SuccessStepsScaffold extends StatelessWidget {
                       if (stepsHeader != null) ...[
                         Text(stepsHeader!,
                             style: AppText.style(
-                                14, FontWeight.w700, AppColors.textSecondary)),
+                                14, FontWeight.w500, AppColors.textSecondary)),
                         const SizedBox(height: 16),
                       ],
                       for (var i = 0; i < steps.length; i++) ...[
@@ -262,7 +262,7 @@ Future<(int, Deduction)?> showWageDialog(BuildContext context,
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(title, style: AppText.style(18, FontWeight.w700)),
+              Text(title, style: AppText.style(18, FontWeight.w500)),
               const SizedBox(height: 16),
               LabeledField('시급 (원)',
                   child: AppTextField(controller: ctrl, keyboardType: TextInputType.number)),
@@ -271,7 +271,7 @@ Future<(int, Deduction)?> showWageDialog(BuildContext context,
                 Text(error!, style: AppText.style(12, FontWeight.w500, AppColors.danger)),
               ],
               const SizedBox(height: 14),
-              Text('공제 유형', style: AppText.style(14, FontWeight.w700, AppColors.textSecondary)),
+              Text('공제 유형', style: AppText.style(14, FontWeight.w500, AppColors.textSecondary)),
               const SizedBox(height: 8),
               Container(
                 decoration: BoxDecoration(
@@ -327,7 +327,7 @@ Future<Staff?> pickStaff(BuildContext context, List<Staff> candidates, {required
             shrinkWrap: true,
             padding: const EdgeInsets.fromLTRB(20, 20, 20, 16),
             children: [
-              Text(title, style: AppText.style(18, FontWeight.w700)),
+              Text(title, style: AppText.style(18, FontWeight.w500)),
               const SizedBox(height: 14),
               if (candidates.isEmpty) const EmptyNote('배정할 수 있는 직원이 없어요'),
               for (final s in candidates) ...[

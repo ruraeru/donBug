@@ -45,10 +45,10 @@ class _EmployerScheduleScreenState extends State<EmployerScheduleScreen> {
         children: [
           Row(
             children: [
-              Expanded(child: Text('근무표', style: AppText.style(24, FontWeight.w700))),
+              Expanded(child: Text('근무표', style: AppText.style(24, FontWeight.w500))),
               GestureDetector(
                 onTap: () => _push(const ScheduleTemplateScreen()),
-                child: Text('템플릿', style: AppText.style(14, FontWeight.w700, AppColors.primary)),
+                child: Text('템플릿', style: AppText.style(14, FontWeight.w500, AppColors.primary)),
               ),
             ],
           ),
@@ -109,7 +109,7 @@ class _EmployerScheduleScreenState extends State<EmployerScheduleScreen> {
             children: [
               Pill(part, color: fg, background: bg),
               const SizedBox(width: 8),
-              Expanded(child: Text(time, style: AppText.style(16, FontWeight.w700))),
+              Expanded(child: Text(time, style: AppText.style(16, FontWeight.w500))),
               Text(
                 need == 0
                     ? '${list.length}명'
@@ -165,7 +165,7 @@ class _EmployerScheduleScreenState extends State<EmployerScheduleScreen> {
             Text(weekday(d),
                 style: AppText.style(11, FontWeight.w400, on ? AppColors.onPrimary : AppColors.textTertiary)),
             Text('${d.day}',
-                style: AppText.style(15, FontWeight.w700, on ? AppColors.onPrimary : AppColors.textPrimary)),
+                style: AppText.style(15, FontWeight.w500, on ? AppColors.onPrimary : AppColors.textPrimary)),
           ],
         ),
       ),

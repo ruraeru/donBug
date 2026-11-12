@@ -42,7 +42,7 @@ class ClockOutDoneScreen extends StatelessWidget {
                   KeyValueRow('오늘 일급', won(store.dayPay(a)),
                       valueSize: 20,
                       valueColor: AppColors.primary,
-                      labelStyle: AppText.style(15, FontWeight.w700)),
+                      labelStyle: AppText.style(15, FontWeight.w500)),
                 ],
               ),
             ),

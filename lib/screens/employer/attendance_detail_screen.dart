@@ -86,7 +86,7 @@ class _AttendanceDetailScreenState extends State<AttendanceDetailScreen> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text('${store.nameOf(s.staffId)} · ${s.part}',
-                              style: AppText.style(16, FontWeight.w700)),
+                              style: AppText.style(16, FontWeight.w500)),
                           Text('${shiftDay(s)} 예정 ${shiftTime(s)}', style: small),
                         ],
                       ),
@@ -114,7 +114,7 @@ class _AttendanceDetailScreenState extends State<AttendanceDetailScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(a == null ? '기록 직접 입력' : '기록 수정',
-                    style: AppText.style(14, FontWeight.w700, AppColors.textSecondary)),
+                    style: AppText.style(14, FontWeight.w500, AppColors.textSecondary)),
                 const SizedBox(height: 12),
                 Row(
                   children: [

@@ -30,10 +30,10 @@ class LoginScreen extends StatelessWidget {
                         ),
                         child: Text('₩',
                             style: AppText.style(
-                                44, FontWeight.w700, AppColors.onPrimary)),
+                                44, FontWeight.w500, AppColors.onPrimary)),
                       ),
                       const SizedBox(height: 16),
-                      Text('돈벌래', style: AppText.style(34, FontWeight.w700)),
+                      Text('돈벌래', style: AppText.style(34, FontWeight.w500)),
                       const SizedBox(height: 16),
                       Text(
                         '사장님의 행정 부담은 덜고,\n알바생의 권리는 지키는\n스마트 매장 관리',
@@ -85,7 +85,7 @@ class KakaoButton extends StatelessWidget {
           child: Padding(
             padding: const EdgeInsets.symmetric(vertical: 16),
             child: Center(
-                child: Text(label, style: AppText.style(16, FontWeight.w700))),
+                child: Text(label, style: AppText.style(16, FontWeight.w500))),
           ),
         ),
       );

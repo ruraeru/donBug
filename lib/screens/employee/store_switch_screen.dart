@@ -60,7 +60,7 @@ class StoreSwitchScreen extends StatelessWidget {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text(st.name, style: AppText.style(16, FontWeight.w700)),
+                          Text(st.name, style: AppText.style(16, FontWeight.w500)),
                           Text(
                               pending
                                   ? '가입 승인 대기 중'

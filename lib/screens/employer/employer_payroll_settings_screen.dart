@@ -80,7 +80,7 @@ class _EmployerPayrollSettingsScreenState extends State<EmployerPayrollSettingsS
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(store.personOf(s).name, style: AppText.style(16, FontWeight.w700)),
+                      Text(store.personOf(s).name, style: AppText.style(16, FontWeight.w500)),
                       Text('${s.part} · 이번 주 $weekly일',
                           style: AppText.style(12, FontWeight.w400, AppColors.textSecondary)),
                     ],

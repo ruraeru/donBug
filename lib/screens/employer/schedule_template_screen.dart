@@ -42,7 +42,7 @@ class _ScheduleTemplateScreenState extends State<ScheduleTemplateScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text('파트별 필요 인원',
-                    style: AppText.style(14, FontWeight.w700, AppColors.textSecondary)),
+                    style: AppText.style(14, FontWeight.w500, AppColors.textSecondary)),
                 for (var i = 0; i < parts.length; i++) ...[
                   const SizedBox(height: 14),
                   Row(
@@ -90,13 +90,13 @@ class _ScheduleTemplateScreenState extends State<ScheduleTemplateScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(_options[i].$1, style: AppText.style(15, on ? FontWeight.w700 : FontWeight.w400)),
+                  Text(_options[i].$1, style: AppText.style(15, on ? FontWeight.w500 : FontWeight.w400)),
                   Text(_options[i].$2,
                       style: AppText.style(12, FontWeight.w400, AppColors.textSecondary)),
                 ],
               ),
             ),
-            if (on) Text('✓', style: AppText.style(16, FontWeight.w700, AppColors.primary)),
+            if (on) Text('✓', style: AppText.style(16, FontWeight.w500, AppColors.primary)),
           ],
         ),
       ),

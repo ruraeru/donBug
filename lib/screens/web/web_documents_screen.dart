@@ -101,7 +101,7 @@ class WebDocumentsScreen extends StatelessWidget {
                     for (final s in staff)
                       [
                         webStaffCell(store, s),
-                        webCertPill(store.certDaysLeft(store.personOf(s))),
+                        certPill(store.certDaysLeft(store.personOf(s))),
                         webCellText(store.personOf(s).certExpiry == null
                             ? '-'
                             : dotDate(parseYmd(store.personOf(s).certExpiry!))),
@@ -124,10 +124,6 @@ Widget contractPill(Contract? c) => switch (c) {
       Contract(signed: true) => webCellText('서명 완료'),
       _ => Pill.accent('서명 대기'),
     };
-
-/// 보건증 상태. 30일 넘게 남으면 조용한 글자, 임박 · 만료 · 미등록만 칩.
-Widget webCertPill(int? daysLeft) =>
-    daysLeft != null && daysLeft > 30 ? webCellText('D-$daysLeft') : certPill(daysLeft);
 
 /// 전자 근로계약서 작성 · 서명 요청. 근무 요일 · 주 시간은 앞으로 2주 근무에서 채운다.
 Future<void> showContractDialog(BuildContext context, {String? staffId}) {

@@ -44,7 +44,7 @@ class EmployerDocumentsScreen extends StatelessWidget {
         children: [
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-            child: Text('서류 · 컴플라이언스', style: AppText.style(22, FontWeight.w700)),
+            child: Text('서류 · 컴플라이언스', style: AppText.style(22, FontWeight.w500)),
           ),
           Expanded(
             child: ListView(
@@ -55,7 +55,7 @@ class EmployerDocumentsScreen extends StatelessWidget {
                     children: [
                       Row(
                         children: [
-                          Expanded(child: Text('노무 체크리스트', style: AppText.style(15, FontWeight.w700))),
+                          Expanded(child: Text('노무 체크리스트', style: AppText.style(15, FontWeight.w500))),
                           Pill(store.store.isSmall ? '5인 미만 사업장' : '5인 이상 사업장',
                               color: AppColors.info, background: AppColors.infoSoft),
                         ],
@@ -75,7 +75,7 @@ class EmployerDocumentsScreen extends StatelessWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text('근로자별 서류', style: AppText.style(15, FontWeight.w700)),
+                      Text('근로자별 서류', style: AppText.style(15, FontWeight.w500)),
                       for (var i = 0; i < staff.length; i++) ...[
                         if (i > 0) const Divider(height: 1, color: AppColors.border),
                         InkWell(
@@ -86,7 +86,7 @@ class EmployerDocumentsScreen extends StatelessWidget {
                               children: [
                                 Expanded(
                                     child: Text(store.personOf(staff[i]).name,
-                                        style: AppText.style(15, FontWeight.w700))),
+                                        style: AppText.style(15, FontWeight.w500))),
                                 contractPill(staff[i].contract),
                                 const SizedBox(width: 6),
                                 certPill(store.certDaysLeft(store.personOf(staff[i]))),
@@ -119,7 +119,7 @@ class EmployerDocumentsScreen extends StatelessWidget {
           const SizedBox(width: 10),
           Expanded(
             child: Text(label,
-                style: ok ? AppText.style(14) : AppText.style(14, FontWeight.w700, AppColors.danger)),
+                style: ok ? AppText.style(14) : AppText.style(14, FontWeight.w500, AppColors.danger)),
           ),
         ],
       );

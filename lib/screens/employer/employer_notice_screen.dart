@@ -64,7 +64,7 @@ class _EmployerNoticeScreenState extends State<EmployerNoticeScreen> {
             padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
             child: Row(
               children: [
-                Expanded(child: Text('공지', style: AppText.style(24, FontWeight.w700))),
+                Expanded(child: Text('공지', style: AppText.style(24, FontWeight.w500))),
                 const Pill('새 공지'),
               ],
             ),
@@ -78,7 +78,7 @@ class _EmployerNoticeScreenState extends State<EmployerNoticeScreen> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        _Input(controller: _title, hint: '제목', style: AppText.style(16, FontWeight.w700)),
+                        _Input(controller: _title, hint: '제목', style: AppText.style(16, FontWeight.w500)),
                         const SizedBox(height: 12),
                         _Input(
                           controller: _body,
@@ -125,7 +125,7 @@ class _EmployerNoticeScreenState extends State<EmployerNoticeScreen> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text('최근 공지', style: AppText.style(15, FontWeight.w700)),
+                        Text('최근 공지', style: AppText.style(15, FontWeight.w500)),
                         if (notices.isEmpty) const EmptyNote('보낸 공지가 없어요'),
                         for (var i = 0; i < notices.length; i++) ...[
                           if (i > 0)
@@ -198,7 +198,7 @@ class _NoticeRow extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text('${notice.required ? '[필독] ' : ''}${notice.title}',
-                    style: AppText.style(14, FontWeight.w700), overflow: TextOverflow.ellipsis),
+                    style: AppText.style(14, FontWeight.w500), overflow: TextOverflow.ellipsis),
                 const SizedBox(height: 2),
                 Text(relative(DateTime.parse(notice.createdAt), store.now),
                     style: AppText.style(12, FontWeight.w400, AppColors.textTertiary)),

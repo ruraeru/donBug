@@ -28,7 +28,7 @@ class EmployeeMyScreen extends StatelessWidget {
       child: ListView(
         padding: const EdgeInsets.fromLTRB(20, 10, 20, 16),
         children: [
-          Text('MY', style: AppText.style(24, FontWeight.w700)),
+          Text('MY', style: AppText.style(24, FontWeight.w500)),
           const SizedBox(height: 18),
           AppCard(
             child: Row(
@@ -40,7 +40,7 @@ class EmployeeMyScreen extends StatelessWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(p.fullName, style: AppText.style(18, FontWeight.w700)),
+                      Text(p.fullName, style: AppText.style(18, FontWeight.w500)),
                       const SizedBox(height: 2),
                       Text('알바생 · ${store.store.name}',
                           style: AppText.style(13, FontWeight.w400, AppColors.textSecondary)),

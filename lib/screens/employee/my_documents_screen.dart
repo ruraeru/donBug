@@ -103,7 +103,7 @@ class _DocCard extends StatelessWidget {
           children: [
             Row(
               children: [
-                Expanded(child: Text(title, style: AppText.style(17, FontWeight.w700))),
+                Expanded(child: Text(title, style: AppText.style(17, FontWeight.w500))),
                 chip,
               ],
             ),

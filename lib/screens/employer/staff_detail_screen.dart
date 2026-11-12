@@ -59,7 +59,7 @@ class StaffDetailScreen extends StatelessWidget {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text(p.fullName, style: AppText.style(18, FontWeight.w700)),
+                          Text(p.fullName, style: AppText.style(18, FontWeight.w500)),
                           const SizedBox(height: 1),
                           Text('${s.part} · ${joined.year}.${joined.month.toString().padLeft(2, '0')} 입사',
                               style: AppText.style(12, FontWeight.w400, AppColors.textSecondary)),
@@ -87,7 +87,7 @@ class StaffDetailScreen extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('서류 상태', style: AppText.style(14, FontWeight.w700, AppColors.textSecondary)),
+                Text('서류 상태', style: AppText.style(14, FontWeight.w500, AppColors.textSecondary)),
                 const SizedBox(height: 10),
                 _DocRow('보건증', certPill(store.certDaysLeft(p))),
                 const SizedBox(height: 10),

@@ -46,7 +46,7 @@ class AiLaborAssistantScreen extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text('네, 주휴수당은 5인 미만 사업장도 줘야 해요.',
-                    style: AppText.style(14, FontWeight.w700)),
+                    style: AppText.style(14, FontWeight.w500)),
                 const SizedBox(height: 10),
                 Text('· 주 15시간 이상 일하고 정해진 근무일을 개근하면 발생해요', style: secondary),
                 Text('· 연장·야간·휴일 가산수당(1.5배)은 5인 미만이면 적용되지 않아요',
@@ -64,7 +64,7 @@ class AiLaborAssistantScreen extends StatelessWidget {
                     children: [
                       Text('근거',
                           style: AppText.style(
-                              11, FontWeight.w700, AppColors.info)),
+                              11, FontWeight.w500, AppColors.info)),
                       const SizedBox(width: 6),
                       Expanded(
                         child: Text('근로기준법 제55조 · 제11조',
@@ -151,7 +151,7 @@ class AiLaborAssistantScreen extends StatelessWidget {
                           height: 36,
                           child: Center(
                             child: Text('↑',
-                                style: AppText.style(16, FontWeight.w700,
+                                style: AppText.style(16, FontWeight.w500,
                                     AppColors.onPrimary)),
                           ),
                         ),

@@ -62,7 +62,7 @@ class EmployerDashboardScreen extends StatelessWidget {
                           Flexible(
                             child: Text(store.store.name,
                                 overflow: TextOverflow.ellipsis,
-                                style: AppText.style(22, FontWeight.w700)),
+                                style: AppText.style(22, FontWeight.w500)),
                           ),
                           const SizedBox(width: 2),
                           const AppIcon('chevron_right', size: 22, color: AppColors.textTertiary),
@@ -93,7 +93,7 @@ class EmployerDashboardScreen extends StatelessWidget {
                   Text('이번 달 예상 인건비',
                       style: AppText.style(13, FontWeight.w500, AppColors.onPrimary)),
                   const SizedBox(height: 8),
-                  Text(won(total), style: AppText.style(32, FontWeight.w700, AppColors.onPrimary)),
+                  Text(won(total), style: AppText.style(32, FontWeight.w500, AppColors.onPrimary)),
                   const SizedBox(height: 8),
                   Text(
                       '지난달 대비 ${diff >= 0 ? '+' : ''}$diff% · 근로자 ${store.activeStaff.length}명',
@@ -137,7 +137,7 @@ class EmployerDashboardScreen extends StatelessWidget {
                 child: Row(children: [
                   Expanded(
                     child: Text('가입 신청 ${pending.length}명 · ${store.nameOf(pending.first.id)}님 외',
-                        style: AppText.style(15, FontWeight.w700)),
+                        style: AppText.style(15, FontWeight.w500)),
                   ),
                   const AppIcon('chevron_right', size: 20, color: AppColors.info),
                 ]),
@@ -162,7 +162,7 @@ class EmployerDashboardScreen extends StatelessWidget {
                     const SizedBox(height: 6),
                     Text(
                         '${store.nameOf(cert.$1.id)}님 보건증이 ${cert.$2 < 0 ? '만료됐어요' : '곧 만료돼요'}',
-                        style: AppText.style(15, FontWeight.w700)),
+                        style: AppText.style(15, FontWeight.w500)),
                   ],
                 ),
               ),
@@ -217,7 +217,7 @@ class _SubAlert extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 10),
-          Text('${shiftDay(s)} ${shiftTime(s)} ${s.part}', style: AppText.style(16, FontWeight.w700)),
+          Text('${shiftDay(s)} ${shiftTime(s)} ${s.part}', style: AppText.style(16, FontWeight.w500)),
           const SizedBox(height: 10),
           Text(
               '${store.nameOf(request.requesterId)}님이 휴무를 신청했어요 · '
@@ -260,7 +260,7 @@ class _StatCard extends StatelessWidget {
           children: [
             Text(label, style: AppText.style(13, FontWeight.w500, AppColors.textSecondary)),
             const SizedBox(height: 6),
-            Text(value, style: AppText.style(26, FontWeight.w700)),
+            Text(value, style: AppText.style(26, FontWeight.w500)),
             const SizedBox(height: 6),
             Text(note, style: AppText.style(12, FontWeight.w400, noteColor)),
           ],

@@ -55,7 +55,7 @@ class StaffApprovalScreen extends StatelessWidget {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text(store.personOf(s).fullName, style: AppText.style(16, FontWeight.w700)),
+                            Text(store.personOf(s).fullName, style: AppText.style(16, FontWeight.w500)),
                             if (s.requestedAt != null)
                               Text(
                                   '${relative(DateTime.parse(s.requestedAt!), store.now)} 신청',

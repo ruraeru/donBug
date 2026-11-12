@@ -62,7 +62,7 @@ class SubstituteApprovalScreen extends StatelessWidget {
         foregroundColor: AppColors.textPrimary,
         elevation: 0,
         titleSpacing: 0,
-        title: Text('대타 승인', style: AppText.style(24, FontWeight.w700)),
+        title: Text('대타 승인', style: AppText.style(24, FontWeight.w500)),
         actions: [
           Padding(
             padding: const EdgeInsets.only(right: 20),
@@ -103,7 +103,7 @@ class SubstituteApprovalScreen extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 14),
-          Text('${shiftDay(s)} ${shiftTime(s)}', style: AppText.style(19, FontWeight.w700)),
+          Text('${shiftDay(s)} ${shiftTime(s)}', style: AppText.style(19, FontWeight.w500)),
           const SizedBox(height: 2),
           Text('${s.part} · ${duration(s.scheduledMinutes)}', style: secondary),
           const SizedBox(height: 14),
@@ -113,7 +113,7 @@ class SubstituteApprovalScreen extends StatelessWidget {
                 child: _PersonChip(store.staffById(r.requesterId)!, '요청 · ${r.reason}'),
               ),
               const SizedBox(width: 10),
-              Text('→', style: AppText.style(16, FontWeight.w700, AppColors.textTertiary)),
+              Text('→', style: AppText.style(16, FontWeight.w500, AppColors.textTertiary)),
               const SizedBox(width: 10),
               Expanded(child: _PersonChip(store.staffById(r.acceptedId)!, '수락')),
             ],
@@ -173,7 +173,7 @@ class SubstituteApprovalScreen extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 12),
-          Text('${shiftDay(s)} ${shiftTime(s)}', style: AppText.style(17, FontWeight.w700)),
+          Text('${shiftDay(s)} ${shiftTime(s)}', style: AppText.style(17, FontWeight.w500)),
           const SizedBox(height: 2),
           Text('${s.part} · ${duration(s.scheduledMinutes)} · 요청 ${store.nameOf(r.requesterId)} (${r.reason})',
               style: AppText.style(13, FontWeight.w400, AppColors.textSecondary)),
@@ -223,7 +223,7 @@ class _SmallChip extends StatelessWidget {
   Widget build(BuildContext context) => Container(
         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
         decoration: BoxDecoration(color: background, borderRadius: BorderRadius.circular(999)),
-        child: Text(label, style: AppText.style(11, FontWeight.w700, color)),
+        child: Text(label, style: AppText.style(11, FontWeight.w500, color)),
       );
 }
 
@@ -246,7 +246,7 @@ class _PersonChip extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(AppScope.of(context).personOf(staff).name,
-                      style: AppText.style(13, FontWeight.w700)),
+                      style: AppText.style(13, FontWeight.w500)),
                   Text(note,
                       overflow: TextOverflow.ellipsis,
                       style: AppText.style(11, FontWeight.w400, AppColors.textTertiary)),
@@ -275,10 +275,10 @@ class _Steps extends StatelessWidget {
             ),
             child: Text(done ? '✓' : '●',
                 style: AppText.style(
-                    done ? 12 : 10, FontWeight.w700, done ? AppColors.onPrimary : AppColors.primary)),
+                    done ? 12 : 10, FontWeight.w500, done ? AppColors.onPrimary : AppColors.primary)),
           ),
           const SizedBox(height: 6),
-          Text(label, style: AppText.style(11, done ? FontWeight.w500 : FontWeight.w700)),
+          Text(label, style: AppText.style(11, done ? FontWeight.w400 : FontWeight.w500)),
         ],
       );
 

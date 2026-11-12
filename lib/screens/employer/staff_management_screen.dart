@@ -22,7 +22,7 @@ class StaffManagementScreen extends StatelessWidget {
         TextButton(
           onPressed: () => Navigator.push(
               context, MaterialPageRoute(builder: (_) => const StoreCodeScreen())),
-          child: Text('+ 초대', style: AppText.style(14, FontWeight.w700, AppColors.primary)),
+          child: Text('+ 초대', style: AppText.style(14, FontWeight.w500, AppColors.primary)),
         ),
         const SizedBox(width: 8),
       ]),
@@ -87,7 +87,7 @@ class _Stat extends StatelessWidget {
           children: [
             Text(label, style: AppText.style(12, FontWeight.w400, labelColor)),
             const SizedBox(height: 2),
-            Text(value, style: AppText.style(22, FontWeight.w700)),
+            Text(value, style: AppText.style(22, FontWeight.w500)),
           ],
         ),
       );

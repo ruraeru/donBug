@@ -39,7 +39,7 @@ class EmployerPayrollDetailScreen extends StatelessWidget {
                 Text(current ? '실수령 예정액 (예정 근무 포함)' : '실수령액',
                     style: AppText.style(13, FontWeight.w500, AppColors.onPrimary)),
                 const SizedBox(height: 6),
-                Text(won(p.net), style: AppText.style(34, FontWeight.w700, AppColors.onPrimary)),
+                Text(won(p.net), style: AppText.style(34, FontWeight.w500, AppColors.onPrimary)),
                 const SizedBox(height: 6),
                 Text('세전 ${won(p.gross)} − 공제 ${won(p.deduction)} (${s.deduction.short})',
                     style: AppText.style(13, FontWeight.w400, AppColors.onPrimary)),

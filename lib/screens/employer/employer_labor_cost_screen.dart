@@ -44,7 +44,7 @@ class _EmployerLaborCostScreenState extends State<EmployerLaborCostScreen> {
             padding: const EdgeInsets.fromLTRB(20, 12, 12, 12),
             child: Row(
               children: [
-                Expanded(child: Text('인건비', style: AppText.style(24, FontWeight.w700))),
+                Expanded(child: Text('인건비', style: AppText.style(24, FontWeight.w500))),
                 MonthNav(month: month, max: store.today, onChanged: (m) => setState(() => _month = m)),
               ],
             ),
@@ -62,7 +62,7 @@ class _EmployerLaborCostScreenState extends State<EmployerLaborCostScreen> {
                       Text(current ? '이번 달 예상 인건비' : '${month.month}월 인건비',
                           style: AppText.style(13, FontWeight.w500, AppColors.onPrimary)),
                       const SizedBox(height: 6),
-                      Text(won(total), style: AppText.style(30, FontWeight.w700, AppColors.onPrimary)),
+                      Text(won(total), style: AppText.style(30, FontWeight.w500, AppColors.onPrimary)),
                       const SizedBox(height: 6),
                       Text('세전 · 주휴수당 포함 · 지난달 대비 ${diff >= 0 ? '+' : ''}$diff%',
                           style: AppText.style(12, FontWeight.w400, AppColors.onPrimary)),
@@ -82,7 +82,7 @@ class _EmployerLaborCostScreenState extends State<EmployerLaborCostScreen> {
                           children: [
                             Expanded(
                               child: Text(current ? '근로자별 지급 예정' : '근로자별 지급액',
-                                  style: AppText.style(15, FontWeight.w700)),
+                                  style: AppText.style(15, FontWeight.w500)),
                             ),
                             Text('전체 ${workers.length}명',
                                 style: AppText.style(12, FontWeight.w500, AppColors.primary)),
@@ -107,13 +107,13 @@ class _EmployerLaborCostScreenState extends State<EmployerLaborCostScreen> {
                                   child: Column(
                                     crossAxisAlignment: CrossAxisAlignment.start,
                                     children: [
-                                      Text(store.personOf(s).name, style: AppText.style(14, FontWeight.w700)),
+                                      Text(store.personOf(s).name, style: AppText.style(14, FontWeight.w500)),
                                       Text('${hours(p.minutes)} · ${s.deduction.short}',
                                           style: AppText.style(12, FontWeight.w400, AppColors.textTertiary)),
                                     ],
                                   ),
                                 ),
-                                Text(won(p.net), style: AppText.style(15, FontWeight.w700)),
+                                Text(won(p.net), style: AppText.style(15, FontWeight.w500)),
                               ],
                             ),
                           ),
@@ -137,7 +137,7 @@ class _EmployerLaborCostScreenState extends State<EmployerLaborCostScreen> {
         children: [
           Row(
             children: [
-              Expanded(child: Text('인건비 지출 추이', style: AppText.style(15, FontWeight.w700))),
+              Expanded(child: Text('인건비 지출 추이', style: AppText.style(15, FontWeight.w500))),
               Text('최근 6개월', style: AppText.style(12, FontWeight.w400, AppColors.textTertiary)),
             ],
           ),
@@ -162,7 +162,7 @@ class _EmployerLaborCostScreenState extends State<EmployerLaborCostScreen> {
         mainAxisSize: MainAxisSize.min,
         children: [
           Text('${(b.$2 / 1e6).toStringAsFixed(1)}M',
-              style: AppText.style(10, current ? FontWeight.w700 : FontWeight.w500,
+              style: AppText.style(10, current ? FontWeight.w500 : FontWeight.w400,
                   current ? AppColors.primary : AppColors.textTertiary)),
           const SizedBox(height: 6),
           Container(
@@ -175,7 +175,7 @@ class _EmployerLaborCostScreenState extends State<EmployerLaborCostScreen> {
           ),
           const SizedBox(height: 6),
           Text('${b.$1.month}월',
-              style: AppText.style(11, current ? FontWeight.w700 : FontWeight.w500,
+              style: AppText.style(11, current ? FontWeight.w500 : FontWeight.w400,
                   current ? AppColors.textPrimary : AppColors.textTertiary)),
         ],
       );

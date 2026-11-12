@@ -42,7 +42,7 @@ class _EmployeeNoticeScreenState extends State<EmployeeNoticeScreen> {
             padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
             child: Row(
               children: [
-                Expanded(child: Text('공지', style: AppText.style(24, FontWeight.w700))),
+                Expanded(child: Text('공지', style: AppText.style(24, FontWeight.w500))),
                 GestureDetector(
                   onTap: unread == 0 ? null : () => AppScope.read(context).markAllNoticesRead(),
                   child: Text('모두 읽음',
@@ -96,7 +96,7 @@ class _EmployeeNoticeScreenState extends State<EmployeeNoticeScreen> {
   Widget _readStatus(AppStore store, Notice n) {
     final at = n.readBy[store.myStaff?.id];
     return at == null
-        ? Text('안 읽음', style: AppText.style(12, FontWeight.w700, AppColors.danger))
+        ? Text('안 읽음', style: AppText.style(12, FontWeight.w500, AppColors.danger))
         : Text('읽음 · ${noticeTime(n, at: at)}',
             style: AppText.style(12, FontWeight.w500, AppColors.primary));
   }
@@ -125,7 +125,7 @@ class _EmployeeNoticeScreenState extends State<EmployeeNoticeScreen> {
                 ],
               ),
               const SizedBox(height: 10),
-              Text(n.title, style: AppText.style(17, FontWeight.w700)),
+              Text(n.title, style: AppText.style(17, FontWeight.w500)),
               const SizedBox(height: 10),
               Text(n.body, style: AppText.style(13, FontWeight.w400, AppColors.textSecondary)),
               const SizedBox(height: 10),
@@ -187,7 +187,7 @@ class _FilterChip extends StatelessWidget {
           child: Text(
             label,
             style: selected
-                ? AppText.style(13, FontWeight.w700, AppColors.onPrimary)
+                ? AppText.style(13, FontWeight.w500, AppColors.onPrimary)
                 : AppText.style(13, FontWeight.w500, AppColors.textSecondary),
           ),
         ),
@@ -243,7 +243,7 @@ class _NoticeCard extends StatelessWidget {
             Text(
               title,
               style: AppText.style(
-                  16, FontWeight.w700, read ? AppColors.textSecondary : AppColors.textPrimary),
+                  16, FontWeight.w500, read ? AppColors.textSecondary : AppColors.textPrimary),
             ),
             const SizedBox(height: 8),
             Text(

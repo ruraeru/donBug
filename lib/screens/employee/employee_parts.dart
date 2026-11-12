@@ -75,12 +75,12 @@ class ShiftHeroCard extends StatelessWidget {
             Row(
               children: [
                 Expanded(
-                    child: Text(date, style: AppText.style(22, FontWeight.w700))),
+                    child: Text(date, style: AppText.style(22, FontWeight.w500))),
                 Pill.accent(chip),
               ],
             ),
             const SizedBox(height: 12),
-            Text(time, style: AppText.style(30, FontWeight.w700)),
+            Text(time, style: AppText.style(30, FontWeight.w500)),
             const SizedBox(height: 12),
             Text(caption,
                 style:
@@ -102,7 +102,7 @@ class TabTitle extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
         child: Row(
           children: [
-            Expanded(child: Text(title, style: AppText.style(24, FontWeight.w700))),
+            Expanded(child: Text(title, style: AppText.style(24, FontWeight.w500))),
             if (chip != null) Pill(chip!),
           ],
         ),

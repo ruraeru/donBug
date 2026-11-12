@@ -36,7 +36,7 @@ class AiAnswerDetailScreen extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text('네, 주휴수당은 사업장 규모와 상관없이 적용돼요.',
-                      style: AppText.style(15, FontWeight.w700)),
+                      style: AppText.style(15, FontWeight.w500)),
                   const SizedBox(height: 12),
                   Text(
                     '1주 소정근로시간이 15시간 이상이고, 소정근로일을 개근한 근로자에게 유급 주휴일을 줘야 해요. 5인 미만 사업장도 동일하게 적용돼요.',
@@ -72,7 +72,7 @@ class AiAnswerDetailScreen extends StatelessWidget {
             const SizedBox(height: 12),
             Text('이어서 물어보기',
                 style: AppText.style(
-                    14, FontWeight.w700, AppColors.textSecondary)),
+                    14, FontWeight.w500, AppColors.textSecondary)),
             const SizedBox(height: 12),
             const Wrap(
               spacing: 8,

@@ -136,7 +136,7 @@ class _EmployerContractWriteScreenState extends State<EmployerContractWriteScree
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(store.personOf(s).fullName, style: AppText.style(16, FontWeight.w700)),
+                        Text(store.personOf(s).fullName, style: AppText.style(16, FontWeight.w500)),
                         Text('표준 근로계약서 · 탭해서 직원 변경',
                             style: AppText.style(12, FontWeight.w400, AppColors.textSecondary)),
                       ],
@@ -192,7 +192,7 @@ class _EmployerContractWriteScreenState extends State<EmployerContractWriteScree
                   children: [
                     Expanded(
                       child: Text('필수 항목 점검',
-                          style: AppText.style(14, FontWeight.w700,
+                          style: AppText.style(14, FontWeight.w500,
                               missing.isEmpty ? AppColors.primary : AppColors.danger)),
                     ),
                     missing.isEmpty

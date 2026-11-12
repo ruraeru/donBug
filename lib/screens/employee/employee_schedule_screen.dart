@@ -85,7 +85,7 @@ class _EmployeeScheduleScreenState extends State<EmployeeScheduleScreen> {
               padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
               children: [
                 Text(_day == null ? '${_weekOffset == 0 ? '이번 주' : '이 주'} 내 근무' : '${md(_day!)} 내 근무',
-                    style: AppText.style(15, FontWeight.w700)),
+                    style: AppText.style(15, FontWeight.w500)),
                 if (shown.isEmpty) const EmptyNote('근무가 없어요'),
                 for (final s in shown) ...[
                   const SizedBox(height: 12),
@@ -133,7 +133,7 @@ class _EmployeeScheduleScreenState extends State<EmployeeScheduleScreen> {
                   style: AppText.style(12, FontWeight.w500,
                       selected ? AppColors.onPrimary : AppColors.textSecondary)),
               const SizedBox(height: 4),
-              Text('${d.day}', style: AppText.style(16, FontWeight.w700, fg)),
+              Text('${d.day}', style: AppText.style(16, FontWeight.w500, fg)),
               const SizedBox(height: 4),
               Container(
                 width: 6,
@@ -169,7 +169,7 @@ class _EmployeeScheduleScreenState extends State<EmployeeScheduleScreen> {
           Column(
             children: [
               Text(weekday(d), style: AppText.style(12, FontWeight.w500, AppColors.textSecondary)),
-              Text('${d.day}', style: AppText.style(20, FontWeight.w700)),
+              Text('${d.day}', style: AppText.style(20, FontWeight.w500)),
             ],
           ),
           const SizedBox(width: 14),
@@ -177,7 +177,7 @@ class _EmployeeScheduleScreenState extends State<EmployeeScheduleScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('${shiftTime(s)} · ${s.part}', style: AppText.style(15, FontWeight.w700)),
+                Text('${shiftTime(s)} · ${s.part}', style: AppText.style(15, FontWeight.w500)),
                 const SizedBox(height: 2),
                 Text(store.store.name,
                     style: AppText.style(12, FontWeight.w400, AppColors.textSecondary)),

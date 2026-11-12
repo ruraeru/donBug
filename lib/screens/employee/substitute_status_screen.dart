@@ -65,7 +65,7 @@ class _SubstituteStatusScreenState extends State<SubstituteStatusScreen> {
             child: Text(
               label,
               style: AppText.style(
-                  14, FontWeight.w700, selected ? AppColors.onPrimary : AppColors.textTertiary),
+                  14, FontWeight.w500, selected ? AppColors.onPrimary : AppColors.textTertiary),
             ),
           ),
         ),
@@ -127,7 +127,7 @@ class _RequestCard extends StatelessWidget {
             children: [
               Expanded(
                 child: Text('${shiftDay(s)} ${shiftTime(s)}',
-                    style: AppText.style(17, FontWeight.w700)),
+                    style: AppText.style(17, FontWeight.w500)),
               ),
               Pill.accent(subStatusLabel(r)),
             ],

@@ -53,7 +53,7 @@ class _NoticeDetailScreenState extends State<NoticeDetailScreen> {
                   ],
                 ),
                 const SizedBox(height: 12),
-                Text(n.title, style: AppText.style(20, FontWeight.w700)),
+                Text(n.title, style: AppText.style(20, FontWeight.w500)),
                 const SizedBox(height: 12),
                 const Divider(height: 1, color: AppColors.border),
                 const SizedBox(height: 12),
@@ -67,10 +67,10 @@ class _NoticeDetailScreenState extends State<NoticeDetailScreen> {
               children: [
                 Expanded(
                   child: Text('확인 현황',
-                      style: AppText.style(14, FontWeight.w700, AppColors.textSecondary)),
+                      style: AppText.style(14, FontWeight.w500, AppColors.textSecondary)),
                 ),
                 Text('$readCount / $active명',
-                    style: AppText.style(14, FontWeight.w700, AppColors.primary)),
+                    style: AppText.style(14, FontWeight.w500, AppColors.primary)),
               ],
             ),
           ),
