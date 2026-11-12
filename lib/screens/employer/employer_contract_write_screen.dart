@@ -62,7 +62,7 @@ class _EmployerContractWriteScreenState extends State<EmployerContractWriteScree
         .where((x) => mondayOf(parseYmd(x.date)) == mondayOf(store.today))
         .fold(0, (m, x) => m + x.scheduledMinutes);
     _staffId = staffId;
-    _wage.text = '${s.wage}';
+    _wage.text = wonInput(s.wage);
     _hours.text = '${(weekMinutes / 60).round()}';
     _days.text = weekdays.map((d) => weekday(DateTime(2024, 1, d))).join('·');
     _duty.text = s.contract?.duty.isNotEmpty == true ? s.contract!.duty : s.part;
@@ -72,7 +72,7 @@ class _EmployerContractWriteScreenState extends State<EmployerContractWriteScree
         if (_duty.text.trim().isEmpty) '업무 내용',
         if (int.tryParse(_hours.text) == null) '소정근로시간',
         if (_days.text.trim().isEmpty) '근무 요일',
-        if (int.tryParse(_wage.text) == null) '임금',
+        if (wonDigits(_wage.text) == null) '임금',
       ];
 
   Future<void> _pick(bool start) async {
@@ -88,7 +88,7 @@ class _EmployerContractWriteScreenState extends State<EmployerContractWriteScree
   void _submit() {
     if (_staffId == null) return showToast(context, '직원을 골라 주세요');
     if (_missing.isNotEmpty) return showToast(context, '${_missing.join(', ')}을(를) 입력해 주세요');
-    final wage = int.parse(_wage.text);
+    final wage = wonDigits(_wage.text)!;
     if (wage < minimumWage2026) {
       return showToast(context, '시급은 2026 최저임금 ${wonText(minimumWage2026)} 이상이어야 해요');
     }
@@ -158,7 +158,7 @@ class _EmployerContractWriteScreenState extends State<EmployerContractWriteScree
           LabeledField('시급 (원)',
               child: AppTextField(
                   controller: _wage,
-                  keyboardType: TextInputType.number,
+                  won: true,
                   onChanged: (_) => setState(() {}))),
           const SizedBox(height: 16),
           Row(children: [
@@ -168,6 +168,7 @@ class _EmployerContractWriteScreenState extends State<EmployerContractWriteScree
                       controller: _hours,
                       keyboardType: TextInputType.number,
                       hint: '시간',
+                      suffix: '시간',
                       onChanged: (_) => setState(() {}))),
             ),
             const SizedBox(width: 12),

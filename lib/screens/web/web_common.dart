@@ -141,7 +141,8 @@ class WebButton extends StatelessWidget {
         ),
       ),
     );
-    return tooltip == null ? button : Tooltip(message: tooltip!, child: button);
+    final ringed = FocusRing(radius: radius, child: button);
+    return tooltip == null ? ringed : Tooltip(message: tooltip!, child: ringed);
   }
 }
 
@@ -156,9 +157,11 @@ class WebTag extends StatelessWidget {
     this.padding = const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
     this.radius = 10,
     this.border,
+    this.maxLines = 1,
   });
 
   final String label;
+  final int maxLines;
   final Color color;
   final Color background;
   final double fontSize;
@@ -175,7 +178,8 @@ class WebTag extends StatelessWidget {
           border: border == null ? null : Border.all(color: border!),
         ),
         child: Text(label,
-            maxLines: 1,
+            maxLines: maxLines,
+            textAlign: TextAlign.center,
             overflow: TextOverflow.ellipsis,
             style: AppText.style(fontSize, FontWeight.w500, color)),
       );
@@ -313,15 +317,46 @@ class WebTable extends StatelessWidget {
             if (i > 0) const Divider(height: 1, thickness: 1, color: AppColors.border),
             onRowTap == null
                 ? _row(rows[i], rowHeight)
-                : InkWell(onTap: () => onRowTap!(i), child: _row(rows[i], rowHeight)),
+                : FocusRing(
+                    radius: 0, child: InkWell(onTap: () => onRowTap!(i), child: _row(rows[i], rowHeight))),
           ],
         ]);
         if (c.maxWidth >= minWidth) return table;
-        return SingleChildScrollView(
-          scrollDirection: Axis.horizontal,
-          child: SizedBox(width: minWidth, child: table),
-        );
+        return HScroll(width: minWidth, child: table);
       });
+}
+
+/// 좁을 때 쓰는 가로 스크롤. 스크롤바를 늘 보여 줘서 옆으로 더 있다는 단서를 준다.
+class HScroll extends StatefulWidget {
+  const HScroll({super.key, required this.width, required this.child});
+
+  final double width;
+  final Widget child;
+
+  @override
+  State<HScroll> createState() => _HScrollState();
+}
+
+class _HScrollState extends State<HScroll> {
+  final _c = ScrollController();
+
+  @override
+  void dispose() {
+    _c.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) => Scrollbar(
+        controller: _c,
+        thumbVisibility: true,
+        child: SingleChildScrollView(
+          controller: _c,
+          scrollDirection: Axis.horizontal,
+          padding: const EdgeInsets.only(bottom: 12),
+          child: SizedBox(width: widget.width, child: widget.child),
+        ),
+      );
 }
 
 /// 표 안의 회색 본문 글자.

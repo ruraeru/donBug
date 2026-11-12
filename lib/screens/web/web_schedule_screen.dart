@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
 
 import '../../data/app_scope.dart';
+import '../../data/app_store.dart';
 import '../../data/format.dart';
 import '../../theme.dart';
 import '../../widgets/common.dart';
 import '../employer/employer_parts.dart';
 import 'web_common.dart';
+import 'web_schedule_create_dialog.dart';
 import 'web_schedule_views.dart';
 
 /// W2 근무표 (Figma v3 오토스케줄 151:9248): 한 달 · 파트별 · 인원별 · 일간.
@@ -36,6 +38,37 @@ class _WebScheduleScreenState extends State<WebScheduleScreen> {
     final today = AppScope.read(context).today;
     // 이번 달로 오면 오늘, 아니면 그 달 1일.
     setState(() => _day = m.year == today.year && m.month == today.month ? today : m);
+  }
+
+  Future<void> _create(DateTime month) async {
+    final today = AppScope.read(context).today;
+    final r = await showScheduleCreateDialog(context,
+        nextMonth: month.isAfter(DateTime(today.year, today.month)));
+    if (r == null || !mounted) return;
+    setState(() {
+      _view = 0;
+      _day = r.month.year == today.year && r.month.month == today.month ? today : r.month;
+    });
+    showToast(context, '${r.month.month}월 근무 ${r.count}건을 만들었어요');
+  }
+
+  /// 그 달 남은 날 중 파트 근무가 하나도 없는 주가 있는가.
+  bool _hasEmptyWeek(AppStore store, DateTime month, List<DateTime> weeks) {
+    final partNames = store.store.parts.map((p) => p.name).toSet();
+    final last = DateTime(month.year, month.month + 1, 0);
+    for (final m in weeks) {
+      var a = m.isBefore(month) ? month : m;
+      if (a.isBefore(store.today)) a = store.today;
+      var b = m.add(const Duration(days: 6));
+      if (b.isAfter(last)) b = last;
+      if (b.isBefore(a)) continue;
+      var any = false;
+      for (var d = a; !d.isAfter(b) && !any; d = d.add(const Duration(days: 1))) {
+        any = store.scheduleOn(d).any((s) => partNames.contains(s.part));
+      }
+      if (!any) return true;
+    }
+    return false;
   }
 
   void _autoFill(List<DateTime> mondays) {
@@ -106,14 +139,16 @@ class _WebScheduleScreenState extends State<WebScheduleScreen> {
         for (final (i, d) in days.indexed) ...[
           if (i > 0) const SizedBox(width: 8),
           Expanded(
-            child: Material(
+            child: Opacity(
+              opacity: d.month == month.month ? 1 : 0.4,
+              child: Material(
               color: d == day ? AppColors.primary : AppColors.surface,
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(10),
                 side: BorderSide(color: d == day ? AppColors.primary : AppColors.border),
               ),
               child: InkWell(
-                onTap: () => setState(() => _day = d),
+                onTap: d.month == month.month ? () => setState(() => _day = d) : null,
                 borderRadius: BorderRadius.circular(10),
                 child: SizedBox(
                   height: 40,
@@ -124,6 +159,7 @@ class _WebScheduleScreenState extends State<WebScheduleScreen> {
                   ),
                 ),
               ),
+            ),
             ),
           ),
         ],
@@ -169,15 +205,31 @@ class _WebScheduleScreenState extends State<WebScheduleScreen> {
             tooltip: '다시하기',
             style: WebButtonStyle.outline,
             onPressed: store.canRedo ? store.redo : null),
+        WebButton('근무표 만들기', style: WebButtonStyle.soft, onPressed: () => _create(month)),
         WebButton('자동 채우기',
-            style: WebButtonStyle.soft,
+            style: WebButtonStyle.outline,
             onPressed: () => _autoFill(_view == 0 ? weeks : [monday])),
-        const WebButton('저장', tooltip: '바뀐 내용은 바로 저장돼요', style: WebButtonStyle.outline),
+        // 좁은 창에선 늘 비활성인 저장을 빼서 확정하기가 혼자 줄바꿈되지 않게 한다.
+        if (MediaQuery.sizeOf(context).width >= 700)
+          const WebButton('저장', tooltip: '바뀐 내용은 바로 저장돼요', style: WebButtonStyle.outline),
         WebButton('확정하기', onPressed: () => _confirm(month)),
       ],
       children: [
         if (_view != 0) weekTabs,
         if (_view == 3) dayTabs,
+        if (_view == 0 && _hasEmptyWeek(store, month, weeks))
+          Row(children: [
+            Flexible(
+              child: Text('남은 날 중 파트 근무가 비어 있는 주가 있어요',
+                  style: AppText.style(13, FontWeight.w400, AppColors.textSecondary)),
+            ),
+            const SizedBox(width: 8),
+            InkWell(
+              onTap: () => _create(month),
+              child: Text('근무표 만들기',
+                  style: AppText.style(13, FontWeight.w500, AppColors.primary)),
+            ),
+          ]),
         view,
         Wrap(
           spacing: 16,
@@ -186,7 +238,7 @@ class _WebScheduleScreenState extends State<WebScheduleScreen> {
           children: [
             Wrap(spacing: 14, runSpacing: 6, children: [
               for (final p in store.store.parts) WebLegend(partColors(p.name).$1, p.name),
-              const WebLegend(AppColors.purple, '직원 근무'),
+              const WebLegend(AppColors.purple, '유동 근무'),
               const WebLegend(AppColors.danger, '시간 미정', dashed: true),
               const WebLegend(AppColors.textTertiary, '연차·휴무'),
               const WebLegend(AppColors.accent, '대타 모집'),

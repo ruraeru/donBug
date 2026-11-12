@@ -23,14 +23,7 @@ class _EmployerScheduleScreenState extends State<EmployerScheduleScreen> {
 
   void _push(Widget page) => Navigator.push(context, MaterialPageRoute(builder: (_) => page));
 
-  Future<void> _deleteShift(AppStore store, Shift s) async {
-    final ok = await showConfirmDialog(context,
-        title: '${store.nameOf(s.staffId)}님 근무를 삭제할까요?',
-        message: '${shiftDay(s)} ${shiftTime(s)} ${s.part}',
-        confirmLabel: '삭제',
-        confirmVariant: AppButtonVariant.danger);
-    if (ok && mounted) AppScope.read(context).deleteShift(s.id);
-  }
+  void _edit(Shift s) => _push(ShiftAddScreen(date: parseYmd(s.date), shift: s));
 
   @override
   Widget build(BuildContext context) {
@@ -53,28 +46,21 @@ class _EmployerScheduleScreenState extends State<EmployerScheduleScreen> {
             ],
           ),
           const SizedBox(height: 12),
-          Row(children: [
-            IconButton(
-              tooltip: '이전 주',
-              onPressed: () => setState(() => _day = day.subtract(const Duration(days: 7))),
-              icon: const Icon(Icons.chevron_left_rounded, size: 28),
+          Align(
+            alignment: Alignment.centerRight,
+            child: PeriodNav(
+              label: '${md(monday)} – ${md(monday.add(const Duration(days: 6)))}',
+              prevTip: '이전 주',
+              nextTip: '다음 주',
+              onPrev: () => setState(() => _day = day.subtract(const Duration(days: 7))),
+              onNext: () => setState(() => _day = day.add(const Duration(days: 7))),
             ),
-            Expanded(
-              child: Text('${md(monday)} – ${md(monday.add(const Duration(days: 6)))}',
-                  textAlign: TextAlign.center,
-                  style: AppText.style(14, FontWeight.w500, AppColors.textSecondary)),
-            ),
-            IconButton(
-              tooltip: '다음 주',
-              onPressed: () => setState(() => _day = day.add(const Duration(days: 7))),
-              icon: const Icon(Icons.chevron_right_rounded, size: 28),
-            ),
-          ]),
+          ),
           const SizedBox(height: 8),
           Row(
             children: [
               for (var i = 0; i < 7; i++) ...[
-                if (i > 0) const SizedBox(width: 8),
+                if (i > 0) const SizedBox(width: 6),
                 Expanded(child: _dayChip(store, monday.add(Duration(days: i)), day)),
               ],
             ],
@@ -84,7 +70,7 @@ class _EmployerScheduleScreenState extends State<EmployerScheduleScreen> {
             _partCard(store, part, shifts.where((s) => s.part == part).toList()),
           ],
           const SizedBox(height: 12),
-          AppButton('근무 추가', onPressed: () => _push(ShiftAddScreen(date: day))),
+          AppButton('+ 근무 추가', variant: AppButtonVariant.outline, onPressed: () => _push(ShiftAddScreen(date: day))),
         ],
       ),
     );
@@ -129,8 +115,7 @@ class _EmployerScheduleScreenState extends State<EmployerScheduleScreen> {
               children: [
                 for (final s in list)
                   InkWell(
-                    onLongPress: () => _deleteShift(store, s),
-                    onTap: () => _deleteShift(store, s),
+                    onTap: () => _edit(s),
                     borderRadius: BorderRadius.circular(999),
                     child: Pill(
                       '${store.nameOf(s.staffId)}${s.isSubstitute ? ' · 대타' : ''}'
@@ -149,23 +134,42 @@ class _EmployerScheduleScreenState extends State<EmployerScheduleScreen> {
   Widget _dayChip(AppStore store, DateTime d, DateTime selected) {
     final on = d == selected;
     final isToday = d == store.today;
-    return GestureDetector(
-      onTap: () => setState(() => _day = d),
-      child: Container(
-        height: 56,
-        decoration: BoxDecoration(
-          color: on ? AppColors.primary : AppColors.surface,
-          borderRadius: BorderRadius.circular(12),
-          border: isToday && !on ? Border.all(color: AppColors.primary) : null,
-        ),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Text(weekday(d),
-                style: AppText.style(11, FontWeight.w400, on ? AppColors.onPrimary : AppColors.textTertiary)),
-            Text('${d.day}',
-                style: AppText.style(15, FontWeight.w500, on ? AppColors.onPrimary : AppColors.textPrimary)),
-          ],
+    final hasShift = store.shiftsOn(d).isNotEmpty;
+    return Material(
+      color: on ? AppColors.primary : AppColors.surface,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(14),
+        side: isToday && !on ? const BorderSide(color: AppColors.primary) : BorderSide.none,
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
+        onTap: () => setState(() => _day = d),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 12),
+          child: Column(
+            children: [
+              Text(weekday(d),
+                  style: AppText.style(12, FontWeight.w500,
+                      on ? AppColors.onPrimary : AppColors.textSecondary)),
+              const SizedBox(height: 4),
+              Text('${d.day}',
+                  style: AppText.style(16, FontWeight.w500,
+                      on ? AppColors.onPrimary : AppColors.textPrimary)),
+              const SizedBox(height: 4),
+              Container(
+                width: 6,
+                height: 6,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: !hasShift
+                      ? Colors.transparent
+                      : on
+                          ? AppColors.onPrimary
+                          : AppColors.primary,
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );

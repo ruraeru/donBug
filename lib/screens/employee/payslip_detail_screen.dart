@@ -39,19 +39,27 @@ class PayslipDetailScreen extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 16),
-          PayBreakdown(slip: slip, staff: me, title: '지급 · 공제 내역'),
+          PayBreakdown(slip: slip, staff: me),
           const SizedBox(height: 16),
-          AppCard(
-            radius: 14,
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-            onTap: () => Navigator.push(
-              context,
-              MaterialPageRoute(builder: (_) => WorkLogScreen(month: month)),
+          Material(
+            color: AppColors.infoSoft,
+            borderRadius: BorderRadius.circular(14),
+            clipBehavior: Clip.antiAlias,
+            child: InkWell(
+              onTap: () => Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => WorkLogScreen(month: month)),
+              ),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                child: Row(children: [
+                  Expanded(
+                      child: Text('일자별 근무 내역 보기',
+                          style: AppText.style(14, FontWeight.w500, AppColors.info))),
+                  const Icon(Icons.chevron_right_rounded, color: AppColors.info),
+                ]),
+              ),
             ),
-            child: Row(children: [
-              Expanded(child: Text('일자별 근무 내역 보기', style: AppText.style(14, FontWeight.w500))),
-              const Icon(Icons.chevron_right_rounded, color: AppColors.textTertiary),
-            ]),
           ),
         ],
       ),

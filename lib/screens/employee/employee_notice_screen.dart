@@ -56,7 +56,9 @@ class _EmployeeNoticeScreenState extends State<EmployeeNoticeScreen> {
             child: ListView(
               padding: const EdgeInsets.fromLTRB(20, 8, 20, 16),
               children: [
-                Row(
+                SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  child: Row(
                   children: [
                     for (var i = 0; i < filters.length; i++) ...[
                       if (i > 0) const SizedBox(width: 8),
@@ -67,6 +69,7 @@ class _EmployeeNoticeScreenState extends State<EmployeeNoticeScreen> {
                       ),
                     ],
                   ],
+                  ),
                 ),
                 if (shown.isEmpty) const EmptyNote('공지가 없어요'),
                 for (final n in pinned) ...[
@@ -135,6 +138,7 @@ class _EmployeeNoticeScreenState extends State<EmployeeNoticeScreen> {
               if (!read) ...[
                 const SizedBox(height: 12),
                 AppButton('확인했어요',
+                    variant: AppButtonVariant.soft,
                     verticalPadding: 12,
                     fontSize: 15,
                     onPressed: () => AppScope.read(context).markNoticeRead(n.id)),
@@ -150,7 +154,7 @@ class _EmployeeNoticeScreenState extends State<EmployeeNoticeScreen> {
 /// 공지 카테고리 칩 (+ 필독).
 Widget noticeTags(Notice n) {
   final (fg, bg) = switch (n.category) {
-    '중요' => (AppColors.onPrimary, AppColors.accent),
+    '중요' => (AppColors.accent, AppColors.accentSoft),
     _ => (AppColors.textSecondary, AppColors.bg),
   };
   return Row(mainAxisSize: MainAxisSize.min, children: [

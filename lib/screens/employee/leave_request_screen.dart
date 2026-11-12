@@ -125,10 +125,9 @@ class _LeaveRequestScreenState extends State<LeaveRequestScreen> {
                     ],
                   ),
                 ),
-                Switch(
-                  value: _notify,
-                  activeTrackColor: AppColors.primary,
-                  onChanged: (v) => setState(() => _notify = v),
+                GestureDetector(
+                  onTap: () => setState(() => _notify = !_notify),
+                  child: AppToggle(_notify),
                 ),
               ],
             ),

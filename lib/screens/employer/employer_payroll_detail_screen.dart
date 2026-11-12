@@ -47,7 +47,7 @@ class EmployerPayrollDetailScreen extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 16),
-          PayBreakdown(slip: p, staff: s, title: '지급 · 공제 내역'),
+          PayBreakdown(slip: p, staff: s),
           const SizedBox(height: 16),
           NoteBox(
             '근태 기록(QR 인증${edited > 0 ? ' · 수동 수정 $edited건' : ''})을 기준으로 자동 계산된 금액이에요',

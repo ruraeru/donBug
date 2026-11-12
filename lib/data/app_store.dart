@@ -13,6 +13,33 @@ enum AttStatus { waiting, working, normal, late, absent }
 /// 매장 코드로 가입 신청한 결과.
 enum JoinResult { requested, alreadyMember, alreadyPending, notFound }
 
+/// 근무표 만들기 미리보기. [AppStore.planSchedule] 이 만들고 [AppStore.applySchedulePlan] 이 반영한다.
+class SchedulePlan {
+  SchedulePlan({
+    required this.from,
+    required this.to,
+    required this.shifts,
+    required this.unfilled,
+    required this.minutesByStaff,
+    required this.cost,
+  });
+
+  /// 만들 범위(양 끝 포함, 날짜만).
+  final DateTime from, to;
+
+  /// 새로 추가할 근무(id 비어 있음). 기존 근무는 건드리지 않는다.
+  final List<Shift> shifts;
+
+  /// 사람이 모자라 못 채운 칸 수(파트 × 날짜 × 필요 인원 기준).
+  final int unfilled;
+
+  /// 직원 id → 범위 안 총 근무 분(기존 + 새 근무).
+  final Map<String, int> minutesByStaff;
+
+  /// 새 근무의 예상 인건비(원, 기본급 기준).
+  final int cost;
+}
+
 /// 앱 전체 상태 + 액션. 화면은 [AppScope]로 받아 쓴다.
 ///
 /// 액션마다 상태를 바꾸고 [notifyListeners] 후 [onSave]로 JSON 을 넘긴다.
@@ -148,9 +175,23 @@ class AppStore extends ChangeNotifier {
 
   /// 오늘 내 근무 (끝나지 않은 것 우선).
   Shift? get myTodayShift {
-    final list = myShifts.where((s) => s.date == ymd(today)).toList();
+    // 종료 시각이 지났는데 출근 기록이 없는 근무는 오늘 근무로 치지 않는다.
+    final list = myShifts
+        .where((s) =>
+            s.date == ymd(today) &&
+            (attendanceFor(s.id) != null || !shiftEnd(s).isBefore(now)))
+        .toList();
     return list.where((s) => attendanceFor(s.id)?.clockOut == null).firstOrNull ??
         list.firstOrNull;
+  }
+
+  /// 출근은 시작 30분 전부터. 막힐 때 안내 문구, 가능하면 null.
+  String? clockInBlock(Shift s) {
+    if (shiftEnd(s).isBefore(now)) return '근무 시간이 지나 출근할 수 없어요';
+    if (now.isBefore(shiftStart(s).subtract(const Duration(minutes: 30)))) {
+      return '근무 시작 30분 전부터 출근할 수 있어요';
+    }
+    return null;
   }
 
   List<Shift> get myUpcomingShifts => myShifts
@@ -187,12 +228,20 @@ class AppStore extends ChangeNotifier {
     return d > 0 ? d : 0;
   }
 
+  /// 급여는 소정 시작과 출근 중 늦은 쪽부터 계산한다(일찍 찍어도 부풀지 않음).
+  DateTime _paidStart(Attendance a, Shift? s) {
+    final inAt = DateTime.parse(a.clockIn);
+    if (s == null) return inAt;
+    final start = shiftStart(s);
+    return inAt.isBefore(start) ? start : inAt;
+  }
+
   /// 실근무 분(휴게 제외). 근무 중이면 지금까지.
   int workedMinutes(Attendance a) {
     final s = shiftById(a.shiftId);
     final end = a.clockOut == null ? now : DateTime.parse(a.clockOut!);
     return WorkEntry(
-      start: DateTime.parse(a.clockIn),
+      start: _paidStart(a, s),
       end: end,
       breakMin: a.clockOut == null ? 0 : (s?.breakMin ?? 0),
     ).minutes;
@@ -314,7 +363,7 @@ class AppStore extends ChangeNotifier {
       final a = attendanceFor(s.id);
       if (a?.clockOut != null) {
         entries.add(WorkEntry(
-          start: DateTime.parse(a!.clockIn),
+          start: _paidStart(a!, s),
           end: DateTime.parse(a.clockOut!),
           breakMin: s.breakMin,
           isSubstitute: s.isSubstitute,
@@ -419,9 +468,12 @@ class AppStore extends ChangeNotifier {
     _commit();
   }
 
-  void switchStore(String storeId) {
+  /// 근무 중이면 전환하지 않고 false.
+  bool switchStore(String storeId) {
+    if (isWorking) return false;
     session.employeeStoreId = storeId;
     _commit();
+    return true;
   }
 
   /// 시드로 되돌린다. 로그인·역할은 유지.
@@ -517,6 +569,7 @@ class AppStore extends ChangeNotifier {
   }
 
   void _notifyPeers(SubstituteRequest r, String title) {
+    if (!store.substitutePush) return; // 사장님 알림은 호출 쪽에서 따로 보낸다
     final s = shiftById(r.shiftId)!;
     for (final p in state.staff.where(
         (x) => x.storeId == r.storeId && x.active && x.id != r.requesterId)) {
@@ -684,10 +737,19 @@ class AppStore extends ChangeNotifier {
   /// 근무 시간에 맞는 법정 최소 휴게(4시간 30분, 8시간 60분).
   static int defaultBreak(int span) => span >= 480 ? 60 : span >= 240 ? 30 : 0;
 
-  void deleteShift(String shiftId) {
+  /// 근무를 지운다. 출근 기록이 있으면 지우지 않고 false. 대기 중 대타 요청은 취소하고 알바생에게 알린다.
+  bool deleteShift(String shiftId) {
+    final s = shiftById(shiftId);
+    if (s == null) return true;
+    if (attendanceFor(shiftId) != null) return false;
     _snapshot();
-    state.shifts.removeWhere((s) => s.id == shiftId);
+    state.shifts.removeWhere((x) => x.id == shiftId);
+    for (final r in state.subs.where((r) => r.shiftId == shiftId && r.pending)) {
+      r.status = SubStatus.cancelled;
+    }
+    if (s.isWork) _notifyStaff(s.staffId, 'sub', '근무가 삭제됐어요', body: _shiftLabel(s));
     _commit();
+    return true;
   }
 
   /// 근무 수정 · 다른 칸으로 옮기기.
@@ -705,6 +767,7 @@ class AppStore extends ChangeNotifier {
     final s = shiftById(shiftId);
     if (s == null) return;
     _snapshot();
+    final before = _shiftLabel(s), oldStaff = s.staffId, wasWork = s.isWork;
     if (staffId != null) s.staffId = staffId;
     if (date != null) s.date = ymd(date);
     if (startMin != null) s.startMin = startMin;
@@ -713,6 +776,15 @@ class AppStore extends ChangeNotifier {
     if (breakMin != null) s.breakMin = breakMin;
     if (kind != null) s.kind = kind;
     if (timeTbd != null) s.timeTbd = timeTbd;
+    final after = _shiftLabel(s);
+    if (wasWork && (s.staffId != oldStaff || !s.isWork)) {
+      _notifyStaff(oldStaff, 'sub', '근무가 삭제됐어요', body: before);
+    }
+    if (s.isWork && (s.staffId != oldStaff || !wasWork)) {
+      _notifyStaff(s.staffId, 'sub', '새 근무가 배정됐어요', body: after);
+    } else if (s.isWork && after != before) {
+      _notifyStaff(s.staffId, 'sub', '근무가 수정됐어요', body: after);
+    }
     _commit();
   }
 
@@ -778,6 +850,154 @@ class AppStore extends ChangeNotifier {
       _notifyStaff(s.id, 'sub', '$month월 근무표가 확정됐어요', body: '근무표에서 내 근무를 확인해 주세요');
     }
     _commit();
+  }
+
+  /// 근무표 만들기(웹): [from]–[to] 의 오늘 이후 날짜에 파트별 [needs](store.parts 순서) 만큼 근무를 짠다.
+  /// 상태는 바꾸지 않고 미리보기만 돌려준다.
+  /// - [copyLastWeek]: 오늘이 든 주의 바로 전 주 근무(연차·휴무 제외, 재직자만)를 요일마다 반복한 뒤 빈칸을 채운다
+  /// - 빈칸은 그 파트가 자기 파트인 근무자 먼저, 그다음 그 주 근무가 적은 사람부터. [excludeStaffIds] 는 빼고,
+  ///   그 주 소정 분이 [weeklyMaxMin] 을 넘게 되는 사람은 건너뛴다
+  /// - 이미 있는 근무 · 겹치는 시간은 그대로 두고 피한다
+  SchedulePlan planSchedule({
+    required DateTime from,
+    required DateTime to,
+    required List<int> needs,
+    bool copyLastWeek = false,
+    Set<String> excludeStaffIds = const {},
+    int weeklyMaxMin = 40 * 60,
+  }) {
+    final start = dayOf(from).isBefore(today) ? today : dayOf(from), end = dayOf(to);
+    final planned = <Shift>[];
+    final inRange = !end.isBefore(start);
+
+    bool onDay(String staffId, String date) =>
+        scheduleOn(parseYmd(date)).any((x) => x.staffId == staffId) ||
+        planned.any((x) => x.staffId == staffId && x.date == date);
+    bool overlaps(String staffId, Shift d) =>
+        overlappingShift(staffId, d) != null ||
+        planned.any((x) =>
+            x.staffId == staffId &&
+            shiftStart(x).isBefore(shiftEnd(d)) &&
+            shiftEnd(x).isAfter(shiftStart(d)));
+    int weekMin(String staffId, DateTime day) {
+      final mon = mondayOf(day), next = mon.add(const Duration(days: 7));
+      return [...shiftsOfStaff(staffId), ...planned.where((x) => x.staffId == staffId)]
+          .where((x) {
+            final d = parseYmd(x.date);
+            return !d.isBefore(mon) && d.isBefore(next);
+          })
+          .fold(0, (sum, x) => sum + x.scheduledMinutes);
+    }
+
+    Shift draft(DateTime day, int startMin, int endMin, String part, int breakMin, [String staffId = '']) =>
+        Shift(
+            id: '',
+            storeId: store.id,
+            staffId: staffId,
+            date: ymd(day),
+            startMin: startMin,
+            endMin: endMin,
+            part: part,
+            breakMin: breakMin);
+
+    if (inRange && copyLastWeek) {
+      final lastMon = mondayOf(today).subtract(const Duration(days: 7));
+      for (var day = start; !day.isAfter(end); day = day.add(const Duration(days: 1))) {
+        for (final s in scheduleOn(lastMon.add(Duration(days: day.weekday - 1)))) {
+          final id = s.originalStaffId ?? s.staffId;
+          if (!s.isWork || excludeStaffIds.contains(id) || !(staffById(id)?.active ?? false)) continue;
+          final d = draft(day, s.startMin, s.endMin, s.part, s.breakMin, id);
+          if (onDay(id, d.date) ||
+              overlaps(id, d) ||
+              weekMin(id, day) + d.scheduledMinutes > weeklyMaxMin) {
+            continue;
+          }
+          planned.add(d);
+        }
+      }
+    }
+
+    var unfilled = 0;
+    if (inRange) {
+      for (var day = start; !day.isAfter(end); day = day.add(const Duration(days: 1))) {
+        for (var i = 0; i < store.parts.length; i++) {
+          final p = store.parts[i], need = i < needs.length ? needs[i] : p.need;
+          final span = (p.endMin <= p.startMin ? p.endMin + 1440 : p.endMin) - p.startMin;
+          var have = scheduleOn(day).where((x) => x.part == p.name && x.kind == ShiftKind.work).length +
+              planned.where((x) => x.part == p.name && x.date == ymd(day)).length;
+          while (have < need) {
+            final d = draft(day, p.startMin, p.endMin, p.name, defaultBreak(span));
+            final free = partStaff
+                .where((m) =>
+                    !excludeStaffIds.contains(m.id) &&
+                    !onDay(m.id, d.date) &&
+                    !overlaps(m.id, d) &&
+                    weekMin(m.id, day) + d.scheduledMinutes <= weeklyMaxMin)
+                .toList()
+              // 자기 파트 근무자 먼저, 그다음 그 주 근무가 적은 사람.
+              ..sort((a, b) {
+                final home = (a.part == p.name ? 0 : 1).compareTo(b.part == p.name ? 0 : 1);
+                return home != 0 ? home : weekMin(a.id, day).compareTo(weekMin(b.id, day));
+              });
+            if (free.isEmpty) {
+              unfilled += need - have;
+              break;
+            }
+            d.staffId = free.first.id;
+            planned.add(d);
+            have++;
+          }
+        }
+      }
+    }
+
+    final minutes = <String, int>{};
+    void add(Shift x) => minutes[x.staffId] = (minutes[x.staffId] ?? 0) + x.scheduledMinutes;
+    for (final m in activeStaff) {
+      for (final x in shiftsOfStaff(m.id)) {
+        final d = parseYmd(x.date);
+        if (!d.isBefore(dayOf(from)) && !d.isAfter(end)) add(x);
+      }
+    }
+    planned.forEach(add);
+    return SchedulePlan(
+      from: dayOf(from),
+      to: end,
+      shifts: planned,
+      unfilled: unfilled,
+      minutesByStaff: minutes,
+      cost: planned.fold(0, (sum, x) => sum + plannedPay(x)),
+    );
+  }
+
+  /// [plan] 의 근무를 추가하고 파트별 필요 인원을 [needs] 로 저장한다. 되돌리기 한 번에 묶인다.
+  /// 담당 직원들에게 알림. 추가한 수를 돌려준다.
+  int applySchedulePlan(SchedulePlan plan, {List<int>? needs}) {
+    if (plan.shifts.isEmpty) return 0;
+    _snapshot();
+    if (needs != null) {
+      for (var i = 0; i < needs.length && i < store.parts.length; i++) {
+        store.parts[i].need = needs[i];
+      }
+    }
+    final counts = <String, int>{};
+    for (final x in plan.shifts) {
+      state.shifts.add(Shift(
+        id: _id('s'),
+        storeId: store.id,
+        staffId: x.staffId,
+        date: x.date,
+        startMin: x.startMin,
+        endMin: x.endMin,
+        part: x.part,
+        breakMin: x.breakMin,
+      ));
+      counts[x.staffId] = (counts[x.staffId] ?? 0) + 1;
+    }
+    counts.forEach((id, n) =>
+        _notifyStaff(id, 'sub', '${plan.from.month}월 근무가 추가됐어요', body: '$n건 · 근무표에서 확인해 주세요'));
+    _commit();
+    return plan.shifts.length;
   }
 
   /// 파트별 필요 인원 저장 + (선택) 지난주 근무를 이번 주로 복사.
@@ -886,13 +1106,25 @@ class AppStore extends ChangeNotifier {
     _commit();
   }
 
-  /// 매장에서 내보낸다. 앞으로의 근무는 지운다.
+  /// 매장에서 내보낸다. 오늘 이후(아직 출근 안 한) 근무는 지우고, 대기 대타에서 뺀다.
   void removeStaff(String staffId) {
     final s = staffById(staffId)!;
     s.status = StaffStatus.left;
-    state.shifts.removeWhere((x) => x.staffId == staffId && parseYmd(x.date).isAfter(today));
-    for (final r in state.subs.where((r) => r.requesterId == staffId && r.pending)) {
-      r.status = SubStatus.cancelled;
+    state.shifts.removeWhere((x) =>
+        x.staffId == staffId &&
+        !parseYmd(x.date).isBefore(today) &&
+        attendanceFor(x.id) == null);
+    for (final r in state.subs.where((r) => r.pending)) {
+      if (r.requesterId == staffId) {
+        r.status = SubStatus.cancelled;
+        continue;
+      }
+      if (!r.applicantIds.remove(staffId) && r.acceptedId != staffId) continue;
+      if (r.acceptedId == staffId) {
+        r
+          ..acceptedId = null
+          ..status = SubStatus.open;
+      }
     }
     _notifyStaff(staffId, 'join', '${storeById(s.storeId)!.name}에서 퇴사 처리됐어요');
     _commit();

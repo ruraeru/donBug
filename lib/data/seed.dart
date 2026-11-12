@@ -11,6 +11,7 @@ import 'models.dart';
 
 const cafeId = 'st-cafe';
 const moaId = 'st-moa';
+const bakeId = 'st-bake';
 const ownerPersonId = 'p-owner';
 const meEmployeePersonId = 'p-taewoo';
 
@@ -208,6 +209,14 @@ AppState buildSeed(DateTime now) {
       address: '서울특별시 마포구 어울마당로 35',
       code: 'MOA-27QX',
       parts: [PartTemplate('야간', 1320, 360, 1)],
+    ),
+    // 태우가 가입하지 않은 데모 매장: 가입 신청 → 대기 → 승인 시연용. 사장님 화면 없음.
+    Store(
+      id: bakeId,
+      name: '베이커리 밀',
+      address: '서울특별시 마포구 독막로 12',
+      code: 'BAKE-5TQ1',
+      parts: [PartTemplate('오전', 420, 840, 1)],
     ),
   ];
 

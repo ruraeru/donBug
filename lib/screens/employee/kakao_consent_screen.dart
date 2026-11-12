@@ -31,7 +31,7 @@ class _KakaoConsentScreenState extends State<KakaoConsentScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text('돈벌래이(가) 아래 정보에\n접근하려고 해요',
+                  Text('돈벌래가 아래 정보에\n접근하려고 해요',
                       style: AppText.style(22, FontWeight.w500)),
                   const SizedBox(height: 6),
                   Text('동의하면 3초 만에 가입돼요',

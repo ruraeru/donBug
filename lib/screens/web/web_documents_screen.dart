@@ -147,7 +147,7 @@ Future<void> showContractDialog(BuildContext context, {String? staffId}) {
     final weekMin = upcoming
         .where((x) => mondayOf(parseYmd(x.date)) == mondayOf(store.today))
         .fold(0, (m, x) => m + x.scheduledMinutes);
-    wage.text = '${s.wage}';
+    wage.text = wonInput(s.wage);
     hoursCtrl.text = '${(weekMin / 60).round()}';
     days.text = weekdays.map((d) => weekday(DateTime(2024, 1, d))).join('·');
     duty.text = s.contract?.duty.isNotEmpty == true ? s.contract!.duty : s.part;
@@ -182,8 +182,8 @@ Future<void> showContractDialog(BuildContext context, {String? staffId}) {
       ),
       const SizedBox(height: 14),
       webPair(
-        webField('시급 (원)', AppTextField(controller: wage, keyboardType: TextInputType.number)),
-        webField('주 소정근로시간', AppTextField(controller: hoursCtrl, keyboardType: TextInputType.number)),
+        webField('시급 (원)', AppTextField(controller: wage, won: true)),
+        webField('주 소정근로시간', AppTextField(controller: hoursCtrl, keyboardType: TextInputType.number, suffix: '시간')),
       ),
       const SizedBox(height: 14),
       webField('근무 요일', AppTextField(controller: days, hint: '예: 월·수·금')),
@@ -197,7 +197,7 @@ Future<void> showContractDialog(BuildContext context, {String? staffId}) {
     actions: (ctx, set) => [
       WebButton('취소', style: WebButtonStyle.outline, onPressed: () => Navigator.pop(ctx)),
       WebButton('서명하고 요청 보내기', onPressed: () {
-        final w = int.tryParse(wage.text.replaceAll(RegExp(r'[^0-9]'), ''));
+        final w = wonDigits(wage.text);
         final h = int.tryParse(hoursCtrl.text);
         if (w == null || w < minimumWage2026) {
           return set(() => error = '시급은 2026 최저임금 ${wonText(minimumWage2026)} 이상이어야 해요');

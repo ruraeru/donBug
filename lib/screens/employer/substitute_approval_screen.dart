@@ -28,7 +28,7 @@ class SubstituteApprovalScreen extends StatelessWidget {
     AppScope.read(context).rejectSubstitute(r.id);
     final messenger = ScaffoldMessenger.of(context);
     Navigator.pop(context);
-    messenger.showSnackBar(const SnackBar(content: Text('대타 요청을 거절했어요')));
+    showToastOn(messenger, '대타 요청을 거절했어요');
   }
 
   void _approve(BuildContext context, SubstituteRequest r) {
@@ -56,21 +56,9 @@ class SubstituteApprovalScreen extends StatelessWidget {
     final list = store.pendingSubs;
     final accepted = list.where((r) => r.status == SubStatus.accepted).length;
     return Scaffold(
-      appBar: AppBar(
-        backgroundColor: AppColors.bg,
-        surfaceTintColor: Colors.transparent,
-        foregroundColor: AppColors.textPrimary,
-        elevation: 0,
-        titleSpacing: 20,
-        title: Text('대타 승인', style: AppText.style(24, FontWeight.w500)),
-        actions: [
-          Padding(
-            padding: const EdgeInsets.only(right: 20),
-            child: Center(
-                child: _SmallChip('승인 대기 $accepted', AppColors.accent, AppColors.accentSoft)),
-          ),
-        ],
-      ),
+      appBar: AppHeader('대타 승인', actions: [
+        _SmallChip('승인 대기 $accepted', AppColors.accent, AppColors.accentSoft),
+      ]),
       body: ListView(
         padding: const EdgeInsets.fromLTRB(20, 8, 20, 16),
         children: [

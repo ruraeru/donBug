@@ -19,11 +19,11 @@ class _StoreSettingsScreenState extends State<StoreSettingsScreen> {
     final store = AppScope.of(context);
     final st = store.store;
     final toggles = [
-      ('5인 미만 사업장', '가산수당·연차 계산 기준에 반영', st.isSmall,
+      ('5인 미만 사업장', '가산수당(야간·8시간 초과) 적용 기준', st.isSmall,
           (bool v) => store.updateStore(isSmall: v)),
       ('공지 필독 기본 설정', '새 공지는 기본으로 필독 지정', st.noticeRequiredDefault,
           (bool v) => store.updateStore(noticeRequiredDefault: v)),
-      ('대타 알림 푸시', '동료 알바생에게 자동 알림', st.substitutePush,
+      ('대타 알림 푸시', '동료에게 대타 요청 알림 (사장님 알림은 유지)', st.substitutePush,
           (bool v) => store.updateStore(substitutePush: v)),
     ];
     return Scaffold(
@@ -61,7 +61,7 @@ class _StoreSettingsScreenState extends State<StoreSettingsScreen> {
           PersonRow(
             avatar: const LetterAvatar('로', color: AppColors.textSecondary, background: AppColors.bg),
             title: '로그아웃',
-            trailing: const AppIcon('chevron_right', size: 20, color: AppColors.textTertiary),
+            trailing: const Icon(Icons.chevron_right_rounded, color: AppColors.textTertiary),
             onTap: () => logoutToLogin(context),
           ),
           const SizedBox(height: 24),

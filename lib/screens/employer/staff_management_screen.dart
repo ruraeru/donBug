@@ -19,12 +19,9 @@ class StaffManagementScreen extends StatelessWidget {
     final pending = store.pendingStaff.length;
     return Scaffold(
       appBar: AppHeader('직원 관리', actions: [
-        TextButton(
-          onPressed: () => Navigator.push(
-              context, MaterialPageRoute(builder: (_) => const StoreCodeScreen())),
-          child: Text('+ 초대', style: AppText.style(14, FontWeight.w500, AppColors.primary)),
-        ),
-        const SizedBox(width: 8),
+        HeaderTextAction('+ 초대',
+            onTap: () => Navigator.push(context,
+                MaterialPageRoute(builder: (_) => const StoreCodeScreen(invite: true)))),
       ]),
       body: ListView(
         padding: const EdgeInsets.fromLTRB(20, 8, 20, 16),

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 
 import '../data/app_scope.dart';
@@ -137,7 +138,11 @@ class AppButton extends StatelessWidget {
                 AppIcon(icon!, size: 20, color: fg),
                 const SizedBox(width: 8),
               ],
-              Text(label, style: AppText.style(fontSize, FontWeight.w500, fg)),
+              Flexible(
+                child: Text(label,
+                    textAlign: TextAlign.center,
+                    style: AppText.style(fontSize, FontWeight.w500, fg)),
+              ),
             ],
           ),
         ),
@@ -189,6 +194,23 @@ class AppHeader extends StatelessWidget implements PreferredSizeWidget {
               ),
             ),
           ),
+        ),
+      );
+}
+
+/// 헤더 오른쪽 글자 액션 (본문 오른쪽 선에 맞춘다).
+class HeaderTextAction extends StatelessWidget {
+  const HeaderTextAction(this.label, {super.key, required this.onTap});
+
+  final String label;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) => InkWell(
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 12),
+          child: Text(label, style: AppText.style(14, FontWeight.w500, AppColors.primary)),
         ),
       );
 }
@@ -516,7 +538,7 @@ class FieldBox extends StatelessWidget {
             child: Row(children: [
               Expanded(child: Text(value, style: AppText.style(15))),
               if (onTap != null)
-                Text('›', style: AppText.style(18, FontWeight.w400, AppColors.textTertiary)),
+                const Icon(Icons.chevron_right_rounded, color: AppColors.textTertiary),
             ]),
           ),
         ),
@@ -533,10 +555,18 @@ class AppTextField extends StatelessWidget {
     this.maxLines = 1,
     this.maxLength,
     this.onChanged,
+    this.won = false,
+    this.suffix,
   });
 
   final TextEditingController controller;
   final String? hint;
+
+  /// true 면 숫자만 받고 천 단위 쉼표 + '원' 단위를 붙인다. 값은 `wonDigits` 로 읽는다.
+  final bool won;
+
+  /// 입력 칸 오른쪽 단위(예: '시간'). [won] 이면 기본 '원'.
+  final String? suffix;
   final TextInputType? keyboardType;
   final int maxLines;
   final int? maxLength;
@@ -550,7 +580,8 @@ class AppTextField extends StatelessWidget {
         );
     return TextField(
       controller: controller,
-      keyboardType: keyboardType,
+      keyboardType: won ? TextInputType.number : keyboardType,
+      inputFormatters: won ? const [WonInputFormatter()] : null,
       maxLines: maxLines,
       maxLength: maxLength,
       onChanged: onChanged,
@@ -558,6 +589,8 @@ class AppTextField extends StatelessWidget {
       decoration: InputDecoration(
         hintText: hint,
         hintStyle: AppText.style(15, FontWeight.w400, AppColors.textTertiary),
+        suffixText: suffix ?? (won ? '원' : null),
+        suffixStyle: AppText.style(15, FontWeight.w400, AppColors.textSecondary),
         filled: true,
         fillColor: AppColors.surface,
         isDense: true,
@@ -569,6 +602,67 @@ class AppTextField extends StatelessWidget {
     );
   }
 }
+
+/// 키보드로 포커스가 올 때만 보이는 초록 링. 안쪽 위젯(InkWell 등)의 포커스를 따라간다.
+class FocusRing extends StatefulWidget {
+  const FocusRing({super.key, required this.child, this.radius = 12});
+
+  final Widget child;
+  final double radius;
+
+  @override
+  State<FocusRing> createState() => _FocusRingState();
+}
+
+class _FocusRingState extends State<FocusRing> {
+  bool _focused = false;
+
+  @override
+  Widget build(BuildContext context) => Focus(
+        canRequestFocus: false,
+        skipTraversal: true,
+        onFocusChange: (v) => setState(() => _focused = v),
+        child: DecoratedBox(
+          position: DecorationPosition.foreground,
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(widget.radius),
+            border: _focused &&
+                    FocusManager.instance.highlightMode == FocusHighlightMode.traditional
+                ? Border.all(color: AppColors.primary, width: 2)
+                : null,
+          ),
+          child: widget.child,
+        ),
+      );
+}
+
+/// 금액 입력: 숫자만 남기고 천 단위 쉼표를 넣는다. 커서는 오른쪽에서 센 숫자 개수를 지킨다.
+class WonInputFormatter extends TextInputFormatter {
+  const WonInputFormatter();
+
+  @override
+  TextEditingValue formatEditUpdate(TextEditingValue old, TextEditingValue next) {
+    final digits = next.text.replaceAll(RegExp(r'[^0-9]'), '');
+    if (digits.isEmpty) return const TextEditingValue();
+    final text = comma(int.parse(digits));
+    final after = next.text
+        .substring(next.selection.end.clamp(0, next.text.length))
+        .replaceAll(RegExp(r'[^0-9]'), '')
+        .length;
+    var offset = text.length, seen = 0;
+    while (offset > 0 && seen < after) {
+      offset--;
+      if (text[offset] != ',') seen++;
+    }
+    return TextEditingValue(text: text, selection: TextSelection.collapsed(offset: offset));
+  }
+}
+
+/// 금액 입력 칸의 초기 텍스트('10,320').
+String wonInput(int n) => comma(n);
+
+/// 금액 입력 칸의 값. 비었으면 null.
+int? wonDigits(String text) => int.tryParse(text.replaceAll(RegExp(r'[^0-9]'), ''));
 
 /// 상세 화면의 대상이 사라졌을 때(취소·거절·삭제) 보여주는 화면.
 class MissingScreen extends StatelessWidget {
@@ -639,7 +733,11 @@ class CountBadge extends StatelessWidget {
 }
 
 /// 화면 아래에 짧은 안내를 띄운다. 이미 떠 있는 것은 바로 바꾼다(연달아 누를 때 줄 서지 않게).
-void showToast(BuildContext context, String text) => ScaffoldMessenger.of(context)
+void showToast(BuildContext context, String text) =>
+    showToastOn(ScaffoldMessenger.of(context), text);
+
+/// 화면을 닫은 뒤에도 쓰도록 messenger 를 미리 잡아 둔 경우.
+void showToastOn(ScaffoldMessengerState messenger, String text) => messenger
   ..hideCurrentSnackBar()
   ..showSnackBar(SnackBar(content: Text(text)));
 
@@ -755,21 +853,33 @@ class ToggleCard extends StatelessWidget {
     required this.subtitle,
     required this.value,
     required this.onChanged,
+    this.flat = false,
   });
 
   final String title;
   final String subtitle;
   final bool value;
 
+  /// 카드 틀 없이 다른 입력 행과 같은 x 에 놓는다(웹 시트).
+  final bool flat;
+
   /// null 이면 비활성.
   final ValueChanged<bool>? onChanged;
 
   @override
-  Widget build(BuildContext context) => AppCard(
+  Widget build(BuildContext context) => flat
+      ? InkWell(
+          onTap: onChanged == null ? null : () => onChanged!(!value),
+          child: Padding(padding: const EdgeInsets.symmetric(vertical: 4), child: _row()),
+        )
+      : AppCard(
         radius: 16,
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        padding: const EdgeInsets.all(20),
         onTap: onChanged == null ? null : () => onChanged!(!value),
-        child: Row(
+        child: _row(),
+      );
+
+  Widget _row() => Row(
           children: [
             Expanded(
               child: Column(
@@ -787,8 +897,38 @@ class ToggleCard extends StatelessWidget {
             const SizedBox(width: 12),
             AppToggle(value, enabled: onChanged != null),
           ],
-        ),
-      );
+        );
+}
+
+/// 기간 이동 컨트롤 '‹ [라벨] ›' (월 · 주 · 일 공용). null 이면 그 방향은 비활성.
+class PeriodNav extends StatelessWidget {
+  const PeriodNav(
+      {super.key, required this.label, this.onPrev, this.onNext, this.prevTip = '이전', this.nextTip = '다음'});
+
+  final String label;
+  final VoidCallback? onPrev;
+  final VoidCallback? onNext;
+  final String prevTip;
+  final String nextTip;
+
+  @override
+  Widget build(BuildContext context) {
+    Widget arrow(IconData icon, String tip, VoidCallback? on) => IconButton(
+          tooltip: tip,
+          onPressed: on,
+          visualDensity: VisualDensity.compact,
+          padding: EdgeInsets.zero,
+          constraints: const BoxConstraints.tightFor(width: 32, height: 40),
+          color: AppColors.textPrimary,
+          disabledColor: AppColors.border,
+          icon: Icon(icon, size: 24),
+        );
+    return Row(mainAxisSize: MainAxisSize.min, children: [
+      arrow(Icons.chevron_left_rounded, prevTip, onPrev),
+      Flexible(child: FittedBox(fit: BoxFit.scaleDown, child: Pill(label))),
+      arrow(Icons.chevron_right_rounded, nextTip, onNext),
+    ]);
+  }
 }
 
 /// '‹ 5월 ›' 월 이동.
@@ -805,68 +945,74 @@ class MonthNav extends StatelessWidget {
   Widget build(BuildContext context) {
     final canNext = max == null || DateTime(month.year, month.month + 1).isBefore(
         DateTime(max!.year, max!.month + 1));
-    Widget arrow(String t, bool on, int d) => InkWell(
-          onTap: on ? () => onChanged(DateTime(month.year, month.month + d)) : null,
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 8),
-            child: Text(t,
-                style: AppText.style(
-                    22, FontWeight.w400, on ? AppColors.textPrimary : AppColors.border)),
-          ),
-        );
-    return Row(mainAxisSize: MainAxisSize.min, children: [
-      arrow('‹', true, -1),
-      Pill('${month.month}월'),
-      arrow('›', canNext, 1),
-    ]);
+    return PeriodNav(
+      label: '${month.month}월',
+      prevTip: '이전 달',
+      nextTip: '다음 달',
+      onPrev: () => onChanged(DateTime(month.year, month.month - 1)),
+      onNext: canNext ? () => onChanged(DateTime(month.year, month.month + 1)) : null,
+    );
   }
 }
 
-/// 급여 내역 카드 (급여 탭 · 명세서 공용).
+/// 급여 내역 (급여 탭 · 명세서 공용): '지급 내역' 카드 + '공제 내역' 카드.
 class PayBreakdown extends StatelessWidget {
-  const PayBreakdown({super.key, required this.slip, required this.staff, this.title});
+  const PayBreakdown({super.key, required this.slip, required this.staff});
 
   final Payslip slip;
   final Staff staff;
-  final String? title;
 
   @override
   Widget build(BuildContext context) {
     const divider = Divider(height: 1, color: AppColors.border);
     const regular = FontWeight.w500;
+    const gap = SizedBox(height: 14);
     final estimate = staff.deduction == Deduction.insurance ? ' · 예상' : '';
-    return AppCard(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          if (title != null) ...[
-            Text(title!, style: AppText.style(15, FontWeight.w500)),
-            const SizedBox(height: 14),
-          ],
-          KeyValueRow('기본급 (${hours(slip.minutes)} × ${wonText(staff.wage)})', won(slip.base),
-              valueWeight: regular),
-          const SizedBox(height: 14),
-          KeyValueRow('주휴수당', won(slip.weeklyHoliday), valueWeight: regular),
-          if (slip.premium > 0) ...[
-            const SizedBox(height: 14),
-            KeyValueRow('야간·연장 가산', won(slip.premium), valueWeight: regular),
-          ],
-          const SizedBox(height: 14),
-          divider,
-          const SizedBox(height: 14),
-          KeyValueRow('총 급여', won(slip.gross), valueWeight: regular),
-          const SizedBox(height: 14),
-          KeyValueRow('${staff.deduction.label}$estimate', won(-slip.deduction),
-              valueWeight: regular, valueColor: AppColors.danger),
-          const SizedBox(height: 14),
-          divider,
-          const SizedBox(height: 14),
-          KeyValueRow('실수령액', won(slip.net),
-              labelStyle: AppText.style(16, FontWeight.w500),
-              valueSize: 18,
-              valueColor: AppColors.primary),
-        ],
-      ),
+    Widget head(String t) => Padding(
+          padding: const EdgeInsets.only(bottom: 14),
+          child: Text(t, style: AppText.style(15, FontWeight.w500)),
+        );
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        AppCard(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              head('지급 내역'),
+              KeyValueRow('기본급 (${hours(slip.minutes)} × ${wonText(staff.wage)})', won(slip.base),
+                  valueWeight: regular),
+              gap,
+              KeyValueRow('주휴수당', won(slip.weeklyHoliday), valueWeight: regular),
+              if (slip.premium > 0) ...[
+                gap,
+                KeyValueRow('야간·연장 가산', won(slip.premium), valueWeight: regular),
+              ],
+              gap,
+              divider,
+              gap,
+              KeyValueRow('세전 합계', won(slip.gross),
+                  labelStyle: AppText.style(14, FontWeight.w500), valueWeight: regular),
+            ],
+          ),
+        ),
+        const SizedBox(height: 16),
+        AppCard(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              head('공제 내역'),
+              KeyValueRow('${staff.deduction.label}$estimate', won(-slip.deduction),
+                  valueWeight: regular),
+              gap,
+              divider,
+              gap,
+              KeyValueRow('실수령액', won(slip.net),
+                  labelStyle: AppText.style(16, FontWeight.w500), valueSize: 18),
+            ],
+          ),
+        ),
+      ],
     );
   }
 }

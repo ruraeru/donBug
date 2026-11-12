@@ -68,7 +68,7 @@ Flutter SDK는 PATH에 없음. 프로젝트 루트의 로컬 SDK 사용 (`/flutt
 - `lib/data/` — 프로토타입 데이터 계층
   - `models.dart`: `Person`(보건증은 사람 단위), `Store`(`scheduleConfirmedAt`), `Staff`(매장별 소속. 가입 신청 = `status: pending`, 계약서 포함, `kind`: 매니저·정직원·알바·연소자), `Shift`(`kind`: 근무·연차·휴무, `timeTbd`: 시간 미정), `Attendance`, `SubstituteRequest`, `Notice`, `AppNotification`, `Session`, `AppState`. 수동 JSON 직렬화.
   - 매니저·정직원(`StaffKind.flex`)은 유동 근무: 파트 대신 `part: '직원'` 으로 시간을 직접 정한다.
-  - `app_store.dart`: `AppStore extends ChangeNotifier`. 조회·파생값(내 근무, 출근 상태, 대타, 급여, 인건비, 안 읽은 수)과 모든 액션(출퇴근, 대타, 근무표, 직원, 공지, 서류, 매장, 세션, 데모). 액션마다 관련자에게 `AppNotification` 을 만든다.
+  - `app_store.dart`: `AppStore extends ChangeNotifier`. 조회·파생값(내 근무, 출근 상태, 대타, 급여, 인건비, 안 읽은 수)과 모든 액션(출퇴근, 대타, 근무표(근무표 만들기: planSchedule 미리보기 → applySchedulePlan), 직원, 공지, 서류, 매장, 세션, 데모). 액션마다 관련자에게 `AppNotification` 을 만든다.
   - `seed.dart`: `buildSeed(now)`. 지난달 1일이 있는 주부터 다음 주까지 근무·출근 기록을 만든다.
   - `payroll.dart`: 급여 순수 함수(`computePayslip`, `weeklyHolidayPay`, `deductionOf`), `minimumWage2026 = 10320`.
   - `format.dart`: `won`, `wonText`, `md`, `hm`, `dDay`, `relative`, `shiftDay/Time/Caption` 등.
@@ -88,6 +88,7 @@ Flutter SDK는 PATH에 없음. 프로젝트 루트의 로컬 SDK 사용 (`/flutt
   - 웹 공용은 `web_common.dart`: `WebPage`(제목 + 액션, 안 들어가면 액션이 아래 줄), `WebButton`, `WebRow`, `WebSplit`, `WebTable`(`onRowTap`, 좁으면 가로 스크롤), `WebSegmented`, `WebSelect`, `showWebDialog`, `showWebSheet`, `webField`/`webPair`, `DashedBorderPainter`.
   - 상세·작성은 웹 전용 창이다: 근무 추가·수정(`web_shift_dialog.dart`), 직원 상세 시트·직원 초대(`web_staff_screen.dart`), 계약서 작성(`web_documents_screen.dart`), 공지 작성(`web_notice_screen.dart`), 알림·오늘 근무·근태 수정(`web_dashboard_screen.dart`).
   - 근무표(`web_schedule_screen.dart` + `web_schedule_views.dart`): 한 달·파트별·인원별·일간. 빈 칸 클릭 = 추가, 블록 클릭 = 수정, 블록 드래그 = 이동(겹침·지난 날짜 막음). 되돌리기·자동 채우기·확정하기.
+  - 근무표 만들기(`web_schedule_create_dialog.dart`): 이번 달·다음 달을 자동 배정(자기 파트 먼저, 주 근무 적은 순) 또는 지난주 반복으로 한 번에 짠다. 파트별 필요 인원·근무자 제외·주 최대 근무, 미리보기(새 근무·못 채운 칸·예상 인건비·직원별 시간). 되돌리기 한 번에 취소.
 - `assets/icons/` — Figma에서 받은 SVG (`flutter_svg`). `assets/images/app_icon.svg` — 로고 App Icon(Figma `186:174`). `assets/fonts/` — Noto Sans KR 400/500/700 (OFL).
 
 ## 프로토타입 데이터 규칙
@@ -106,9 +107,10 @@ Flutter SDK는 PATH에 없음. 프로젝트 루트의 로컬 SDK 사용 (`/flutt
   - 근무: 지난달 1일이 든 주부터 다음 주(또는 이번 달 끝 주)까지. 파트(오픈 10–16 · 미들 14–20 · 마감 18–22)마다 필요 1명을 매일 채운다. 일부러 남긴 것: 다음 주 일요일 마감 빈칸(자동 채우기 시연), 지훈 다음 주 토요일 시간 미정, 지훈 이번 주 연차 1건.
   - 보건증: 수빈 D-12, 태우 D-25, 도현 미등록. 계약서 직원 미서명: 태우·서연.
   - 편의점 모아: `MOA-27QX`, 태우 야간. 사장님 화면 없음.
+  - 베이커리 밀: `BAKE-5TQ1`, 태우 미가입(가입 신청 → 대기 → 데모 승인 시연용). 사장님 화면 없음. 이미 가입한 코드는 "이미 가입한 매장이에요" 토스트.
   - 진행 중 대타 2건: 수빈 → 지민 수락(승인 대기), 하윤(지원 대기).
 - 급여 규칙(근사)
-  - 기본급 = 실근무 분 × 시급.
+  - 기본급 = 실근무 분 × 시급. 실근무는 max(출근, 소정 시작)부터 센다(일찍 찍어도 안 부풀음). 출근은 시작 30분 전부터, 종료 뒤엔 불가(`clockInBlock`). 근무 중엔 매장 전환 불가.
   - 주휴수당: 그 주 대타 제외 15시간 이상, 일요일이 속한 달에 지급.
   - 가산(5인 이상 + 직원 설정): 야간·8시간 초과분에 0.5배 추가.
   - 공제: 3.3%(원 단위 내림), 4대보험 근사 9.4%(화면에 "예상" 표기), 없음.

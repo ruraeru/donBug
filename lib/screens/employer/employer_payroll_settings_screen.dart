@@ -29,7 +29,7 @@ class _EmployerPayrollSettingsScreenState extends State<EmployerPayrollSettingsS
     super.initState();
     final s = AppScope.read(context).staffById(widget.staffId);
     if (s != null) {
-      _wage.text = '${s.wage}';
+      _wage.text = wonInput(s.wage);
       _deduction = s.deduction.index;
       _weeklyAllowance = s.weeklyHolidayAuto;
       _premium = s.premium;
@@ -43,7 +43,7 @@ class _EmployerPayrollSettingsScreenState extends State<EmployerPayrollSettingsS
   }
 
   void _save() {
-    final w = int.tryParse(_wage.text.replaceAll(RegExp(r'[^0-9]'), ''));
+    final w = wonDigits(_wage.text);
     if (w == null || w < minimumWage2026) {
       return showToast(context, '시급은 2026 최저임금 ${wonText(minimumWage2026)} 이상이어야 해요');
     }
@@ -91,7 +91,7 @@ class _EmployerPayrollSettingsScreenState extends State<EmployerPayrollSettingsS
           ),
           const SizedBox(height: 16),
           LabeledField('시급 (원)',
-              child: AppTextField(controller: _wage, keyboardType: TextInputType.number)),
+              child: AppTextField(controller: _wage, won: true)),
           const SizedBox(height: 8),
           Text('2026 최저임금 ${wonText(minimumWage2026)}',
               style: AppText.style(12, FontWeight.w400, AppColors.textTertiary)),

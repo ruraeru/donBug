@@ -44,9 +44,11 @@ class StoreSwitchScreen extends StatelessWidget {
               onTap: pending || selected
                   ? null
                   : () {
-                      AppScope.read(context).switchStore(st.id);
+                      if (!AppScope.read(context).switchStore(st.id)) {
+                        return showToast(context, '퇴근한 뒤 전환할 수 있어요');
+                      }
                       Navigator.pop(context);
-                      showToast(context, '${st.name}(으)로 전환했어요');
+                      showToast(context, '${st.name} 매장으로 전환했어요');
                     },
               child: Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
