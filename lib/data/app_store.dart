@@ -517,6 +517,7 @@ class AppStore extends ChangeNotifier {
   }
 
   void _notifyPeers(SubstituteRequest r, String title) {
+    if (!store.substitutePush) return; // 사장님 알림은 호출 쪽에서 따로 보낸다
     final s = shiftById(r.shiftId)!;
     for (final p in state.staff.where(
         (x) => x.storeId == r.storeId && x.active && x.id != r.requesterId)) {
@@ -684,10 +685,19 @@ class AppStore extends ChangeNotifier {
   /// 근무 시간에 맞는 법정 최소 휴게(4시간 30분, 8시간 60분).
   static int defaultBreak(int span) => span >= 480 ? 60 : span >= 240 ? 30 : 0;
 
-  void deleteShift(String shiftId) {
+  /// 근무를 지운다. 출근 기록이 있으면 지우지 않고 false. 대기 중 대타 요청은 취소하고 알바생에게 알린다.
+  bool deleteShift(String shiftId) {
+    final s = shiftById(shiftId);
+    if (s == null) return true;
+    if (attendanceFor(shiftId) != null) return false;
     _snapshot();
-    state.shifts.removeWhere((s) => s.id == shiftId);
+    state.shifts.removeWhere((x) => x.id == shiftId);
+    for (final r in state.subs.where((r) => r.shiftId == shiftId && r.pending)) {
+      r.status = SubStatus.cancelled;
+    }
+    if (s.isWork) _notifyStaff(s.staffId, 'sub', '근무가 삭제됐어요', body: _shiftLabel(s));
     _commit();
+    return true;
   }
 
   /// 근무 수정 · 다른 칸으로 옮기기.
@@ -705,6 +715,7 @@ class AppStore extends ChangeNotifier {
     final s = shiftById(shiftId);
     if (s == null) return;
     _snapshot();
+    final before = _shiftLabel(s), oldStaff = s.staffId, wasWork = s.isWork;
     if (staffId != null) s.staffId = staffId;
     if (date != null) s.date = ymd(date);
     if (startMin != null) s.startMin = startMin;
@@ -713,6 +724,15 @@ class AppStore extends ChangeNotifier {
     if (breakMin != null) s.breakMin = breakMin;
     if (kind != null) s.kind = kind;
     if (timeTbd != null) s.timeTbd = timeTbd;
+    final after = _shiftLabel(s);
+    if (wasWork && (s.staffId != oldStaff || !s.isWork)) {
+      _notifyStaff(oldStaff, 'sub', '근무가 삭제됐어요', body: before);
+    }
+    if (s.isWork && (s.staffId != oldStaff || !wasWork)) {
+      _notifyStaff(s.staffId, 'sub', '새 근무가 배정됐어요', body: after);
+    } else if (s.isWork && after != before) {
+      _notifyStaff(s.staffId, 'sub', '근무가 수정됐어요', body: after);
+    }
     _commit();
   }
 
@@ -886,13 +906,25 @@ class AppStore extends ChangeNotifier {
     _commit();
   }
 
-  /// 매장에서 내보낸다. 앞으로의 근무는 지운다.
+  /// 매장에서 내보낸다. 오늘 이후(아직 출근 안 한) 근무는 지우고, 대기 대타에서 뺀다.
   void removeStaff(String staffId) {
     final s = staffById(staffId)!;
     s.status = StaffStatus.left;
-    state.shifts.removeWhere((x) => x.staffId == staffId && parseYmd(x.date).isAfter(today));
-    for (final r in state.subs.where((r) => r.requesterId == staffId && r.pending)) {
-      r.status = SubStatus.cancelled;
+    state.shifts.removeWhere((x) =>
+        x.staffId == staffId &&
+        !parseYmd(x.date).isBefore(today) &&
+        attendanceFor(x.id) == null);
+    for (final r in state.subs.where((r) => r.pending)) {
+      if (r.requesterId == staffId) {
+        r.status = SubStatus.cancelled;
+        continue;
+      }
+      if (!r.applicantIds.remove(staffId) && r.acceptedId != staffId) continue;
+      if (r.acceptedId == staffId) {
+        r
+          ..acceptedId = null
+          ..status = SubStatus.open;
+      }
     }
     _notifyStaff(staffId, 'join', '${storeById(s.storeId)!.name}에서 퇴사 처리됐어요');
     _commit();

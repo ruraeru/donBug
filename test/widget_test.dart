@@ -3,6 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 
 import 'package:donbug/data/app_scope.dart';
 import 'package:donbug/data/app_store.dart';
+import 'package:donbug/data/format.dart';
 import 'package:donbug/data/models.dart';
 import 'package:donbug/main.dart';
 import 'package:donbug/screens/employee/contract_sign_screen.dart';
@@ -302,7 +303,9 @@ void main() {
 
     final before = store.shiftsOn(store.today).length;
     await openPage(tester, ShiftAddScreen(date: store.today), store: store);
-    await tester.tap(find.text('지민'));
+    final free = store.activeStaff.firstWhere((x) =>
+        store.scheduleOfStaff(x.id).every((s) => s.date != ymd(store.today)));
+    await tester.tap(find.text(store.nameOf(free.id)));
     await tester.tap(find.text('근무 등록'));
     await tester.pumpAndSettle();
     expect(store.shiftsOn(store.today).length, before + 1);

@@ -9,7 +9,10 @@ import 'employer_parts.dart';
 
 /// 매장 코드 공유 (Figma 47:78).
 class StoreCodeScreen extends StatelessWidget {
-  const StoreCodeScreen({super.key});
+  const StoreCodeScreen({super.key, this.invite = false});
+
+  /// 직원 관리의 "+ 초대"에서 열면 true (매장 만들기 직후가 아님).
+  final bool invite;
 
   @override
   Widget build(BuildContext context) {
@@ -20,8 +23,8 @@ class StoreCodeScreen extends StatelessWidget {
           child: ListView(
             padding: const EdgeInsets.fromLTRB(20, 8, 20, 16),
             children: [
-              const SuccessHero(
-                title: '매장이 만들어졌어요',
+              SuccessHero(
+                title: invite ? '직원을 초대해요' : '매장이 만들어졌어요',
                 subtitle: '직원에게 매장 코드를 알려주세요',
               ),
               const SizedBox(height: 16),
@@ -66,11 +69,13 @@ class StoreCodeScreen extends StatelessWidget {
         ),
         bottomNavigationBar: BottomBar(children: [
           AppButton(
-            '직원 승인하러 가기',
-            onPressed: () => Navigator.push(
-              context,
-              MaterialPageRoute(builder: (_) => const StaffApprovalScreen()),
-            ),
+            invite ? '닫기' : '직원 승인하러 가기',
+            onPressed: () => invite
+                ? Navigator.pop(context)
+                : Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => const StaffApprovalScreen(onboarding: true)),
+                  ),
           ),
           Material(
             color: AppColors.kakao,

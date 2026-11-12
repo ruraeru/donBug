@@ -23,14 +23,7 @@ class _EmployerScheduleScreenState extends State<EmployerScheduleScreen> {
 
   void _push(Widget page) => Navigator.push(context, MaterialPageRoute(builder: (_) => page));
 
-  Future<void> _deleteShift(AppStore store, Shift s) async {
-    final ok = await showConfirmDialog(context,
-        title: '${store.nameOf(s.staffId)}님 근무를 삭제할까요?',
-        message: '${shiftDay(s)} ${shiftTime(s)} ${s.part}',
-        confirmLabel: '삭제',
-        confirmVariant: AppButtonVariant.danger);
-    if (ok && mounted) AppScope.read(context).deleteShift(s.id);
-  }
+  void _edit(Shift s) => _push(ShiftAddScreen(date: parseYmd(s.date), shift: s));
 
   @override
   Widget build(BuildContext context) {
@@ -129,8 +122,7 @@ class _EmployerScheduleScreenState extends State<EmployerScheduleScreen> {
               children: [
                 for (final s in list)
                   InkWell(
-                    onLongPress: () => _deleteShift(store, s),
-                    onTap: () => _deleteShift(store, s),
+                    onTap: () => _edit(s),
                     borderRadius: BorderRadius.circular(999),
                     child: Pill(
                       '${store.nameOf(s.staffId)}${s.isSubstitute ? ' · 대타' : ''}'
