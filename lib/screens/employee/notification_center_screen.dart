@@ -53,10 +53,8 @@ class NotificationCenterScreen extends StatelessWidget {
     return Scaffold(
       appBar: AppHeader('알림', actions: [
         if (store.unreadNotificationCount > 0)
-          TextButton(
-            onPressed: () => AppScope.read(context).markAllNotificationsRead(),
-            child: Text('모두 읽음', style: AppText.style(14, FontWeight.w500, AppColors.primary)),
-          ),
+          HeaderTextAction('모두 읽음',
+              onTap: () => AppScope.read(context).markAllNotificationsRead()),
       ]),
       body: items.isEmpty
           ? const EmptyNote('알림이 없어요')

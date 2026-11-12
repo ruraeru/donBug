@@ -366,7 +366,7 @@ class _StaffSheetState extends State<_StaffSheet> {
         ]),
       ]),
       const SizedBox(height: 14),
-      PayBreakdown(slip: slip, staff: s, title: '${t.month}월 예상 급여'),
+      PayBreakdown(slip: slip, staff: s),
       const SizedBox(height: 18),
       WebButton('매장에서 내보내기',
           style: WebButtonStyle.danger, expand: true, onPressed: () => _remove(store, s)),
