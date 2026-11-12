@@ -4,6 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:donbug/data/app_store.dart';
 import 'package:donbug/data/seed.dart';
 import 'package:donbug/screens/employee/store_code_screen.dart';
+import 'package:donbug/screens/employee/employee_schedule_screen.dart';
 import 'widget_test.dart';
 
 ({AppStore store, void Function(DateTime) setNow}) make(DateTime start) {
@@ -12,6 +13,7 @@ import 'widget_test.dart';
 }
 
 void main() {
+  _overflowMain();
   test('끝난 미출근 근무는 오늘 근무가 아니고 출근도 막는다', () {
     final m = make(DateTime(2026, 5, 14, 21, 0));
     final s = m.store;
@@ -65,5 +67,14 @@ void main() {
     await tester.tap(find.text('가입 신청하기'));
     await tester.pump();
     expect(find.text('이미 가입한 매장이에요'), findsOneWidget);
+  });
+}
+
+void _overflowMain() {
+  testWidgets('근무표 주 이동 줄: 320 폭 · 글자 1.3배에서도 넘치지 않는다', (tester) async {
+    tester.platformDispatcher.textScaleFactorTestValue = 1.3;
+    addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
+    await pumpAt(tester, const EmployeeScheduleScreen(), const Size(320, 568));
+    expect(tester.takeException(), isNull);
   });
 }

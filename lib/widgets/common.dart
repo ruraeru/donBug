@@ -925,7 +925,7 @@ class PeriodNav extends StatelessWidget {
         );
     return Row(mainAxisSize: MainAxisSize.min, children: [
       arrow(Icons.chevron_left_rounded, prevTip, onPrev),
-      Pill(label),
+      Flexible(child: FittedBox(fit: BoxFit.scaleDown, child: Pill(label))),
       arrow(Icons.chevron_right_rounded, nextTip, onNext),
     ]);
   }
