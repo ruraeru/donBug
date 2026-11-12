@@ -4,6 +4,7 @@ import '../../data/app_store.dart';
 import '../../data/models.dart';
 import '../../theme.dart';
 import '../../widgets/common.dart';
+import '../employer/employer_parts.dart';
 
 /// 웹 콘텐츠 영역 좌우 여백: 넓으면 32, 좁으면 20.
 double webGutter(double width) => width >= 1100 ? 32 : 20;
@@ -37,7 +38,7 @@ class WebPage extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           mainAxisSize: MainAxisSize.min,
           children: [
-            titleWidget ?? Text(title, style: AppText.style(28, FontWeight.w700)),
+            titleWidget ?? Text(title, style: AppText.style(28, FontWeight.w500)),
             if (subtitle != null) ...[
               const SizedBox(height: 4),
               Text(subtitle!,
@@ -116,7 +117,7 @@ class WebButton extends StatelessWidget {
     final side = switch (style) {
       _ when !enabled => const BorderSide(color: AppColors.border),
       WebButtonStyle.outline => const BorderSide(color: AppColors.border),
-      WebButtonStyle.danger => const BorderSide(color: AppColors.danger),
+      WebButtonStyle.danger => const BorderSide(color: AppColors.border),
       _ => BorderSide.none,
     };
     final button = Material(
@@ -133,7 +134,7 @@ class WebButton extends StatelessWidget {
             child: Center(
               widthFactor: 1,
               child: icon == null
-                  ? Text(label, maxLines: 1, style: AppText.style(fontSize, FontWeight.w700, fg))
+                  ? Text(label, maxLines: 1, style: AppText.style(fontSize, FontWeight.w500, fg))
                   : Icon(icon, size: 20, color: fg, semanticLabel: label),
             ),
           ),
@@ -176,7 +177,7 @@ class WebTag extends StatelessWidget {
         child: Text(label,
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
-            style: AppText.style(fontSize, FontWeight.w700, color)),
+            style: AppText.style(fontSize, FontWeight.w500, color)),
       );
 }
 
@@ -264,9 +265,13 @@ class WebTable extends StatelessWidget {
     this.rowHeight = 64,
     this.onRowTap,
     this.minWidth = 640,
+    this.numeric = const {},
   });
 
   final List<String> columns;
+
+  /// 오른쪽 정렬할 숫자 열 번호(금액·시간).
+  final Set<int> numeric;
   final List<int> flex;
   final List<List<Widget>> rows;
   final double rowHeight;
@@ -285,7 +290,12 @@ class WebTable extends StatelessWidget {
           for (var i = 0; i < cells.length; i++)
             Expanded(
               flex: flex[i],
-              child: Align(alignment: Alignment.centerLeft, child: cells[i]),
+              child: numeric.contains(i)
+                  ? Padding(
+                      padding: EdgeInsets.only(right: i == cells.length - 1 ? 0 : 16),
+                      child: Align(alignment: Alignment.centerRight, child: cells[i]),
+                    )
+                  : Align(alignment: Alignment.centerLeft, child: cells[i]),
             ),
         ]),
       );
@@ -297,7 +307,7 @@ class WebTable extends StatelessWidget {
             for (final col in columns)
               Text(col,
                   maxLines: 1,
-                  style: AppText.style(12, FontWeight.w700, AppColors.textSecondary)),
+                  style: AppText.style(12, FontWeight.w500, AppColors.textSecondary)),
           ], 40, bg: AppColors.bg),
           for (var i = 0; i < rows.length; i++) ...[
             if (i > 0) const Divider(height: 1, thickness: 1, color: AppColors.border),
@@ -319,18 +329,29 @@ Widget webCellText(String s,
         {Color color = AppColors.textSecondary, FontWeight weight = FontWeight.w400}) =>
     Text(s, maxLines: 1, overflow: TextOverflow.ellipsis, style: AppText.style(14, weight, color));
 
+/// 파트 칸: 파트 색 점 + 이름. 파트 색은 근무표와 같다(오픈 초록 · 미들 파랑 · 마감 주황 · 직원 보라).
+Widget webPartCell(String part, [String? label]) => Row(mainAxisSize: MainAxisSize.min, children: [
+      Container(
+        width: 8,
+        height: 8,
+        decoration: BoxDecoration(color: partColors(part).$1, shape: BoxShape.circle),
+      ),
+      const SizedBox(width: 8),
+      Flexible(child: webCellText(label ?? part)),
+    ]);
+
 /// 표 첫 열: 직원 아바타 + 굵은 이름.
 Widget webStaffCell(AppStore store, Staff s) => Row(children: [
       MemberAvatar(s, size: 32),
       const SizedBox(width: 8),
       Flexible(
           child: webCellText(store.personOf(s).name,
-              color: AppColors.textPrimary, weight: FontWeight.w700)),
+              color: AppColors.textPrimary, weight: FontWeight.w500)),
     ]);
 
 /// 카드 제목 줄: 제목 + 오른쪽 위젯.
 Widget webCardTitle(String title, {Widget? trailing}) => Row(children: [
-      Expanded(child: Text(title, style: AppText.style(16, FontWeight.w700))),
+      Expanded(child: Text(title, style: AppText.style(16, FontWeight.w500))),
       ?trailing,
     ]);
 
@@ -380,7 +401,7 @@ class WebSegmented extends StatelessWidget {
                       labels[i],
                       style: AppText.style(
                         13,
-                        i == selected ? FontWeight.w700 : FontWeight.w500,
+                        FontWeight.w500,
                         i == selected ? AppColors.primary : AppColors.textSecondary,
                       ),
                     ),
@@ -475,7 +496,7 @@ Future<T?> showWebDialog<T>(
                 Padding(
                   padding: const EdgeInsets.fromLTRB(20, 14, 8, 14),
                   child: Row(children: [
-                    Expanded(child: Text(title, style: AppText.style(18, FontWeight.w700))),
+                    Expanded(child: Text(title, style: AppText.style(18, FontWeight.w500))),
                     IconButton(
                       tooltip: '닫기',
                       onPressed: () => Navigator.pop(context),
@@ -533,7 +554,7 @@ Future<T?> showWebSheet<T>(BuildContext context,
                   color: AppColors.surface,
                   padding: const EdgeInsets.fromLTRB(20, 12, 8, 12),
                   child: Row(children: [
-                    Expanded(child: Text(title, style: AppText.style(18, FontWeight.w700))),
+                    Expanded(child: Text(title, style: AppText.style(18, FontWeight.w500))),
                     IconButton(
                       tooltip: '닫기',
                       onPressed: () => Navigator.pop(context),
@@ -609,7 +630,7 @@ Widget webPair(Widget a, Widget b) => Row(crossAxisAlignment: CrossAxisAlignment
 Widget webField(String label, Widget child, {String? help}) => Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(label, style: AppText.style(13, FontWeight.w700)),
+        Text(label, style: AppText.style(13, FontWeight.w500)),
         const SizedBox(height: 8),
         child,
         if (help != null) ...[

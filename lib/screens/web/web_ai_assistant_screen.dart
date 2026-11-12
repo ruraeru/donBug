@@ -67,7 +67,7 @@ class _WebAiAssistantScreenState extends State<WebAiAssistantScreen> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text('네, 주휴수당은 사업장 규모와 상관없이 적용돼요.',
-                              style: AppText.style(16, FontWeight.w700)
+                              style: AppText.style(16, FontWeight.w500)
                                   .copyWith(height: 24 / 16)),
                           const SizedBox(height: 10),
                           Text(
@@ -115,7 +115,7 @@ class _WebAiAssistantScreenState extends State<WebAiAssistantScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text('추천 질문', style: AppText.style(15, FontWeight.w700)),
+                  Text('추천 질문', style: AppText.style(15, FontWeight.w500)),
                   for (final q in _suggestions) ...[
                     const SizedBox(height: 12),
                     AppCard(

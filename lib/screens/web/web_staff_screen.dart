@@ -32,7 +32,7 @@ class _WebStaffScreenState extends State<WebStaffScreen> {
     final left = store.certDaysLeft(store.personOf(s));
     if (left == null || left <= 30) return certPill(left);
     if (!(s.contract?.signed ?? false)) return contractPill(s.contract);
-    return const Pill('정상');
+    return webCellText('정상');
   }
 
   Future<void> _approve(Staff s) async {
@@ -85,7 +85,7 @@ class _WebStaffScreenState extends State<WebStaffScreen> {
             color: AppColors.infoSoft,
             padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 18),
             child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Text('가입 신청 ${pending.length}명', style: AppText.style(15, FontWeight.w700)),
+              Text('가입 신청 ${pending.length}명', style: AppText.style(15, FontWeight.w500)),
               for (final s in pending) ...[
                 const SizedBox(height: 12),
                 Row(children: [
@@ -93,7 +93,7 @@ class _WebStaffScreenState extends State<WebStaffScreen> {
                   const SizedBox(width: 10),
                   Expanded(
                     child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                      Text(store.personOf(s).fullName, style: AppText.style(14, FontWeight.w700)),
+                      Text(store.personOf(s).fullName, style: AppText.style(14, FontWeight.w500)),
                       Text(
                           '희망 파트 ${s.part}'
                           '${s.requestedAt == null ? '' : ' · ${relative(DateTime.parse(s.requestedAt!), store.now)} 신청'}',
@@ -158,7 +158,7 @@ class _WebStaffScreenState extends State<WebStaffScreen> {
                   [
                     webStaffCell(store, s),
                     webCellText(s.kind.label),
-                    webCellText(s.kind.flex ? '유동' : s.part),
+                    webPartCell(s.kind.flex ? '직원' : s.part, s.kind.flex ? '유동' : s.part),
                     webCellText(wonText(s.wage)),
                     webCellText(s.deduction.short),
                     _docPill(store, s),
@@ -191,7 +191,7 @@ Future<void> showInviteDialog(BuildContext context) {
         child: Column(children: [
           Text(store.name, style: AppText.style(13, FontWeight.w500, AppColors.primary)),
           const SizedBox(height: 6),
-          Text(store.code, style: AppText.style(30, FontWeight.w700, AppColors.primary)),
+          Text(store.code, style: AppText.style(30, FontWeight.w500, AppColors.primary)),
         ]),
       ),
     ]),
@@ -263,7 +263,7 @@ class _StaffSheetState extends State<_StaffSheet> {
   Widget _section(String title, List<Widget> children) => AppCard(
         padding: const EdgeInsets.all(18),
         child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-          Text(title, style: AppText.style(15, FontWeight.w700)),
+          Text(title, style: AppText.style(15, FontWeight.w500)),
           for (final c in children) ...[const SizedBox(height: 14), c],
         ]),
       );
@@ -283,7 +283,7 @@ class _StaffSheetState extends State<_StaffSheet> {
         const SizedBox(width: 14),
         Expanded(
           child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Text(p.fullName, style: AppText.style(20, FontWeight.w700)),
+            Text(p.fullName, style: AppText.style(20, FontWeight.w500)),
             Text('${s.kind.label} · ${s.kind.flex ? '유동 근무' : s.part} · ${dotDate(parseYmd(s.joinedAt))} 입사',
                 style: AppText.style(13, FontWeight.w400, AppColors.textSecondary)),
           ]),
@@ -345,7 +345,7 @@ class _StaffSheetState extends State<_StaffSheet> {
                 '보건증 ${p.certExpiry == null ? '' : '· ${dotDate(parseYmd(p.certExpiry!))} 만료'}',
                 style: AppText.style(14, FontWeight.w500)),
           ),
-          certPill(left),
+          webCertPill(left),
           if (left == null || left <= 30) ...[
             const SizedBox(width: 8),
             WebButton('갱신 요청', height: 32, fontSize: 12, style: WebButtonStyle.soft, onPressed: () {

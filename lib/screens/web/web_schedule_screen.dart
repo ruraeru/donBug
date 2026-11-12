@@ -73,7 +73,7 @@ class _WebScheduleScreenState extends State<WebScheduleScreen> {
       _Arrow('‹', '이전 달', () => _moveMonth(day, -1)),
       Flexible(
         child: Text('근무표 · ${month.year}년 ${month.month}월',
-            overflow: TextOverflow.ellipsis, style: AppText.style(28, FontWeight.w700)),
+            overflow: TextOverflow.ellipsis, style: AppText.style(28, FontWeight.w500)),
       ),
       _Arrow('›', '다음 달', () => _moveMonth(day, 1)),
       if (tbd > 0) ...[
@@ -119,7 +119,7 @@ class _WebScheduleScreenState extends State<WebScheduleScreen> {
                   height: 40,
                   child: Center(
                     child: Text('${weekday(d)} ${d.month}/${d.day}',
-                        style: AppText.style(13, FontWeight.w700,
+                        style: AppText.style(13, FontWeight.w500,
                             d == day ? AppColors.onPrimary : dayColor(d))),
                   ),
                 ),

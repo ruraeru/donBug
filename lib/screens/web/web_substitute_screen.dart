@@ -6,7 +6,6 @@ import '../../data/format.dart';
 import '../../data/models.dart';
 import '../../theme.dart';
 import '../../widgets/common.dart';
-import '../employer/employer_parts.dart';
 import 'web_common.dart';
 
 /// 대타 승인 (웹). 진행 중 요청은 승인 · 거절 · 재알림 · 직접 배정, 아래는 지난 요청.
@@ -60,9 +59,9 @@ String _shiftText(AppStore store, SubstituteRequest r) {
 }
 
 Widget _statusPill(SubStatus s) => switch (s) {
-      SubStatus.approved => const Pill('승인'),
-      SubStatus.rejected => const Pill('거절', color: AppColors.danger, background: AppColors.dangerSoft),
-      SubStatus.cancelled => const Pill('취소', color: AppColors.textSecondary, background: AppColors.bg),
+      SubStatus.approved => webCellText('승인'),
+      SubStatus.rejected => webCellText('거절', color: AppColors.danger),
+      SubStatus.cancelled => webCellText('취소', color: AppColors.textTertiary),
       SubStatus.accepted => const Pill.accent('승인 대기'),
       SubStatus.open => const Pill.accent('지원 대기'),
     };
@@ -140,7 +139,6 @@ class _RequestCard extends StatelessWidget {
     final store = AppScope.of(context);
     final s = store.shiftById(r.shiftId);
     final requester = store.staffById(r.requesterId)!;
-    final (fg, bg) = partColors(s?.part ?? '');
     return AppCard(
       padding: const EdgeInsets.all(20),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
@@ -150,7 +148,7 @@ class _RequestCard extends StatelessWidget {
           Expanded(
             child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
               Text('${store.personOf(requester).name}님 요청',
-                  style: AppText.style(15, FontWeight.w700)),
+                  style: AppText.style(15, FontWeight.w500)),
               Text('${relative(DateTime.parse(r.createdAt), store.now)} · ${r.reason}',
                   style: AppText.style(12, FontWeight.w400, AppColors.textSecondary)),
             ]),
@@ -164,11 +162,11 @@ class _RequestCard extends StatelessWidget {
           decoration: BoxDecoration(color: AppColors.bg, borderRadius: BorderRadius.circular(12)),
           child: Row(children: [
             if (s != null) ...[
-              WebTag(s.part, color: fg, background: bg),
-              const SizedBox(width: 10),
+              webPartCell(s.part),
+              const SizedBox(width: 16),
             ],
             Expanded(
-              child: Text(_shiftText(store, r), style: AppText.style(14, FontWeight.w700)),
+              child: Text(_shiftText(store, r), style: AppText.style(14, FontWeight.w500)),
             ),
           ]),
         ),

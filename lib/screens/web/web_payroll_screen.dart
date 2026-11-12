@@ -43,6 +43,7 @@ class _WebPayrollScreenState extends State<WebPayrollScreen> {
         ),
     ];
     final maxTrend = trend.fold(1, (m, x) => x.$2 > m ? x.$2 : m);
+    bool isLast(int i) => i == trend.length - 1;
     void later() => showToast(context, '추후 개발 예정이에요');
 
     return WebPage(
@@ -59,7 +60,7 @@ class _WebPayrollScreenState extends State<WebPayrollScreen> {
       ],
       children: [
         WebRow(children: [
-          _Stat(current ? '이번 달 예상 인건비' : '${month.month}월 인건비', won(total), primary: true),
+          _Stat(current ? '이번 달 예상 인건비' : '${month.month}월 인건비', wonText(total)),
           _Stat('지급 대상', '${rows.length}명'),
           _Stat('전월 대비', '${diff > 0 ? '+' : ''}$diff%',
               valueColor: diff > 0 ? AppColors.danger : AppColors.primary),
@@ -72,11 +73,12 @@ class _WebPayrollScreenState extends State<WebPayrollScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('직원별 정산', style: AppText.style(16, FontWeight.w700)),
+                Text('직원별 정산', style: AppText.style(16, FontWeight.w500)),
                 const SizedBox(height: 14),
                 WebTable(
                   columns: const ['직원', '근무시간', '기본급', '주휴', '가산', '공제', '실수령'],
                   flex: const [130, 100, 120, 100, 100, 100, 120],
+                  numeric: const {1, 2, 3, 4, 5, 6},
                   onRowTap: (i) => _showDetail(context, rows[i].$1, rows[i].$2, month),
                   rows: [
                     for (final (s, p) in rows)
@@ -88,7 +90,7 @@ class _WebPayrollScreenState extends State<WebPayrollScreen> {
                         webCellText(comma(p.premium)),
                         webCellText(p.deduction == 0 ? '0' : '−${comma(p.deduction)}'),
                         webCellText(comma(p.net),
-                            color: AppColors.textPrimary, weight: FontWeight.w700),
+                            color: AppColors.textPrimary, weight: FontWeight.w500),
                       ],
                   ],
                 ),
@@ -101,34 +103,41 @@ class _WebPayrollScreenState extends State<WebPayrollScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('월별 인건비 추이', style: AppText.style(16, FontWeight.w700)),
+                Text('월별 인건비 추이', style: AppText.style(16, FontWeight.w500)),
                 const SizedBox(height: 14),
                 SizedBox(
-                  height: 240,
+                  height: 260,
                   child: Row(
                     crossAxisAlignment: CrossAxisAlignment.end,
                     children: [
                       for (var i = 0; i < trend.length; i++)
                         Expanded(
                           child: Tooltip(
-                            message: won(trend[i].$2),
+                            message: wonText(trend[i].$2),
                             child: Column(
                               mainAxisAlignment: MainAxisAlignment.end,
                               children: [
+                                // 만 원 단위 값. 이번 달만 강조색, 나머지는 회색.
+                                Text('${comma((trend[i].$2 / 10000).round())}만',
+                                    style: AppText.style(
+                                        11,
+                                        isLast(i) ? FontWeight.w500 : FontWeight.w400,
+                                        isLast(i) ? AppColors.primary : AppColors.textTertiary)),
+                                const SizedBox(height: 4),
                                 Container(
                                   height: 200 * trend[i].$2 / maxTrend,
-                                  margin: const EdgeInsets.symmetric(horizontal: 4),
+                                  margin: const EdgeInsets.symmetric(horizontal: 6),
                                   decoration: BoxDecoration(
-                                    color: i == trend.length - 1
-                                        ? AppColors.primary
-                                        : AppColors.primarySoft,
-                                    borderRadius: BorderRadius.circular(8),
+                                    color: isLast(i) ? AppColors.primary : AppColors.border,
+                                    borderRadius:
+                                        const BorderRadius.vertical(top: Radius.circular(4)),
                                   ),
                                 ),
-                                const SizedBox(height: 6),
+                                const Divider(height: 1, thickness: 1, color: AppColors.border),
+                                const SizedBox(height: 8),
                                 Text('${trend[i].$1.month}월',
-                                    style: AppText.style(
-                                        11, FontWeight.w400, AppColors.textSecondary)),
+                                    style: AppText.style(11, FontWeight.w400,
+                                        isLast(i) ? AppColors.textPrimary : AppColors.textSecondary)),
                               ],
                             ),
                           ),
@@ -146,31 +155,24 @@ class _WebPayrollScreenState extends State<WebPayrollScreen> {
 }
 
 class _Stat extends StatelessWidget {
-  const _Stat(this.label, this.value, {this.primary = false, this.valueColor});
+  const _Stat(this.label, this.value, {this.valueColor});
 
   final String label, value;
-  final bool primary;
   final Color? valueColor;
 
   @override
   Widget build(BuildContext context) => AppCard(
-        color: primary ? AppColors.primary : AppColors.surface,
-        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
+        padding: const EdgeInsets.all(20),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(label,
-                style: AppText.style(13, FontWeight.w400,
-                    primary ? AppColors.onPrimary : AppColors.textSecondary)),
-            const SizedBox(height: 6),
+                style: AppText.style(13, FontWeight.w400, AppColors.textSecondary)),
+            const SizedBox(height: 8),
             FittedBox(
               fit: BoxFit.scaleDown,
               child: Text(value,
-                  style: AppText.style(
-                      30,
-                      FontWeight.w700,
-                      valueColor ??
-                          (primary ? AppColors.onPrimary : AppColors.textPrimary))),
+                  style: AppText.style(28, FontWeight.w500, valueColor ?? AppColors.textPrimary)),
             ),
           ],
         ),
@@ -187,7 +189,7 @@ Future<void> _showDetail(BuildContext context, Staff s, Payslip slip, DateTime m
     builder: (ctx, _) => Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
       PayBreakdown(slip: slip, staff: s),
       const SizedBox(height: 16),
-      Text('근무 기록 ${slip.entries.length}건', style: AppText.style(14, FontWeight.w700)),
+      Text('근무 기록 ${slip.entries.length}건', style: AppText.style(14, FontWeight.w500)),
       const SizedBox(height: 8),
       for (final e in slip.entries)
         Padding(
@@ -200,7 +202,7 @@ Future<void> _showDetail(BuildContext context, Staff s, Payslip slip, DateTime m
             SizedBox(
               width: 70,
               child: Text(hours(e.minutes),
-                  textAlign: TextAlign.right, style: AppText.style(13, FontWeight.w700)),
+                  textAlign: TextAlign.right, style: AppText.style(13, FontWeight.w500)),
             ),
           ]),
         ),

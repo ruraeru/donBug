@@ -244,7 +244,7 @@ void main() {
     }
     addTearDown(tester.view.reset);
     final waiting = store.shiftsOn(store.today).where((s) => store.attendanceFor(s.id) == null).length;
-    await tester.tap(find.text('QR'));
+    await tester.tap(find.byKey(const ValueKey('pos-qr')));
     await tester.pump();
     expect(find.textContaining('출근 완료'), findsOneWidget);
     expect(store.shiftsOn(store.today).where((s) => store.attendanceFor(s.id) == null).length,

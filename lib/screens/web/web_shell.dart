@@ -145,7 +145,7 @@ class _WebShellState extends State<WebShell> {
             appBar: AppBar(
               backgroundColor: AppColors.surface,
               surfaceTintColor: Colors.transparent,
-              title: Text(_menu[_page].$1, style: AppText.style(17, FontWeight.w700)),
+              title: Text(_menu[_page].$1, style: AppText.style(17, FontWeight.w500)),
             ),
             drawer: Drawer(width: 260, child: _sidebar(rail: false)),
             body: _content(),
@@ -183,7 +183,7 @@ class _Logo extends StatelessWidget {
               const SizedBox(width: 10),
               Expanded(
                 child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                  Text('돈벌래', style: AppText.style(16, FontWeight.w700)),
+                  Text('돈벌래', style: AppText.style(16, FontWeight.w500)),
                   Text(AppScope.of(context).store.name,
                       overflow: TextOverflow.ellipsis,
                       style: AppText.style(11, FontWeight.w400, AppColors.textSecondary)),
@@ -230,13 +230,10 @@ class _MenuItem extends StatelessWidget {
                     child: Text(label,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
-                        style: AppText.style(15, active ? FontWeight.w700 : FontWeight.w500, color)),
+                        style: AppText.style(15, FontWeight.w500, color)),
                   ),
                   if (badge > 0)
-                    WebTag('$badge',
-                        color: AppColors.onPrimary,
-                        background: AppColors.accent,
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2)),
+                    Text('$badge', style: AppText.style(13, FontWeight.w500, color)),
                 ]),
         ),
       ),

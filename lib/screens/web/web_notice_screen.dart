@@ -59,7 +59,7 @@ class _WebNoticeScreenState extends State<WebNoticeScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text('공지 목록', style: AppText.style(16, FontWeight.w700)),
+                  Text('공지 목록', style: AppText.style(16, FontWeight.w500)),
                   for (final n in notices) ...[
                     const SizedBox(height: 12),
                     _NoticeItem(
@@ -87,7 +87,7 @@ class _WebNoticeScreenState extends State<WebNoticeScreen> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(children: [
-            Expanded(child: Text(n.title, style: AppText.style(20, FontWeight.w700))),
+            Expanded(child: Text(n.title, style: AppText.style(20, FontWeight.w500))),
             _tag(n.required),
           ]),
           const SizedBox(height: 4),
@@ -105,7 +105,7 @@ class _WebNoticeScreenState extends State<WebNoticeScreen> {
           Row(children: [
             Expanded(
                 child: Text('확인 현황 ${staff.length - unread} / ${staff.length}명',
-                    style: AppText.style(15, FontWeight.w700))),
+                    style: AppText.style(15, FontWeight.w500))),
             if (unread > 0)
               WebButton('미확인자 리마인드',
                   style: WebButtonStyle.soft, onPressed: () => _remind(n)),
@@ -119,11 +119,10 @@ class _WebNoticeScreenState extends State<WebNoticeScreen> {
               child: Row(children: [
                 Expanded(
                     child: Text(store.personOf(s).name,
-                        style: AppText.style(14, FontWeight.w700))),
+                        style: AppText.style(14, FontWeight.w500))),
                 n.readBy[s.id] == null
-                    ? const Pill('미확인',
-                        color: AppColors.danger, background: AppColors.dangerSoft)
-                    : Pill('${clock(DateTime.parse(n.readBy[s.id]!))} 확인'),
+                    ? webCellText('미확인', color: AppColors.danger, weight: FontWeight.w500)
+                    : webCellText('${clock(DateTime.parse(n.readBy[s.id]!))} 확인'),
               ]),
             ),
           ],
@@ -164,7 +163,7 @@ class _NoticeItem extends StatelessWidget {
               Row(children: [
                 tag,
                 const SizedBox(width: 8),
-                Expanded(child: Text(title, style: AppText.style(14, FontWeight.w700))),
+                Expanded(child: Text(title, style: AppText.style(14, FontWeight.w500))),
               ]),
               const SizedBox(height: 8),
               Row(children: [

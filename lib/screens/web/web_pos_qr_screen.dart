@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
@@ -91,16 +92,16 @@ class _WebPosQrScreenState extends State<WebPosQrScreen> {
       child: Container(
         width: 380,
         height: 380,
+        alignment: Alignment.center,
         decoration: BoxDecoration(
             color: AppColors.surface, borderRadius: BorderRadius.circular(28)),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Text('QR', style: AppText.style(64, FontWeight.w700, AppColors.textTertiary)),
-            const SizedBox(height: 8),
-            Text('동적 QR 코드',
-                style: AppText.style(14, FontWeight.w400, AppColors.textTertiary)),
-          ],
+        child: Semantics(
+          label: '출근 QR 코드',
+          child: CustomPaint(
+            key: const ValueKey('pos-qr'),
+            size: const Size.square(300),
+            painter: _QrPainter(_tick ~/ _qrSeconds),
+          ),
         ),
       ),
     );
@@ -123,7 +124,7 @@ class _WebPosQrScreenState extends State<WebPosQrScreen> {
                     const SizedBox(width: 12),
                     Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                       Text(store.store.name,
-                          style: AppText.style(18, FontWeight.w700, AppColors.surface)),
+                          style: AppText.style(18, FontWeight.w500, AppColors.surface)),
                       Text('매장 POS · 출퇴근 인증',
                           style: AppText.style(
                               12, FontWeight.w400, AppColors.textTertiary)),
@@ -131,79 +132,82 @@ class _WebPosQrScreenState extends State<WebPosQrScreen> {
                   ]),
                 ),
                 const Spacer(),
-                Text(clock(store.now), style: AppText.style(32, FontWeight.w700, AppColors.surface)),
+                Text(clock(store.now), style: AppText.style(32, FontWeight.w500, AppColors.surface)),
               ]),
             ),
             Expanded(
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.fromLTRB(48, 0, 48, 48),
-                child: Center(
-                  child: Wrap(
-                    spacing: 48,
-                    runSpacing: 48,
-                    alignment: WrapAlignment.center,
-                    crossAxisAlignment: WrapCrossAlignment.center,
-                    children: [
-                      GestureDetector(
-                        onTap: checkedIn ? null : _scan,
-                        child: Column(mainAxisSize: MainAxisSize.min, children: [
-                          qr,
-                          const SizedBox(height: 22),
-                          Text('스마트폰으로 QR을 스캔해 출퇴근을 기록하세요',
-                              textAlign: TextAlign.center,
-                              style: AppText.style(22, FontWeight.w700, AppColors.surface)),
-                          const SizedBox(height: 22),
-                          Row(mainAxisSize: MainAxisSize.min, children: [
-                            Container(
-                              width: 12,
-                              height: 12,
-                              decoration: const BoxDecoration(
-                                  color: AppColors.primary, shape: BoxShape.circle),
-                            ),
-                            const SizedBox(width: 10),
-                            Text('${_qrSeconds - _tick % _qrSeconds}초 후 QR이 자동으로 바뀌어요',
-                                style: AppText.style(
-                                    15, FontWeight.w400, AppColors.textTertiary)),
-                          ]),
-                        ]),
-                      ),
-                      Container(
-                        width: 380,
-                        padding: const EdgeInsets.all(22),
-                        decoration: BoxDecoration(
-                            color: AppColors.surface,
-                            borderRadius: BorderRadius.circular(24)),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text('오늘 출근 현황', style: AppText.style(16, FontWeight.w700)),
-                            if (today.isEmpty) const EmptyNote('오늘 근무가 없어요'),
-                            for (final s in today) ...[
-                              const SizedBox(height: 12),
+              // 남는 높이가 있으면 화면 가운데(머리 줄 높이만큼 위로 보정), 넘치면 스크롤.
+              child: LayoutBuilder(builder: (context, c) => SingleChildScrollView(
+                padding: const EdgeInsets.fromLTRB(48, 0, 48, 112),
+                child: ConstrainedBox(
+                  constraints: BoxConstraints(minHeight: max(0, c.maxHeight - 112)),
+                  child: Center(
+                    child: Wrap(
+                      spacing: 48,
+                      runSpacing: 48,
+                      alignment: WrapAlignment.center,
+                      children: [
+                        GestureDetector(
+                          onTap: checkedIn ? null : _scan,
+                          child: Column(mainAxisSize: MainAxisSize.min, children: [
+                            qr,
+                            const SizedBox(height: 22),
+                            Text('스마트폰으로 QR을 스캔해 출퇴근을 기록하세요',
+                                textAlign: TextAlign.center,
+                                style: AppText.style(22, FontWeight.w500, AppColors.surface)),
+                            const SizedBox(height: 22),
+                            Row(mainAxisSize: MainAxisSize.min, children: [
                               Container(
-                                padding: const EdgeInsets.symmetric(
-                                    horizontal: 14, vertical: 10),
-                                decoration: BoxDecoration(
-                                    color: AppColors.bg,
-                                    borderRadius: BorderRadius.circular(12)),
-                                child: Row(children: [
-                                  Expanded(
-                                      child: Text(store.nameOf(s.staffId),
-                                          style: AppText.style(14, FontWeight.w700))),
-                                  Builder(builder: (_) {
-                                    final (label, fg, bg) = _status(store, s);
-                                    return Pill(label, color: fg, background: bg);
-                                  }),
-                                ]),
+                                width: 12,
+                                height: 12,
+                                decoration: const BoxDecoration(
+                                    color: AppColors.primary, shape: BoxShape.circle),
                               ),
-                            ],
-                          ],
+                              const SizedBox(width: 10),
+                              Text('${_qrSeconds - _tick % _qrSeconds}초 후 QR이 자동으로 바뀌어요',
+                                  style: AppText.style(
+                                      15, FontWeight.w400, AppColors.textTertiary)),
+                            ]),
+                          ]),
                         ),
-                      ),
-                    ],
+                        Container(
+                          width: 380,
+                          padding: const EdgeInsets.all(22),
+                          decoration: BoxDecoration(
+                              color: AppColors.surface,
+                              borderRadius: BorderRadius.circular(24)),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text('오늘 출근 현황', style: AppText.style(16, FontWeight.w500)),
+                              if (today.isEmpty) const EmptyNote('오늘 근무가 없어요'),
+                              for (final s in today) ...[
+                                const SizedBox(height: 12),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 14, vertical: 10),
+                                  decoration: BoxDecoration(
+                                      color: AppColors.bg,
+                                      borderRadius: BorderRadius.circular(12)),
+                                  child: Row(children: [
+                                    Expanded(
+                                        child: Text(store.nameOf(s.staffId),
+                                            style: AppText.style(14, FontWeight.w500))),
+                                    Builder(builder: (_) {
+                                      final (label, fg, bg) = _status(store, s);
+                                      return Pill(label, color: fg, background: bg);
+                                    }),
+                                  ]),
+                                ),
+                              ],
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
-              ),
+              )),
             ),
           ]),
           if (_checked case (final title, final caption))
@@ -236,15 +240,55 @@ class _CheckedInToast extends StatelessWidget {
             alignment: Alignment.center,
             decoration:
                 const BoxDecoration(color: AppColors.surface, shape: BoxShape.circle),
-            child: Text('✓', style: AppText.style(18, FontWeight.w700, AppColors.primary)),
+            child: const Icon(Icons.check_rounded, size: 20, color: AppColors.primary),
           ),
           const SizedBox(width: 14),
           Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
             Text(title,
-                style: AppText.style(18, FontWeight.w700, AppColors.onPrimary)),
+                style: AppText.style(18, FontWeight.w500, AppColors.onPrimary)),
             Text(caption,
                 style: AppText.style(13, FontWeight.w400, AppColors.onPrimary)),
           ]),
         ]),
       );
+}
+
+/// 출근 QR 무늬(프로토타입). [seed] 가 바뀌면 무늬가 바뀐다. 실제로 읽히는 QR 은 아니다.
+class _QrPainter extends CustomPainter {
+  const _QrPainter(this.seed);
+
+  final int seed;
+  static const _n = 25;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final cell = size.width / _n;
+    final ink = Paint()
+      ..color = AppColors.textPrimary
+      ..isAntiAlias = false;
+    final paper = Paint()
+      ..color = AppColors.surface
+      ..isAntiAlias = false;
+    final corners = [(0, 0), (_n - 7, 0), (0, _n - 7)];
+    bool inCorner(int x, int y) =>
+        corners.any((c) => x >= c.$1 - 1 && x <= c.$1 + 7 && y >= c.$2 - 1 && y <= c.$2 + 7);
+    final rnd = Random(seed);
+    for (var y = 0; y < _n; y++) {
+      for (var x = 0; x < _n; x++) {
+        if (!inCorner(x, y) && rnd.nextBool()) {
+          canvas.drawRect(Rect.fromLTWH(x * cell, y * cell, cell, cell), ink);
+        }
+      }
+    }
+    // 세 모서리 위치 표시: 7칸 검정 · 5칸 흰색 · 3칸 검정.
+    for (final (x, y) in corners) {
+      final o = Offset(x * cell, y * cell);
+      canvas.drawRect(o & Size.square(cell * 7), ink);
+      canvas.drawRect(o + Offset(cell, cell) & Size.square(cell * 5), paper);
+      canvas.drawRect(o + Offset(cell * 2, cell * 2) & Size.square(cell * 3), ink);
+    }
+  }
+
+  @override
+  bool shouldRepaint(_QrPainter old) => old.seed != seed;
 }

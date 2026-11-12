@@ -52,8 +52,9 @@ class WebDocumentsScreen extends StatelessWidget {
               children: [
                 Row(children: [
                   Expanded(
-                      child: Text('노무 체크리스트', style: AppText.style(16, FontWeight.w700))),
-                  Pill.accent('${items.where((x) => x.$2).length} / ${items.length} 완료'),
+                      child: Text('노무 체크리스트', style: AppText.style(16, FontWeight.w500))),
+                  Text('${items.where((x) => x.$2).length}/${items.length} 완료',
+                      style: AppText.style(13, FontWeight.w400, AppColors.textSecondary)),
                 ]),
                 for (final (label, done) in items) ...[
                   const SizedBox(height: 16),
@@ -68,8 +69,7 @@ class WebDocumentsScreen extends StatelessWidget {
                         border: done ? null : Border.all(color: AppColors.border),
                       ),
                       child: done
-                          ? Text('✓',
-                              style: AppText.style(13, FontWeight.w700, AppColors.onPrimary))
+                          ? const Icon(Icons.check_rounded, size: 16, color: AppColors.onPrimary)
                           : null,
                     ),
                     const SizedBox(width: 12),
@@ -90,7 +90,7 @@ class WebDocumentsScreen extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('직원별 서류', style: AppText.style(16, FontWeight.w700)),
+                Text('직원별 서류', style: AppText.style(16, FontWeight.w500)),
                 const SizedBox(height: 14),
                 if (staff.isEmpty) const EmptyNote('재직 중인 직원이 없어요'),
                 WebTable(
@@ -101,7 +101,7 @@ class WebDocumentsScreen extends StatelessWidget {
                     for (final s in staff)
                       [
                         webStaffCell(store, s),
-                        certPill(store.certDaysLeft(store.personOf(s))),
+                        webCertPill(store.certDaysLeft(store.personOf(s))),
                         webCellText(store.personOf(s).certExpiry == null
                             ? '-'
                             : dotDate(parseYmd(store.personOf(s).certExpiry!))),
@@ -118,12 +118,16 @@ class WebDocumentsScreen extends StatelessWidget {
   }
 }
 
-/// 근로계약서 상태 칩.
-Pill contractPill(Contract? c) => switch (c) {
+/// 근로계약서 상태. 서명 완료는 조용한 글자, 손볼 것만 칩.
+Widget contractPill(Contract? c) => switch (c) {
       null => Pill.accent('미작성'),
-      Contract(signed: true) => const Pill('서명 완료'),
+      Contract(signed: true) => webCellText('서명 완료'),
       _ => Pill.accent('서명 대기'),
     };
+
+/// 보건증 상태. 30일 넘게 남으면 조용한 글자, 임박 · 만료 · 미등록만 칩.
+Widget webCertPill(int? daysLeft) =>
+    daysLeft != null && daysLeft > 30 ? webCellText('D-$daysLeft') : certPill(daysLeft);
 
 /// 전자 근로계약서 작성 · 서명 요청. 근무 요일 · 주 시간은 앞으로 2주 근무에서 채운다.
 Future<void> showContractDialog(BuildContext context, {String? staffId}) {

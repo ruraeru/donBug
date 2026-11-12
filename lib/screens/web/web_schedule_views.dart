@@ -69,7 +69,7 @@ class ShiftBlock extends StatelessWidget {
         Text(title,
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
-            style: AppText.style(12, FontWeight.w700, titleColor)),
+            style: AppText.style(12, FontWeight.w500, titleColor)),
         if (caption.isNotEmpty)
           Text(caption,
               maxLines: 1,
@@ -208,7 +208,7 @@ Widget _dayHead(AppStore store, DateTime d) => Container(
       alignment: Alignment.center,
       color: d == store.today ? AppColors.primarySoft : null,
       child: Text('${weekday(d)} ${d.month}/${d.day}',
-          style: AppText.style(13, FontWeight.w700, dayColor(d))),
+          style: AppText.style(13, FontWeight.w500, dayColor(d))),
     );
 
 Widget _labelHead(String text) => Container(
@@ -252,7 +252,7 @@ class PartWeekView extends StatelessWidget {
             const SizedBox(width: 10),
             Expanded(
               child: Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisSize: MainAxisSize.min, children: [
-                Text(name, style: AppText.style(15, FontWeight.w700)),
+                Text(name, style: AppText.style(15, FontWeight.w500)),
                 Text(caption, style: AppText.style(12, FontWeight.w400, AppColors.textSecondary)),
               ]),
             ),
@@ -318,7 +318,7 @@ class PeopleWeekView extends StatelessWidget {
     Widget group(String title, String caption) => Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
           child: Row(children: [
-            Text(title, style: AppText.style(12, FontWeight.w700)),
+            Text(title, style: AppText.style(12, FontWeight.w500)),
             const SizedBox(width: 10),
             Expanded(
               child: Text(caption,
@@ -352,7 +352,7 @@ class PeopleWeekView extends StatelessWidget {
                 Row(children: [
                   Flexible(
                     child: Text(store.personOf(s).fullName,
-                        overflow: TextOverflow.ellipsis, style: AppText.style(14, FontWeight.w700)),
+                        overflow: TextOverflow.ellipsis, style: AppText.style(14, FontWeight.w500)),
                   ),
                   const SizedBox(width: 6),
                   WebTag(s.kind.label,
@@ -430,7 +430,7 @@ class MonthView extends StatelessWidget {
           decoration: BoxDecoration(color: bg, borderRadius: BorderRadius.circular(4)),
           child: Text.rich(
             TextSpan(children: [
-              TextSpan(text: '$tag ', style: AppText.style(11, FontWeight.w700, fg)),
+              TextSpan(text: '$tag ', style: AppText.style(11, FontWeight.w500, fg)),
               TextSpan(text: text, style: AppText.style(11, FontWeight.w400, AppColors.textPrimary)),
             ]),
             maxLines: 2,
@@ -450,7 +450,7 @@ class MonthView extends StatelessWidget {
           padding: const EdgeInsets.all(6),
           color: d == store.today ? AppColors.primarySoft.withValues(alpha: 0.4) : null,
           child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-            Text('${d.day}', style: AppText.style(12, FontWeight.w700, dayColor(d))),
+            Text('${d.day}', style: AppText.style(12, FontWeight.w500, dayColor(d))),
             for (final p in store.store.parts)
               if (list.where((s) => s.part == p.name && s.kind == ShiftKind.work) case final ps
                   when ps.isNotEmpty)
@@ -470,7 +470,7 @@ class MonthView extends StatelessWidget {
                   Padding(
                     padding: const EdgeInsets.only(top: 4, left: 2),
                     child: Text('${p.name} 인원 부족',
-                        style: AppText.style(11, FontWeight.w700, AppColors.danger)),
+                        style: AppText.style(11, FontWeight.w500, AppColors.danger)),
                   ),
           ]),
         ),
@@ -554,7 +554,7 @@ class DayTimelineView extends StatelessWidget {
               Row(children: [
                 Flexible(
                   child: Text(store.personOf(staff).fullName,
-                      overflow: TextOverflow.ellipsis, style: AppText.style(14, FontWeight.w700)),
+                      overflow: TextOverflow.ellipsis, style: AppText.style(14, FontWeight.w500)),
                 ),
                 const SizedBox(width: 6),
                 WebTag(tag,
@@ -623,7 +623,7 @@ class DayTimelineView extends StatelessWidget {
                                     s.timeTbd ? '시간 미정' : s.kind == ShiftKind.leave ? '연차' : '${hm(s.startMin)}–${hm(s.endMin)}',
                                     maxLines: 1,
                                     overflow: TextOverflow.clip,
-                                    style: AppText.style(12, FontWeight.w700, s.timeTbd ? AppColors.danger : AppColors.textPrimary),
+                                    style: AppText.style(12, FontWeight.w500, s.timeTbd ? AppColors.danger : AppColors.textPrimary),
                                   ),
                                 ),
                               ),
@@ -643,7 +643,7 @@ class DayTimelineView extends StatelessWidget {
 
     Widget group(String t) => Padding(
           padding: const EdgeInsets.only(top: 14, bottom: 4),
-          child: Text(t, style: AppText.style(12, FontWeight.w700, AppColors.textSecondary)),
+          child: Text(t, style: AppText.style(12, FontWeight.w500, AppColors.textSecondary)),
         );
 
     return AppCard(

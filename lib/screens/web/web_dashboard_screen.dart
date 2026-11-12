@@ -56,7 +56,7 @@ class _WebDashboardScreenState extends State<WebDashboardScreen> {
     final certs = certAlerts(store);
     void go(int page) => WebShell.open(context, page);
     return WebPage(
-      title: '안녕하세요, 사장님',
+      title: '대시보드',
       subtitle: '${store.store.name} · ${t.year}년 ${t.month}월 ${t.day}일 ${weekday(t)}요일',
       gap: 16,
       actions: [
@@ -74,10 +74,8 @@ class _WebDashboardScreenState extends State<WebDashboardScreen> {
       ],
       children: [
         WebRow(children: [
-          _Kpi('이번 달 예상 인건비', won(total),
+          _Kpi('이번 달 예상 인건비', wonText(total),
               '지난달 대비 ${diff >= 0 ? '+' : ''}$diff% · 근로자 ${store.activeStaff.length}명',
-              bg: AppColors.primary,
-              fg: AppColors.onPrimary,
               onTap: () => go(WebMenu.payroll)),
           _Kpi('오늘 근무', '${statuses.length}명', '출근 $present · 대기 $waiting',
               onTap: () => showTodayAttendance(context)),
@@ -87,7 +85,6 @@ class _WebDashboardScreenState extends State<WebDashboardScreen> {
               subs.isEmpty
                   ? '진행 중인 요청 없음'
                   : '${subs.map((r) => store.nameOf(r.requesterId)).toSet().join(' · ')} 요청',
-              bg: AppColors.accentSoft,
               onTap: () => go(WebMenu.substitute)),
           certs.isEmpty
               ? _Kpi('보건증 만료 임박', '없음', '30일 이내 만료 없음',
@@ -98,7 +95,6 @@ class _WebDashboardScreenState extends State<WebDashboardScreen> {
                   '${store.nameOf(certs.first.$1.id)}님'
                       '${certs.length > 1 ? ' 외 ${certs.length - 1}명' : ''}'
                       ' · ${store.personOf(certs.first.$1).certAlertDays.where((d) => d > 0).join('·')}일 전 알림',
-                  bg: AppColors.dangerSoft,
                   valueColor: AppColors.danger,
                   onTap: () => go(WebMenu.documents)),
         ]),
@@ -120,36 +116,33 @@ class _WebDashboardScreenState extends State<WebDashboardScreen> {
 }
 
 class _Kpi extends StatelessWidget {
-  const _Kpi(this.label, this.value, this.caption,
-      {this.bg = AppColors.surface, this.fg, this.valueColor, this.onTap});
+  const _Kpi(this.label, this.value, this.caption, {this.valueColor, this.onTap});
 
   final String label, value, caption;
-  final Color bg;
-  final Color? fg, valueColor;
+  final Color? valueColor;
   final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) => AppCard(
-        color: bg,
         onTap: onTap,
-        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
+        padding: const EdgeInsets.all(20),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(label,
-                style: AppText.style(13, FontWeight.w500, fg ?? AppColors.textSecondary)),
-            const SizedBox(height: 6),
+                style: AppText.style(13, FontWeight.w400, AppColors.textSecondary)),
+            const SizedBox(height: 8),
             FittedBox(
               fit: BoxFit.scaleDown,
               child: Text(value,
                   style: AppText.style(
-                      28, FontWeight.w700, valueColor ?? fg ?? AppColors.textPrimary)),
+                      28, FontWeight.w500, valueColor ?? AppColors.textPrimary)),
             ),
-            const SizedBox(height: 6),
+            const SizedBox(height: 8),
             Text(caption,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
-                style: AppText.style(12, FontWeight.w400, fg ?? AppColors.textSecondary)),
+                style: AppText.style(12, FontWeight.w400, AppColors.textSecondary)),
           ],
         ),
       );
@@ -185,11 +178,11 @@ class _WeekCard extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(children: [
-            Expanded(child: Text('이번 주 근무표', style: AppText.style(17, FontWeight.w700))),
+            Expanded(child: Text('이번 주 근무표', style: AppText.style(17, FontWeight.w500))),
             arrow('‹', -1),
             const SizedBox(width: 4),
             Text('${monday.month}/${monday.day} – ${sunday.month}/${sunday.day}',
-                style: AppText.style(13, FontWeight.w700)),
+                style: AppText.style(13, FontWeight.w500)),
             const SizedBox(width: 4),
             arrow('›', 1),
           ]),
@@ -219,7 +212,7 @@ class _WeekCard extends StatelessWidget {
                 SizedBox(
                     width: 84,
                     child: Text(store.personOf(s).name,
-                        style: AppText.style(14, FontWeight.w700))),
+                        style: AppText.style(14, FontWeight.w500))),
                 for (final d in days)
                   Expanded(child: _cell(context, store, s, d)),
               ]),
@@ -312,7 +305,7 @@ class _SubstituteCard extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(children: [
-            Expanded(child: Text('대타 승인 대기', style: AppText.style(15, FontWeight.w700))),
+            Expanded(child: Text('대타 승인 대기', style: AppText.style(15, FontWeight.w500))),
             InkWell(
               onTap: () => WebShell.open(context, WebMenu.substitute),
               child: Text('전체 보기 ›',
@@ -352,7 +345,7 @@ class _SubItem extends StatelessWidget {
         child: Row(children: [
           Expanded(
             child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Text(title, style: AppText.style(13, FontWeight.w700)),
+              Text(title, style: AppText.style(13, FontWeight.w500)),
               Text(caption,
                   style: AppText.style(12, FontWeight.w400, AppColors.textSecondary)),
             ]),
@@ -415,7 +408,7 @@ class _RiskCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('노무 리스크 알림', style: AppText.style(15, FontWeight.w700)),
+          Text('노무 리스크 알림', style: AppText.style(15, FontWeight.w500)),
           for (final r in risks) ...[const SizedBox(height: 12), r],
         ],
       ),
@@ -447,7 +440,7 @@ class _Risk extends StatelessWidget {
           const SizedBox(width: 10),
           Expanded(
             child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Text(title, style: AppText.style(13, FontWeight.w700)),
+              Text(title, style: AppText.style(13, FontWeight.w500)),
               Text(caption,
                   style: AppText.style(12, FontWeight.w400, AppColors.textSecondary)),
             ]),
@@ -495,7 +488,7 @@ Future<void> _showNotifications(BuildContext context) {
                 Expanded(
                   child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                     Text(n.title,
-                        style: AppText.style(14, n.read ? FontWeight.w500 : FontWeight.w700)),
+                        style: AppText.style(14, n.read ? FontWeight.w400 : FontWeight.w500)),
                     if (n.body.isNotEmpty)
                       Text(n.body,
                           style: AppText.style(12, FontWeight.w400, AppColors.textSecondary)),
@@ -543,7 +536,7 @@ Future<void> showTodayAttendance(BuildContext context) {
                 Expanded(
                   child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                     Text('${s.nameOf(shift.staffId)} · ${shift.part}',
-                        style: AppText.style(14, FontWeight.w700)),
+                        style: AppText.style(14, FontWeight.w500)),
                     Text(_attText(s, shift),
                         style: AppText.style(12, FontWeight.w400, AppColors.textSecondary)),
                   ]),
