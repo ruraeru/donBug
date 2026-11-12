@@ -61,8 +61,8 @@ class SubstituteApprovalScreen extends StatelessWidget {
         surfaceTintColor: Colors.transparent,
         foregroundColor: AppColors.textPrimary,
         elevation: 0,
-        titleSpacing: 0,
-        title: Text('대타 승인', style: AppText.style(24, FontWeight.w700)),
+        titleSpacing: 20,
+        title: Text('대타 승인', style: AppText.style(24, FontWeight.w500)),
         actions: [
           Padding(
             padding: const EdgeInsets.only(right: 20),
@@ -79,7 +79,7 @@ class SubstituteApprovalScreen extends StatelessWidget {
             r.status == SubStatus.accepted
                 ? _acceptedCard(context, store, r)
                 : _waitingCard(context, store, r),
-            const SizedBox(height: 14),
+            const SizedBox(height: 16),
           ],
         ],
       ),
@@ -91,41 +91,44 @@ class SubstituteApprovalScreen extends StatelessWidget {
     final tertiary = AppText.style(12, FontWeight.w400, AppColors.textTertiary);
     final secondary = AppText.style(13, FontWeight.w400, AppColors.textSecondary);
     return AppCard(
-      padding: const EdgeInsets.all(18),
+      padding: const EdgeInsets.all(16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
-              const _SmallChip('사장님 승인 필요', AppColors.onPrimary, AppColors.accent),
+              const _SmallChip('사장님 승인 필요', AppColors.accent, AppColors.accentSoft),
               const Spacer(),
               Text(relative(DateTime.parse(r.createdAt), store.now), style: tertiary),
             ],
           ),
-          const SizedBox(height: 14),
-          Text('${shiftDay(s)} ${shiftTime(s)}', style: AppText.style(19, FontWeight.w700)),
+          const SizedBox(height: 16),
+          Text('${shiftDay(s)} ${shiftTime(s)}', style: AppText.style(19, FontWeight.w500)),
           const SizedBox(height: 2),
-          Text('${s.part} · ${duration(s.scheduledMinutes)}', style: secondary),
-          const SizedBox(height: 14),
+          Row(children: [
+            PartLabel(s.part, style: secondary),
+            Text(' · ${duration(s.scheduledMinutes)}', style: secondary),
+          ]),
+          const SizedBox(height: 16),
           Row(
             children: [
               Expanded(
                 child: _PersonChip(store.staffById(r.requesterId)!, '요청 · ${r.reason}'),
               ),
-              const SizedBox(width: 10),
-              Text('→', style: AppText.style(16, FontWeight.w700, AppColors.textTertiary)),
-              const SizedBox(width: 10),
+              const SizedBox(width: 12),
+              const Icon(Icons.arrow_forward_rounded, size: 16, color: AppColors.textTertiary),
+              const SizedBox(width: 12),
               Expanded(child: _PersonChip(store.staffById(r.acceptedId)!, '수락')),
             ],
           ),
-          const SizedBox(height: 14),
+          const SizedBox(height: 16),
           const _Steps(),
-          const SizedBox(height: 14),
+          const SizedBox(height: 16),
           Container(
             width: double.infinity,
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
             decoration: BoxDecoration(
-              color: AppColors.infoSoft,
+              color: AppColors.bg,
               borderRadius: BorderRadius.circular(12),
             ),
             child: Text(
@@ -133,21 +136,21 @@ class SubstituteApprovalScreen extends StatelessWidget {
               style: AppText.style(12, FontWeight.w400, AppColors.textSecondary),
             ),
           ),
-          const SizedBox(height: 14),
+          const SizedBox(height: 16),
           Row(
             children: [
               SizedBox(
                 width: 96,
                 child: AppButton('거절',
                     variant: AppButtonVariant.outline,
-                    verticalPadding: 13,
+                    verticalPadding: 12,
                     fontSize: 14,
                     onPressed: () => _reject(context, r)),
               ),
-              const SizedBox(width: 10),
+              const SizedBox(width: 12),
               Expanded(
                 child: AppButton('승인하고 반영',
-                    verticalPadding: 13, fontSize: 14, onPressed: () => _approve(context, r)),
+                    verticalPadding: 12, fontSize: 14, onPressed: () => _approve(context, r)),
               ),
             ],
           ),
@@ -160,7 +163,7 @@ class SubstituteApprovalScreen extends StatelessWidget {
     final s = store.shiftById(r.shiftId)!;
     final peers = store.activeStaff.length - 1;
     return AppCard(
-      padding: const EdgeInsets.all(18),
+      padding: const EdgeInsets.all(16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -173,14 +176,14 @@ class SubstituteApprovalScreen extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 12),
-          Text('${shiftDay(s)} ${shiftTime(s)}', style: AppText.style(17, FontWeight.w700)),
+          Text('${shiftDay(s)} ${shiftTime(s)}', style: AppText.style(17, FontWeight.w500)),
           const SizedBox(height: 2),
           Text('${s.part} · ${duration(s.scheduledMinutes)} · 요청 ${store.nameOf(r.requesterId)} (${r.reason})',
               style: AppText.style(13, FontWeight.w400, AppColors.textSecondary)),
           const SizedBox(height: 12),
           Text(
               r.notifyPeers
-                  ? '동료 $peers명에게 알림을 보냈고 아직 수락한 사람이 없어요.'
+                  ? '동료 $peers명에게 알림을 보냈고 아직 수락한 사람이 없어요'
                   : '동료 알림 없이 요청됐어요. 직접 배정해 주세요.',
               style: AppText.style(12, FontWeight.w400, AppColors.textTertiary)),
           const SizedBox(height: 12),
@@ -189,17 +192,17 @@ class SubstituteApprovalScreen extends StatelessWidget {
               Expanded(
                 child: AppButton('다시 알림 보내기',
                     variant: AppButtonVariant.outline,
-                    verticalPadding: 13,
+                    verticalPadding: 12,
                     fontSize: 14, onPressed: () {
                   AppScope.read(context).resendSubstitute(r.id);
                   showToast(context, '동료들에게 다시 알렸어요');
                 }),
               ),
-              const SizedBox(width: 10),
+              const SizedBox(width: 12),
               Expanded(
                 child: AppButton('직접 배정',
                     variant: AppButtonVariant.outline,
-                    verticalPadding: 13,
+                    verticalPadding: 12,
                     fontSize: 14,
                     onPressed: () => _assign(context, r)),
               ),
@@ -223,7 +226,7 @@ class _SmallChip extends StatelessWidget {
   Widget build(BuildContext context) => Container(
         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
         decoration: BoxDecoration(color: background, borderRadius: BorderRadius.circular(999)),
-        child: Text(label, style: AppText.style(11, FontWeight.w700, color)),
+        child: Text(label, style: AppText.style(11, FontWeight.w500, color)),
       );
 }
 
@@ -235,7 +238,7 @@ class _PersonChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Container(
-        padding: const EdgeInsets.fromLTRB(10, 8, 12, 8),
+        padding: const EdgeInsets.fromLTRB(12, 8, 12, 8),
         decoration: BoxDecoration(color: AppColors.bg, borderRadius: BorderRadius.circular(14)),
         child: Row(
           children: [
@@ -246,7 +249,7 @@ class _PersonChip extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(AppScope.of(context).personOf(staff).name,
-                      style: AppText.style(13, FontWeight.w700)),
+                      style: AppText.style(13, FontWeight.w500)),
                   Text(note,
                       overflow: TextOverflow.ellipsis,
                       style: AppText.style(11, FontWeight.w400, AppColors.textTertiary)),
@@ -273,12 +276,16 @@ class _Steps extends StatelessWidget {
               shape: BoxShape.circle,
               border: Border.all(color: AppColors.primary, width: 2),
             ),
-            child: Text(done ? '✓' : '●',
-                style: AppText.style(
-                    done ? 12 : 10, FontWeight.w700, done ? AppColors.onPrimary : AppColors.primary)),
+            child: done
+                ? const Icon(Icons.check_rounded, size: 14, color: AppColors.onPrimary)
+                : Container(
+                    width: 8,
+                    height: 8,
+                    decoration:
+                        const BoxDecoration(color: AppColors.primary, shape: BoxShape.circle)),
           ),
-          const SizedBox(height: 6),
-          Text(label, style: AppText.style(11, done ? FontWeight.w500 : FontWeight.w700)),
+          const SizedBox(height: 8),
+          Text(label, style: AppText.style(11, done ? FontWeight.w400 : FontWeight.w500)),
         ],
       );
 
@@ -291,13 +298,13 @@ class _Steps extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           _step('휴무 신청', done: true),
-          const SizedBox(width: 6),
+          const SizedBox(width: 8),
           _line(AppColors.primary),
-          const SizedBox(width: 6),
+          const SizedBox(width: 8),
           _step('동료 수락', done: true),
-          const SizedBox(width: 6),
+          const SizedBox(width: 8),
           _line(AppColors.border),
-          const SizedBox(width: 6),
+          const SizedBox(width: 8),
           _step('사장님 승인', done: false),
         ],
       );

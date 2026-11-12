@@ -78,7 +78,7 @@ class _ShiftAddScreenState extends State<ShiftAddScreen> {
         padding: const EdgeInsets.fromLTRB(20, 8, 20, 16),
         children: [
           LabeledField('날짜', child: FieldBox('${dotDate(_date)} (${weekday(_date)})', onTap: _pickDate)),
-          const SizedBox(height: 14),
+          const SizedBox(height: 16),
           LabeledField(
             '파트',
             child: SegmentedPicker(
@@ -87,7 +87,7 @@ class _ShiftAddScreenState extends State<ShiftAddScreen> {
               onChanged: (i) => setState(() => _applyPart(i)),
             ),
           ),
-          const SizedBox(height: 14),
+          const SizedBox(height: 16),
           Row(
             children: [
               Expanded(
@@ -107,7 +107,7 @@ class _ShiftAddScreenState extends State<ShiftAddScreen> {
               ),
             ],
           ),
-          const SizedBox(height: 14),
+          const SizedBox(height: 16),
           LabeledField(
             '근로자',
             child: Wrap(
@@ -128,7 +128,7 @@ class _ShiftAddScreenState extends State<ShiftAddScreen> {
               ],
             ),
           ),
-          const SizedBox(height: 14),
+          const SizedBox(height: 16),
           AppCard(
             child: Column(
               children: [

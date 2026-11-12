@@ -36,7 +36,7 @@ class _WorkLogScreenState extends State<WorkLogScreen> {
           for (final e in logs) ...[
             AppCard(
               radius: 16,
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
               child: Row(
                 children: [
                   Expanded(
@@ -45,7 +45,7 @@ class _WorkLogScreenState extends State<WorkLogScreen> {
                       children: [
                         Row(
                           children: [
-                            Text(md(e.day), style: AppText.style(15, FontWeight.w700)),
+                            Text(md(e.day), style: AppText.style(15, FontWeight.w500)),
                             if (e.isSubstitute) ...[
                               const SizedBox(width: 6),
                               const Pill.accent('대타'),
@@ -59,11 +59,11 @@ class _WorkLogScreenState extends State<WorkLogScreen> {
                     ),
                   ),
                   const SizedBox(width: 12),
-                  Text(wonText(payFor(e.minutes, me.wage)), style: AppText.style(15, FontWeight.w700)),
+                  Text(wonText(payFor(e.minutes, me.wage)), style: AppText.style(15, FontWeight.w500)),
                 ],
               ),
             ),
-            const SizedBox(height: 10),
+            const SizedBox(height: 12),
           ],
           AppCard(
             child: Column(

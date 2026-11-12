@@ -62,7 +62,7 @@ class EmployerDashboardScreen extends StatelessWidget {
                           Flexible(
                             child: Text(store.store.name,
                                 overflow: TextOverflow.ellipsis,
-                                style: AppText.style(22, FontWeight.w700)),
+                                style: AppText.style(22, FontWeight.w500)),
                           ),
                           const SizedBox(width: 2),
                           const AppIcon('chevron_right', size: 22, color: AppColors.textTertiary),
@@ -93,7 +93,7 @@ class EmployerDashboardScreen extends StatelessWidget {
                   Text('이번 달 예상 인건비',
                       style: AppText.style(13, FontWeight.w500, AppColors.onPrimary)),
                   const SizedBox(height: 8),
-                  Text(won(total), style: AppText.style(32, FontWeight.w700, AppColors.onPrimary)),
+                  Text(won(total), style: AppText.style(32, FontWeight.w500, AppColors.onPrimary)),
                   const SizedBox(height: 8),
                   Text(
                       '지난달 대비 ${diff >= 0 ? '+' : ''}$diff% · 근로자 ${store.activeStaff.length}명',
@@ -109,7 +109,6 @@ class EmployerDashboardScreen extends StatelessWidget {
                     label: '오늘 근무',
                     value: '${todayShifts.length}명',
                     note: '출근 $present · 대기 $waiting',
-                    noteColor: AppColors.primary,
                     onTap: () => _push(context, const AttendanceScreen()),
                   ),
                 ),
@@ -119,7 +118,6 @@ class EmployerDashboardScreen extends StatelessWidget {
                     label: '대타 모집',
                     value: '${subs.length}건',
                     note: '승인 대기 $accepted',
-                    noteColor: AppColors.accent,
                     onTap: () => _push(context, const SubstituteApprovalScreen()),
                   ),
                 ),
@@ -132,21 +130,19 @@ class EmployerDashboardScreen extends StatelessWidget {
             if (pending.isNotEmpty) ...[
               const SizedBox(height: 16),
               AppCard(
-                color: AppColors.infoSoft,
                 onTap: () => _push(context, const StaffApprovalScreen()),
                 child: Row(children: [
                   Expanded(
                     child: Text('가입 신청 ${pending.length}명 · ${store.nameOf(pending.first.id)}님 외',
-                        style: AppText.style(15, FontWeight.w700)),
+                        style: AppText.style(15, FontWeight.w500)),
                   ),
-                  const AppIcon('chevron_right', size: 20, color: AppColors.info),
+                  const AppIcon('chevron_right', size: 20, color: AppColors.textTertiary),
                 ]),
               ),
             ],
             if (cert != null) ...[
               const SizedBox(height: 16),
               AppCard(
-                color: AppColors.dangerSoft,
                 onTap: () => _push(context, StaffDetailScreen(staffId: cert.$1.id)),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -154,15 +150,15 @@ class EmployerDashboardScreen extends StatelessWidget {
                     Row(
                       children: [
                         Pill(cert.$2 < 0 ? '보건증 만료' : '보건증 D-${cert.$2}',
-                            color: AppColors.danger, background: AppColors.surface),
+                            color: AppColors.danger, background: AppColors.dangerSoft),
                         const Spacer(),
-                        const AppIcon('chevron_right', size: 20, color: AppColors.danger),
+                        const AppIcon('chevron_right', size: 20, color: AppColors.textTertiary),
                       ],
                     ),
-                    const SizedBox(height: 6),
+                    const SizedBox(height: 8),
                     Text(
                         '${store.nameOf(cert.$1.id)}님 보건증이 ${cert.$2 < 0 ? '만료됐어요' : '곧 만료돼요'}',
-                        style: AppText.style(15, FontWeight.w700)),
+                        style: AppText.style(15, FontWeight.w500)),
                   ],
                 ),
               ),
@@ -172,7 +168,7 @@ class EmployerDashboardScreen extends StatelessWidget {
               avatar: const LetterAvatar('직'),
               title: '직원 관리',
               subtitle: '재직 ${store.activeStaff.length}명',
-              trailing: Text('›', style: AppText.style(22, FontWeight.w400, AppColors.textTertiary)),
+              trailing: const AppIcon('chevron_right', size: 20, color: AppColors.textTertiary),
               onTap: () => _push(context, const StaffManagementScreen()),
             ),
           ],
@@ -203,27 +199,26 @@ class _SubAlert extends StatelessWidget {
     final s = store.shiftById(request.shiftId)!;
     final accepted = request.acceptedId != null;
     return AppCard(
-      color: AppColors.accentSoft,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
               Pill(accepted ? '대타 승인 필요' : '인력 공백 주의',
-                  color: AppColors.accent, background: AppColors.surface),
+                  color: AppColors.accent, background: AppColors.accentSoft),
               const Spacer(),
               Text(relative(DateTime.parse(request.createdAt), store.now),
                   style: AppText.style(12, FontWeight.w400, AppColors.textSecondary)),
             ],
           ),
-          const SizedBox(height: 10),
-          Text('${shiftDay(s)} ${shiftTime(s)} ${s.part}', style: AppText.style(16, FontWeight.w700)),
-          const SizedBox(height: 10),
+          const SizedBox(height: 12),
+          Text('${shiftDay(s)} ${shiftTime(s)} ${s.part}', style: AppText.style(16, FontWeight.w500)),
+          const SizedBox(height: 8),
           Text(
               '${store.nameOf(request.requesterId)}님이 휴무를 신청했어요 · '
               '${accepted ? '${store.nameOf(request.acceptedId)}님 수락' : '지원 ${request.applicantIds.length}명'}',
               style: AppText.style(13, FontWeight.w400, AppColors.textSecondary)),
-          const SizedBox(height: 10),
+          const SizedBox(height: 12),
           AppButton(
             '지원자 확인하고 확정',
             verticalPadding: 12,
@@ -242,14 +237,12 @@ class _StatCard extends StatelessWidget {
     required this.label,
     required this.value,
     required this.note,
-    required this.noteColor,
     this.onTap,
   });
 
   final String label;
   final String value;
   final String note;
-  final Color noteColor;
   final VoidCallback? onTap;
 
   @override
@@ -259,10 +252,10 @@ class _StatCard extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(label, style: AppText.style(13, FontWeight.w500, AppColors.textSecondary)),
-            const SizedBox(height: 6),
-            Text(value, style: AppText.style(26, FontWeight.w700)),
-            const SizedBox(height: 6),
-            Text(note, style: AppText.style(12, FontWeight.w400, noteColor)),
+            const SizedBox(height: 8),
+            Text(value, style: AppText.style(26, FontWeight.w500)),
+            const SizedBox(height: 8),
+            Text(note, style: AppText.style(12, FontWeight.w400, AppColors.textSecondary)),
           ],
         ),
       );

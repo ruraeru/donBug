@@ -49,7 +49,7 @@ class _StoreCodeScreenState extends State<StoreCodeScreen> {
         body: ListView(
           padding: const EdgeInsets.fromLTRB(20, 8, 20, 16),
           children: [
-            Text('사장님께 받은\n매장 코드를 입력해주세요', style: AppText.style(22, FontWeight.w700)),
+            Text('사장님께 받은\n매장 코드를 입력해주세요', style: AppText.style(22, FontWeight.w500)),
             const SizedBox(height: 16),
             TextField(
               controller: _code,
@@ -57,15 +57,15 @@ class _StoreCodeScreenState extends State<StoreCodeScreen> {
               textCapitalization: TextCapitalization.characters,
               maxLength: 9,
               onSubmitted: (_) => _submit(),
-              style: AppText.style(22, FontWeight.w700).copyWith(letterSpacing: 4),
+              style: AppText.style(22, FontWeight.w500).copyWith(letterSpacing: 4),
               decoration: InputDecoration(
                 hintText: 'CAFE-8K2D',
-                hintStyle: AppText.style(22, FontWeight.w700, AppColors.border)
+                hintStyle: AppText.style(22, FontWeight.w500, AppColors.border)
                     .copyWith(letterSpacing: 4),
                 counterText: '',
                 filled: true,
                 fillColor: AppColors.surface,
-                contentPadding: const EdgeInsets.symmetric(vertical: 14),
+                contentPadding: const EdgeInsets.symmetric(vertical: 12),
                 enabledBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(12),
                     borderSide: const BorderSide(color: AppColors.border)),
@@ -85,8 +85,8 @@ class _StoreCodeScreenState extends State<StoreCodeScreen> {
             const SizedBox(height: 16),
             const NoteBox(
               '매장 코드는 사장님 앱의 [매장 설정]에서 확인할 수 있어요. 여러 매장에서 일하면 코드를 추가로 입력하세요.\n데모 매장 코드: CAFE-8K2D · MOA-27QX',
-              color: AppColors.info,
-              background: AppColors.infoSoft,
+              color: AppColors.textSecondary,
+              background: AppColors.surface,
             ),
           ],
         ),

@@ -80,7 +80,7 @@ class _EmployerPayrollSettingsScreenState extends State<EmployerPayrollSettingsS
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(store.personOf(s).name, style: AppText.style(16, FontWeight.w700)),
+                      Text(store.personOf(s).name, style: AppText.style(16, FontWeight.w500)),
                       Text('${s.part} · 이번 주 $weekly일',
                           style: AppText.style(12, FontWeight.w400, AppColors.textSecondary)),
                     ],
@@ -89,13 +89,13 @@ class _EmployerPayrollSettingsScreenState extends State<EmployerPayrollSettingsS
               ],
             ),
           ),
-          const SizedBox(height: 14),
+          const SizedBox(height: 16),
           LabeledField('시급 (원)',
               child: AppTextField(controller: _wage, keyboardType: TextInputType.number)),
-          const SizedBox(height: 6),
+          const SizedBox(height: 8),
           Text('2026 최저임금 ${wonText(minimumWage2026)}',
               style: AppText.style(12, FontWeight.w400, AppColors.textTertiary)),
-          const SizedBox(height: 14),
+          const SizedBox(height: 16),
           LabeledField(
             '공제 유형',
             child: SegmentedPicker(
@@ -104,14 +104,14 @@ class _EmployerPayrollSettingsScreenState extends State<EmployerPayrollSettingsS
               onChanged: (i) => setState(() => _deduction = i),
             ),
           ),
-          const SizedBox(height: 14),
+          const SizedBox(height: 16),
           ToggleCard(
             title: '주휴수당 자동 적용',
             subtitle: '주 15시간 이상이면 자동 계산 (대타 근무 제외)',
             value: _weeklyAllowance,
             onChanged: (v) => setState(() => _weeklyAllowance = v),
           ),
-          const SizedBox(height: 14),
+          const SizedBox(height: 16),
           ToggleCard(
             title: '야간·연장 가산',
             subtitle: small ? '5인 미만 사업장은 법적으로 미적용 (매장 설정에서 변경)' : '야간(22–06)·하루 8시간 초과분 0.5배',

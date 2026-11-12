@@ -72,7 +72,7 @@ class QrCheckInScreen extends StatelessWidget {
                       child: Text('출근 인증',
                           textAlign: TextAlign.center,
                           style: AppText.style(
-                              17, FontWeight.w700, AppColors.onPrimary)),
+                              17, FontWeight.w500, AppColors.onPrimary)),
                     ),
                     TextButton(
                       onPressed: () => showConfirmDialog(context,
@@ -94,14 +94,14 @@ class QrCheckInScreen extends StatelessWidget {
                     children: [
                       Container(
                         padding: const EdgeInsets.symmetric(
-                            horizontal: 14, vertical: 8),
+                            horizontal: 12, vertical: 8),
                         decoration: BoxDecoration(
                           color: AppColors.primary,
                           borderRadius: BorderRadius.circular(999),
                         ),
                         child: Text('${store.store.name} · ${shiftTime(shift)} 근무',
                             style: AppText.style(
-                                13, FontWeight.w700, AppColors.onPrimary)),
+                                13, FontWeight.w500, AppColors.onPrimary)),
                       ),
                       const SizedBox(height: 20),
                       GestureDetector(
@@ -113,7 +113,7 @@ class QrCheckInScreen extends StatelessWidget {
                       Text('POS 화면의 QR 코드를\n사각형 안에 맞춰주세요\n(데모: 사각형을 탭하세요)',
                           textAlign: TextAlign.center,
                           style: AppText.style(
-                              16, FontWeight.w700, AppColors.onPrimary)),
+                              16, FontWeight.w500, AppColors.onPrimary)),
                       const SizedBox(height: 20),
                       Text('위·변조 방지를 위해 매장 안에서만 인증돼요',
                           textAlign: TextAlign.center,
@@ -124,13 +124,13 @@ class QrCheckInScreen extends StatelessWidget {
                 ),
               ),
               Padding(
-                padding: const EdgeInsets.fromLTRB(20, 0, 20, 34),
+                padding: const EdgeInsets.fromLTRB(20, 0, 20, 32),
                 child: Container(
                   width: double.infinity,
                   padding:
-                      const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                      const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
                   decoration: BoxDecoration(
-                    color: AppColors.accentSoft,
+                    color: AppColors.surface,
                     borderRadius: BorderRadius.circular(14),
                   ),
                   child: Text(

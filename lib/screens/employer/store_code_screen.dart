@@ -34,7 +34,7 @@ class StoreCodeScreen extends StatelessWidget {
                     const SizedBox(height: 12),
                     Text(code,
                         style: AppText.style(
-                            32, FontWeight.w700, AppColors.primary)),
+                            32, FontWeight.w500, AppColors.primary)),
                     const SizedBox(height: 12),
                     Container(
                       width: 140,
@@ -46,7 +46,7 @@ class StoreCodeScreen extends StatelessWidget {
                       ),
                       child: Text('QR',
                           style: AppText.style(
-                              28, FontWeight.w700, AppColors.textTertiary)),
+                              28, FontWeight.w500, AppColors.textTertiary)),
                     ),
                     const SizedBox(height: 12),
                     SmallButton(
@@ -87,7 +87,7 @@ class StoreCodeScreen extends StatelessWidget {
                 height: 54,
                 alignment: Alignment.center,
                 child: Text('카카오톡으로 코드 공유',
-                    style: AppText.style(16, FontWeight.w700)),
+                    style: AppText.style(16, FontWeight.w500)),
               ),
             ),
           ),

@@ -345,7 +345,7 @@ class _StaffSheetState extends State<_StaffSheet> {
                 '보건증 ${p.certExpiry == null ? '' : '· ${dotDate(parseYmd(p.certExpiry!))} 만료'}',
                 style: AppText.style(14, FontWeight.w500)),
           ),
-          webCertPill(left),
+          certPill(left),
           if (left == null || left <= 30) ...[
             const SizedBox(width: 8),
             WebButton('갱신 요청', height: 32, fontSize: 12, style: WebButtonStyle.soft, onPressed: () {

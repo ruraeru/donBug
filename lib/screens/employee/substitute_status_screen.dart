@@ -65,7 +65,7 @@ class _SubstituteStatusScreenState extends State<SubstituteStatusScreen> {
             child: Text(
               label,
               style: AppText.style(
-                  14, FontWeight.w700, selected ? AppColors.onPrimary : AppColors.textTertiary),
+                  14, FontWeight.w500, selected ? AppColors.onPrimary : AppColors.textTertiary),
             ),
           ),
         ),
@@ -127,7 +127,7 @@ class _RequestCard extends StatelessWidget {
             children: [
               Expanded(
                 child: Text('${shiftDay(s)} ${shiftTime(s)}',
-                    style: AppText.style(17, FontWeight.w700)),
+                    style: AppText.style(17, FontWeight.w500)),
               ),
               Pill.accent(subStatusLabel(r)),
             ],
@@ -166,7 +166,7 @@ class _RequestCard extends StatelessWidget {
                   showToast(context, ok ? '동료가 대타를 수락했어요' : '수락할 수 있는 동료가 없어요');
                 },
               ),
-              const SizedBox(height: 10),
+              const SizedBox(height: 12),
             ],
             AppButton(
               '요청 취소',

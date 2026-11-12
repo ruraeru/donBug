@@ -63,9 +63,9 @@ class SubstituteDoneScreen extends StatelessWidget {
   Widget _requestSummary(AppStore store, SubstituteRequest r, Shift s) => Column(
         children: [
           KeyValueRow('근무', '${shiftDay(s)} ${shiftTime(s)}'),
-          const SizedBox(height: 14),
+          const SizedBox(height: 12),
           KeyValueRow('사유', r.reason),
-          const SizedBox(height: 14),
+          const SizedBox(height: 12),
           Row(
             children: [
               Expanded(

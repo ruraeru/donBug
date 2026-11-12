@@ -136,19 +136,17 @@ class _EmployerContractWriteScreenState extends State<EmployerContractWriteScree
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(store.personOf(s).fullName, style: AppText.style(16, FontWeight.w700)),
+                        Text(store.personOf(s).fullName, style: AppText.style(16, FontWeight.w500)),
                         Text('표준 근로계약서 · 탭해서 직원 변경',
                             style: AppText.style(12, FontWeight.w400, AppColors.textSecondary)),
                       ],
                     ),
                   ),
-                  s.contract == null
-                      ? const Pill('신규', color: AppColors.info, background: AppColors.infoSoft)
-                      : const Pill('재작성', color: AppColors.textSecondary, background: AppColors.bg),
+                  Text(s.contract == null ? '신규' : '재작성', style: AppText.style(13, FontWeight.w400, AppColors.textSecondary)),
                 ],
               ),
             ),
-          const SizedBox(height: 14),
+          const SizedBox(height: 16),
           Row(children: [
             Expanded(
                 child: LabeledField('계약 시작', child: FieldBox(dotDate(_start), onTap: () => _pick(true)))),
@@ -156,13 +154,13 @@ class _EmployerContractWriteScreenState extends State<EmployerContractWriteScree
             Expanded(
                 child: LabeledField('계약 종료', child: FieldBox(dotDate(_end), onTap: () => _pick(false)))),
           ]),
-          const SizedBox(height: 14),
+          const SizedBox(height: 16),
           LabeledField('시급 (원)',
               child: AppTextField(
                   controller: _wage,
                   keyboardType: TextInputType.number,
                   onChanged: (_) => setState(() {}))),
-          const SizedBox(height: 14),
+          const SizedBox(height: 16),
           Row(children: [
             Expanded(
               child: LabeledField('주 소정근로시간',
@@ -179,29 +177,26 @@ class _EmployerContractWriteScreenState extends State<EmployerContractWriteScree
                       controller: _days, hint: '예: 화·목·토', onChanged: (_) => setState(() {}))),
             ),
           ]),
-          const SizedBox(height: 14),
+          const SizedBox(height: 16),
           LabeledField('업무 내용',
               child: AppTextField(controller: _duty, hint: '예: 홀 서빙', onChanged: (_) => setState(() {}))),
-          const SizedBox(height: 14),
+          const SizedBox(height: 16),
           AppCard(
-            color: missing.isEmpty ? AppColors.primarySoft : AppColors.dangerSoft,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Row(
                   children: [
                     Expanded(
-                      child: Text('필수 항목 점검',
-                          style: AppText.style(14, FontWeight.w700,
-                              missing.isEmpty ? AppColors.primary : AppColors.danger)),
+                      child: Text('필수 항목 점검', style: AppText.style(14, FontWeight.w500)),
                     ),
                     missing.isEmpty
-                        ? const Pill('누락 항목 없음')
+                        ? Text('누락 항목 없음', style: AppText.style(13, FontWeight.w400, AppColors.textSecondary))
                         : Pill('${missing.length}개 누락',
-                            color: AppColors.danger, background: AppColors.surface),
+                            color: AppColors.danger, background: AppColors.dangerSoft),
                   ],
                 ),
-                const SizedBox(height: 10),
+                const SizedBox(height: 12),
                 Text(
                   missing.isEmpty
                       ? '근무 장소 · 업무 내용 · 소정근로시간 · 임금 · 휴일 필수 항목이 모두 입력됐어요.'

@@ -48,7 +48,7 @@ class MyDocumentsScreen extends StatelessWidget {
             chip: c == null
                 ? const Pill('없음', color: AppColors.textSecondary, background: AppColors.bg)
                 : c.signed
-                    ? const Pill('서명 완료')
+                    ? Text('서명 완료', style: AppText.style(13, FontWeight.w400, AppColors.textSecondary))
                     : const Pill.accent('서명 필요'),
             description: c == null
                 ? '사장님이 계약서를 보내면 여기서 서명해요'
@@ -103,7 +103,7 @@ class _DocCard extends StatelessWidget {
           children: [
             Row(
               children: [
-                Expanded(child: Text(title, style: AppText.style(17, FontWeight.w700))),
+                Expanded(child: Text(title, style: AppText.style(17, FontWeight.w500))),
                 chip,
               ],
             ),

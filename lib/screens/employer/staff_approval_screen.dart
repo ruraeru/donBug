@@ -55,7 +55,7 @@ class StaffApprovalScreen extends StatelessWidget {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text(store.personOf(s).fullName, style: AppText.style(16, FontWeight.w700)),
+                            Text(store.personOf(s).fullName, style: AppText.style(16, FontWeight.w500)),
                             if (s.requestedAt != null)
                               Text(
                                   '${relative(DateTime.parse(s.requestedAt!), store.now)} 신청',
@@ -63,15 +63,15 @@ class StaffApprovalScreen extends StatelessWidget {
                           ],
                         ),
                       ),
-                      const Pill('알바생', color: AppColors.textSecondary, background: AppColors.bg),
+                      Text('알바생', style: AppText.style(13, FontWeight.w400, AppColors.textSecondary)),
                     ],
                   ),
-                  const SizedBox(height: 14),
+                  const SizedBox(height: 16),
                   Row(
                     children: [
                       Expanded(
                           child: SmallButton.outline('거절', onPressed: () => _reject(context, s))),
-                      const SizedBox(width: 8),
+                      const SizedBox(width: 12),
                       Expanded(
                           child: SmallButton('승인하고 시급 설정',
                               onPressed: () => _approve(context, s))),

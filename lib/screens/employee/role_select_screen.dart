@@ -23,7 +23,7 @@ class _RoleSelectScreenState extends State<RoleSelectScreen> {
           padding: const EdgeInsets.fromLTRB(20, 8, 20, 16),
           children: [
             Text('어떤 역할로 사용하시나요?',
-                style: AppText.style(22, FontWeight.w700)),
+                style: AppText.style(22, FontWeight.w500)),
             const SizedBox(height: 16),
             Text('나중에 설정에서 바꿀 수 없으니 신중히 골라주세요',
                 style:
@@ -103,16 +103,16 @@ class _RoleCard extends StatelessWidget {
                   ),
                   child: Text(
                     letter,
-                    style: AppText.style(24, FontWeight.w700,
+                    style: AppText.style(24, FontWeight.w500,
                         selected ? AppColors.primary : AppColors.textTertiary),
                   ),
                 ),
-                const SizedBox(width: 14),
+                const SizedBox(width: 12),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(title, style: AppText.style(17, FontWeight.w700)),
+                      Text(title, style: AppText.style(17, FontWeight.w500)),
                       const SizedBox(height: 2),
                       Text(caption,
                           style: AppText.style(

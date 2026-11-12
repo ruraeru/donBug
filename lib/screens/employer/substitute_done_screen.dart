@@ -44,7 +44,7 @@ class SubstituteDoneScreen extends StatelessWidget {
             ),
             const SizedBox(height: 16),
             NoteBox('대타 근무는 $to님의 주휴수당 계산에서 제외돼요.',
-                color: AppColors.accent, background: AppColors.accentSoft),
+                color: AppColors.textSecondary, background: AppColors.bg),
           ],
         ),
       ),

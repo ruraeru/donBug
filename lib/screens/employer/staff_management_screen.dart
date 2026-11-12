@@ -22,7 +22,7 @@ class StaffManagementScreen extends StatelessWidget {
         TextButton(
           onPressed: () => Navigator.push(
               context, MaterialPageRoute(builder: (_) => const StoreCodeScreen())),
-          child: Text('+ 초대', style: AppText.style(14, FontWeight.w700, AppColors.primary)),
+          child: Text('+ 초대', style: AppText.style(14, FontWeight.w500, AppColors.primary)),
         ),
         const SizedBox(width: 8),
       ]),
@@ -32,10 +32,9 @@ class StaffManagementScreen extends StatelessWidget {
           Row(
             children: [
               Expanded(
-                child: _Stat('재직', '${staff.length}',
-                    background: AppColors.primarySoft, labelColor: AppColors.primary),
+                child: _Stat('재직', '${staff.length}'),
               ),
-              const SizedBox(width: 8),
+              const SizedBox(width: 12),
               Expanded(
                 child: _Stat('신규 승인 대기', '$pending',
                     onTap: pending == 0
@@ -46,12 +45,12 @@ class StaffManagementScreen extends StatelessWidget {
             ],
           ),
           for (final s in staff) ...[
-            const SizedBox(height: 10),
+            const SizedBox(height: 12),
             PersonRow(
               avatar: MemberAvatar(s),
               title: store.personOf(s).name,
               subtitle: '${s.part} · ${wonText(s.wage)}',
-              trailing: Text('›', style: AppText.style(22, FontWeight.w400, AppColors.textTertiary)),
+              trailing: const Icon(Icons.chevron_right_rounded, size: 24, color: AppColors.textTertiary),
               onTap: () => Navigator.push(context,
                   MaterialPageRoute(builder: (_) => StaffDetailScreen(staffId: s.id))),
             ),
@@ -66,28 +65,23 @@ class _Stat extends StatelessWidget {
   const _Stat(
     this.label,
     this.value, {
-    this.background = AppColors.surface,
-    this.labelColor = AppColors.textSecondary,
     this.onTap,
   });
 
   final String label;
   final String value;
-  final Color background;
-  final Color labelColor;
   final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) => AppCard(
-        color: background,
         radius: 16,
         onTap: onTap,
-        padding: const EdgeInsets.symmetric(vertical: 14),
+        padding: const EdgeInsets.symmetric(vertical: 16),
         child: Column(
           children: [
-            Text(label, style: AppText.style(12, FontWeight.w400, labelColor)),
+            Text(label, style: AppText.style(12, FontWeight.w400, AppColors.textSecondary)),
             const SizedBox(height: 2),
-            Text(value, style: AppText.style(22, FontWeight.w700)),
+            Text(value, style: AppText.style(22, FontWeight.w500)),
           ],
         ),
       );

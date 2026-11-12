@@ -35,7 +35,7 @@ class _StoreSettingsScreenState extends State<StoreSettingsScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(st.name, style: AppText.style(18, FontWeight.w700)),
+                Text(st.name, style: AppText.style(18, FontWeight.w500)),
                 const SizedBox(height: 12),
                 Text(st.address, style: AppText.style(13, FontWeight.w400, AppColors.textSecondary)),
                 const SizedBox(height: 12),
@@ -47,7 +47,7 @@ class _StoreSettingsScreenState extends State<StoreSettingsScreen> {
                       child: Text('매장 코드',
                           style: AppText.style(14, FontWeight.w400, AppColors.textSecondary)),
                     ),
-                    Text(st.code, style: AppText.style(15, FontWeight.w700, AppColors.primary)),
+                    Text(st.code, style: AppText.style(15, FontWeight.w500, AppColors.primary)),
                   ],
                 ),
               ],
@@ -61,7 +61,7 @@ class _StoreSettingsScreenState extends State<StoreSettingsScreen> {
           PersonRow(
             avatar: const LetterAvatar('로', color: AppColors.textSecondary, background: AppColors.bg),
             title: '로그아웃',
-            trailing: Text('›', style: AppText.style(22, FontWeight.w400, AppColors.textTertiary)),
+            trailing: const AppIcon('chevron_right', size: 20, color: AppColors.textTertiary),
             onTap: () => logoutToLogin(context),
           ),
           const SizedBox(height: 24),

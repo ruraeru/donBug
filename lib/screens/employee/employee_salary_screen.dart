@@ -31,7 +31,7 @@ class _EmployeeSalaryScreenState extends State<EmployeeSalaryScreen> {
           Padding(
             padding: const EdgeInsets.fromLTRB(20, 12, 12, 12),
             child: Row(children: [
-              Expanded(child: Text('급여', style: AppText.style(24, FontWeight.w700))),
+              Expanded(child: Text('급여', style: AppText.style(24, FontWeight.w500))),
               MonthNav(month: month, max: store.today, onChanged: (m) => setState(() => _month = m)),
             ]),
           ),
@@ -52,11 +52,16 @@ class _EmployeeSalaryScreenState extends State<EmployeeSalaryScreen> {
                           style: AppText.style(13, FontWeight.w500, AppColors.onPrimary)),
                       const SizedBox(height: 8),
                       Text(won(slip.net),
-                          style: AppText.style(34, FontWeight.w700, AppColors.onPrimary)),
+                          style: AppText.style(34, FontWeight.w500, AppColors.onPrimary)),
                       const SizedBox(height: 8),
-                      Text(
-                          '급여일 ${month.month}/25 · ${current ? '예정 포함 ' : ''}근무 ${hours(slip.minutes)}  ›',
-                          style: AppText.style(13, FontWeight.w400, AppColors.onPrimary)),
+                      Row(children: [
+                        Flexible(
+                          child: Text(
+                              '급여일 ${month.month}/25 · ${current ? '예정 포함 ' : ''}근무 ${hours(slip.minutes)}',
+                              style: AppText.style(13, FontWeight.w400, AppColors.onPrimary)),
+                        ),
+                        const Icon(Icons.chevron_right_rounded, size: 16, color: AppColors.onPrimary),
+                      ]),
                     ],
                   ),
                 ),
@@ -67,7 +72,7 @@ class _EmployeeSalaryScreenState extends State<EmployeeSalaryScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text('최근 출퇴근 기록', style: AppText.style(15, FontWeight.w700)),
+                      Text('최근 출퇴근 기록', style: AppText.style(15, FontWeight.w500)),
                       if (logs.isEmpty) const EmptyNote('이 달 출퇴근 기록이 없어요'),
                       for (final e in logs) ...[
                         const SizedBox(height: 12),
@@ -83,7 +88,7 @@ class _EmployeeSalaryScreenState extends State<EmployeeSalaryScreen> {
                             Expanded(
                               child: Text(hours(e.minutes),
                                   textAlign: TextAlign.right,
-                                  style: AppText.style(14, FontWeight.w700)),
+                                  style: AppText.style(14, FontWeight.w500)),
                             ),
                           ],
                         ),

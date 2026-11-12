@@ -62,7 +62,7 @@ class TabShellState extends State<TabShell> {
             widget.tabs[i].label,
             style: AppText.style(
               11,
-              selected ? FontWeight.w700 : FontWeight.w500,
+              FontWeight.w500,
               color,
             ),
           ),

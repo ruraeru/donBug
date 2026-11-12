@@ -42,7 +42,7 @@ class _EmployeeNoticeScreenState extends State<EmployeeNoticeScreen> {
             padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
             child: Row(
               children: [
-                Expanded(child: Text('공지', style: AppText.style(24, FontWeight.w700))),
+                Expanded(child: Text('공지', style: AppText.style(24, FontWeight.w500))),
                 GestureDetector(
                   onTap: unread == 0 ? null : () => AppScope.read(context).markAllNoticesRead(),
                   child: Text('모두 읽음',
@@ -96,15 +96,17 @@ class _EmployeeNoticeScreenState extends State<EmployeeNoticeScreen> {
   Widget _readStatus(AppStore store, Notice n) {
     final at = n.readBy[store.myStaff?.id];
     return at == null
-        ? Text('안 읽음', style: AppText.style(12, FontWeight.w700, AppColors.danger))
+        ? Text('안 읽음',
+            style: AppText.style(
+                12, FontWeight.w500, n.required ? AppColors.danger : AppColors.textSecondary))
         : Text('읽음 · ${noticeTime(n, at: at)}',
-            style: AppText.style(12, FontWeight.w500, AppColors.primary));
+            style: AppText.style(12, FontWeight.w400, AppColors.textSecondary));
   }
 
   Widget _pinnedCard(AppStore store, Notice n) {
     final read = store.isNoticeReadByMe(n);
     return Material(
-      color: AppColors.accentSoft,
+      color: AppColors.surface,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(20),
         side: const BorderSide(color: AppColors.accent, width: 1.5),
@@ -113,7 +115,7 @@ class _EmployeeNoticeScreenState extends State<EmployeeNoticeScreen> {
       child: InkWell(
         onTap: () => _openDetail(n),
         child: Padding(
-          padding: const EdgeInsets.all(18),
+          padding: const EdgeInsets.all(16),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -121,19 +123,19 @@ class _EmployeeNoticeScreenState extends State<EmployeeNoticeScreen> {
                 children: [
                   noticeTags(n),
                   const SizedBox(width: 6),
-                  const Pill('상단 고정', color: AppColors.textSecondary, background: AppColors.surface),
+                  const Pill('상단 고정', color: AppColors.textSecondary, background: AppColors.bg),
                 ],
               ),
-              const SizedBox(height: 10),
-              Text(n.title, style: AppText.style(17, FontWeight.w700)),
-              const SizedBox(height: 10),
+              const SizedBox(height: 12),
+              Text(n.title, style: AppText.style(17, FontWeight.w500)),
+              const SizedBox(height: 12),
               Text(n.body, style: AppText.style(13, FontWeight.w400, AppColors.textSecondary)),
-              const SizedBox(height: 10),
+              const SizedBox(height: 12),
               _MetaRow('사장님 · ${noticeTime(n)}', _readStatus(store, n)),
               if (!read) ...[
-                const SizedBox(height: 10),
+                const SizedBox(height: 12),
                 AppButton('확인했어요',
-                    verticalPadding: 13,
+                    verticalPadding: 12,
                     fontSize: 15,
                     onPressed: () => AppScope.read(context).markNoticeRead(n.id)),
               ],
@@ -149,8 +151,7 @@ class _EmployeeNoticeScreenState extends State<EmployeeNoticeScreen> {
 Widget noticeTags(Notice n) {
   final (fg, bg) = switch (n.category) {
     '중요' => (AppColors.onPrimary, AppColors.accent),
-    '노무' => (AppColors.primary, AppColors.primarySoft),
-    _ => (AppColors.info, AppColors.infoSoft),
+    _ => (AppColors.textSecondary, AppColors.bg),
   };
   return Row(mainAxisSize: MainAxisSize.min, children: [
     Pill(n.category, color: fg, background: bg),
@@ -178,7 +179,7 @@ class _FilterChip extends StatelessWidget {
   Widget build(BuildContext context) => GestureDetector(
         onTap: onTap,
         child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
           decoration: BoxDecoration(
             color: selected ? AppColors.primary : AppColors.surface,
             border: selected ? null : Border.all(color: AppColors.border),
@@ -187,7 +188,7 @@ class _FilterChip extends StatelessWidget {
           child: Text(
             label,
             style: selected
-                ? AppText.style(13, FontWeight.w700, AppColors.onPrimary)
+                ? AppText.style(13, FontWeight.w500, AppColors.onPrimary)
                 : AppText.style(13, FontWeight.w500, AppColors.textSecondary),
           ),
         ),
@@ -233,7 +234,7 @@ class _NoticeCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => AppCard(
-        padding: const EdgeInsets.all(18),
+        padding: const EdgeInsets.all(16),
         onTap: onTap,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -243,7 +244,7 @@ class _NoticeCard extends StatelessWidget {
             Text(
               title,
               style: AppText.style(
-                  16, FontWeight.w700, read ? AppColors.textSecondary : AppColors.textPrimary),
+                  16, FontWeight.w500, read ? AppColors.textSecondary : AppColors.textPrimary),
             ),
             const SizedBox(height: 8),
             Text(

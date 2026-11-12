@@ -38,7 +38,6 @@ class EmployeeHomeScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final store = AppScope.of(context);
-    final me = store.me;
     final open = store.myOpenAttendance;
     final today = store.myTodayShift;
     final sub = store.subsAvailableToMe.firstOrNull;
@@ -54,8 +53,8 @@ class EmployeeHomeScreen extends StatelessWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text('안녕하세요, ${me.name}님',
-                          style: AppText.style(22, FontWeight.w700)),
+                      Text(md(store.today),
+                          style: AppText.style(22, FontWeight.w500)),
                       const SizedBox(height: 2),
                       Text('${store.store.name} · 알바생',
                           style: AppText.style(13, FontWeight.w400, AppColors.textSecondary)),
@@ -111,16 +110,16 @@ class _TodayCard extends StatelessWidget {
           children: [
             Text(shift.isSubstitute ? '오늘 근무 · 대타' : '오늘 근무',
                 style: AppText.style(13, FontWeight.w500, AppColors.onPrimary)),
-            const SizedBox(height: 14),
+            const SizedBox(height: 12),
             Text(shiftTime(shift),
-                style: AppText.style(30, FontWeight.w700, AppColors.onPrimary)),
-            const SizedBox(height: 14),
+                style: AppText.style(30, FontWeight.w500, AppColors.onPrimary)),
+            const SizedBox(height: 12),
             Text(shiftCaption(shift),
                 style: AppText.style(13, FontWeight.w400, AppColors.onPrimary)),
-            const SizedBox(height: 14),
+            const SizedBox(height: 12),
             AppButton('출근하기',
                 icon: 'scan', variant: AppButtonVariant.surface, onPressed: onCheckIn),
-            const SizedBox(height: 14),
+            const SizedBox(height: 12),
             SizedBox(
               width: double.infinity,
               child: Text('매장 POS 화면의 QR 코드를 스캔하세요',
@@ -150,11 +149,11 @@ class _NextShiftCard extends StatelessWidget {
         children: [
           Text(doneToday ? '오늘 근무 완료 · 다음 근무' : '다음 근무',
               style: AppText.style(13, FontWeight.w500, AppColors.onPrimary)),
-          const SizedBox(height: 14),
+          const SizedBox(height: 12),
           Text(next == null ? '예정된 근무가 없어요' : '${shiftDay(next)} ${hm(next.startMin)}',
-              style: AppText.style(next == null ? 20 : 30, FontWeight.w700, AppColors.onPrimary)),
+              style: AppText.style(next == null ? 20 : 30, FontWeight.w500, AppColors.onPrimary)),
           if (next != null) ...[
-            const SizedBox(height: 14),
+            const SizedBox(height: 12),
             Text('${shiftTime(next)} · ${shiftCaption(next)}',
                 style: AppText.style(13, FontWeight.w400, AppColors.onPrimary)),
           ],
@@ -208,13 +207,13 @@ class _WorkingCardState extends State<_WorkingCard> {
         children: [
           Text('근무 중 · ${clock(inAt)} 출근',
               style: AppText.style(13, FontWeight.w500, AppColors.onPrimary)),
-          const SizedBox(height: 10),
-          Text(elapsed, style: AppText.style(40, FontWeight.w700, AppColors.onPrimary)),
-          const SizedBox(height: 10),
+          const SizedBox(height: 12),
+          Text(elapsed, style: AppText.style(40, FontWeight.w500, AppColors.onPrimary)),
+          const SizedBox(height: 12),
           Text(
               '${shift == null ? '' : '예상 퇴근 ${hm(shift.endMin)} · '}지금까지 ${won(store.dayPay(a))}',
               style: AppText.style(13, FontWeight.w400, AppColors.onPrimary)),
-          const SizedBox(height: 10),
+          const SizedBox(height: 12),
           AppButton('퇴근하기', variant: AppButtonVariant.soft, onPressed: widget.onCheckOut),
         ],
       ),
@@ -244,11 +243,10 @@ class _PayCard extends StatelessWidget {
                 child: Text('이번 달 예상 실수령액',
                     style: AppText.style(14, FontWeight.w500, AppColors.textSecondary)),
               ),
-              const Pill('세후 반영'),
             ],
           ),
           const SizedBox(height: 12),
-          Text(won(p.net), style: AppText.style(30, FontWeight.w700)),
+          Text(won(p.net), style: AppText.style(30, FontWeight.w500)),
           const SizedBox(height: 12),
           Text(
             '근무 ${hours(p.minutes)} 예정 포함 · ${m.deduction.short} 반영'
@@ -283,7 +281,7 @@ class _SubstituteCard extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 12),
-          Text('${shiftDay(s)} ${shiftTime(s)}', style: AppText.style(17, FontWeight.w700)),
+          Text('${shiftDay(s)} ${shiftTime(s)}', style: AppText.style(17, FontWeight.w500)),
           const SizedBox(height: 12),
           Text('${store.nameOf(request.requesterId)}님이 대타를 찾고 있어요 · 사유: ${request.reason}',
               style: AppText.style(13, FontWeight.w400, AppColors.textSecondary)),

@@ -50,7 +50,7 @@ class SegmentedPicker extends StatelessWidget {
                       options[i],
                       style: AppText.style(
                         14,
-                        FontWeight.w700,
+                        FontWeight.w500,
                         i == selected
                             ? AppColors.onPrimary
                             : AppColors.textTertiary,
@@ -72,7 +72,7 @@ class CountStepper extends StatelessWidget {
   final int value;
   final ValueChanged<int> onChanged;
 
-  Widget _circle(String label, Color bg, Color fg, VoidCallback onTap) =>
+  Widget _circle(IconData icon, Color bg, Color fg, VoidCallback onTap) =>
       GestureDetector(
         onTap: onTap,
         child: Container(
@@ -80,7 +80,7 @@ class CountStepper extends StatelessWidget {
           height: 32,
           alignment: Alignment.center,
           decoration: BoxDecoration(color: bg, shape: BoxShape.circle),
-          child: Text(label, style: AppText.style(16, FontWeight.w700, fg)),
+          child: Icon(icon, size: 18, color: fg),
         ),
       );
 
@@ -88,12 +88,12 @@ class CountStepper extends StatelessWidget {
   Widget build(BuildContext context) => Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          _circle('−', AppColors.bg, AppColors.textSecondary,
+          _circle(Icons.remove_rounded, AppColors.bg, AppColors.textSecondary,
               () => onChanged(value > 0 ? value - 1 : 0)),
-          const SizedBox(width: 14),
-          Text('$value명', style: AppText.style(16, FontWeight.w700)),
-          const SizedBox(width: 14),
-          _circle('+', AppColors.primary, AppColors.onPrimary,
+          const SizedBox(width: 16),
+          Text('$value명', style: AppText.style(16, FontWeight.w500)),
+          const SizedBox(width: 16),
+          _circle(Icons.add_rounded, AppColors.primary, AppColors.onPrimary,
               () => onChanged(value + 1)),
         ],
       );
@@ -136,8 +136,8 @@ class SmallButton extends StatelessWidget {
           child: Container(
             height: 36,
             alignment: Alignment.center,
-            padding: const EdgeInsets.symmetric(horizontal: 14),
-            child: Text(label, style: AppText.style(13, FontWeight.w700, color)),
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: Text(label, style: AppText.style(13, FontWeight.w500, color)),
           ),
         ),
       );
@@ -179,13 +179,12 @@ class SuccessStepsScaffold extends StatelessWidget {
                   alignment: Alignment.center,
                   decoration: const BoxDecoration(
                       color: AppColors.primarySoft, shape: BoxShape.circle),
-                  child: Text('✓',
-                      style: AppText.style(44, FontWeight.w700, AppColors.primary)),
+                  child: const Icon(Icons.check_rounded, size: 48, color: AppColors.primary),
                 ),
                 const SizedBox(height: 12),
                 Text(title,
                     textAlign: TextAlign.center,
-                    style: AppText.style(22, FontWeight.w700)),
+                    style: AppText.style(22, FontWeight.w500)),
                 const SizedBox(height: 12),
                 Text(message,
                     textAlign: TextAlign.center,
@@ -198,7 +197,7 @@ class SuccessStepsScaffold extends StatelessWidget {
                       if (stepsHeader != null) ...[
                         Text(stepsHeader!,
                             style: AppText.style(
-                                14, FontWeight.w700, AppColors.textSecondary)),
+                                14, FontWeight.w500, AppColors.textSecondary)),
                         const SizedBox(height: 16),
                       ],
                       for (var i = 0; i < steps.length; i++) ...[
@@ -224,6 +223,27 @@ class SuccessStepsScaffold extends StatelessWidget {
       '직원' => (AppColors.purple, AppColors.purpleSoft),
       _ => (AppColors.danger, AppColors.dangerSoft),
     };
+
+/// 파트 표시: 파트 색 점 8px + 글자.
+class PartLabel extends StatelessWidget {
+  const PartLabel(this.part, {super.key, this.style});
+
+  final String part;
+  final TextStyle? style;
+
+  @override
+  Widget build(BuildContext context) => Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+              width: 8,
+              height: 8,
+              decoration: BoxDecoration(color: partColors(part).$1, shape: BoxShape.circle)),
+          const SizedBox(width: 8),
+          Text(part, style: style ?? AppText.style(15, FontWeight.w500)),
+        ],
+      );
+}
 
 /// 출근 상태 칩: (문구, 글자색, 배경색).
 (String, Color, Color) attStyle(AttStatus s) => switch (s) {
@@ -262,16 +282,16 @@ Future<(int, Deduction)?> showWageDialog(BuildContext context,
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(title, style: AppText.style(18, FontWeight.w700)),
+              Text(title, style: AppText.style(18, FontWeight.w500)),
               const SizedBox(height: 16),
               LabeledField('시급 (원)',
                   child: AppTextField(controller: ctrl, keyboardType: TextInputType.number)),
               if (error != null) ...[
-                const SizedBox(height: 6),
+                const SizedBox(height: 8),
                 Text(error!, style: AppText.style(12, FontWeight.w500, AppColors.danger)),
               ],
-              const SizedBox(height: 14),
-              Text('공제 유형', style: AppText.style(14, FontWeight.w700, AppColors.textSecondary)),
+              const SizedBox(height: 16),
+              Text('공제 유형', style: AppText.style(14, FontWeight.w500, AppColors.textSecondary)),
               const SizedBox(height: 8),
               Container(
                 decoration: BoxDecoration(
@@ -289,13 +309,13 @@ Future<(int, Deduction)?> showWageDialog(BuildContext context,
                 Expanded(
                   child: AppButton('취소',
                       variant: AppButtonVariant.outline,
-                      verticalPadding: 13,
+                      verticalPadding: 12,
                       fontSize: 15,
                       onPressed: () => Navigator.pop(context)),
                 ),
-                const SizedBox(width: 10),
+                const SizedBox(width: 12),
                 Expanded(
-                  child: AppButton('승인', verticalPadding: 13, fontSize: 15, onPressed: () {
+                  child: AppButton('승인', verticalPadding: 12, fontSize: 15, onPressed: () {
                     final w = int.tryParse(ctrl.text.replaceAll(RegExp(r'[^0-9]'), ''));
                     if (w == null || w < minimumWage2026) {
                       setState(() => error = '2026 최저임금 ${wonText(minimumWage2026)} 이상이어야 해요');
@@ -327,8 +347,8 @@ Future<Staff?> pickStaff(BuildContext context, List<Staff> candidates, {required
             shrinkWrap: true,
             padding: const EdgeInsets.fromLTRB(20, 20, 20, 16),
             children: [
-              Text(title, style: AppText.style(18, FontWeight.w700)),
-              const SizedBox(height: 14),
+              Text(title, style: AppText.style(18, FontWeight.w500)),
+              const SizedBox(height: 16),
               if (candidates.isEmpty) const EmptyNote('배정할 수 있는 직원이 없어요'),
               for (final s in candidates) ...[
                 PersonRow(
@@ -337,7 +357,7 @@ Future<Staff?> pickStaff(BuildContext context, List<Staff> candidates, {required
                   subtitle: '${s.part} · 시급 ${wonText(s.wage)}',
                   onTap: () => Navigator.pop(context, s),
                 ),
-                const SizedBox(height: 10),
+                const SizedBox(height: 12),
               ],
             ],
           ),

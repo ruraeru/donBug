@@ -43,17 +43,16 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
         IconButton(
           tooltip: '이전 날',
           onPressed: () => setState(() => _day = day.subtract(const Duration(days: 1))),
-          icon: Text('‹', style: AppText.style(22)),
+          icon: const Icon(Icons.chevron_left_rounded, size: 28),
         ),
-        Text(md(day), style: AppText.style(14, FontWeight.w700, AppColors.primary)),
+        Text(md(day), style: AppText.style(14, FontWeight.w500, AppColors.primary)),
         IconButton(
           tooltip: '다음 날',
           onPressed: day == store.today
               ? null
               : () => setState(() => _day = day.add(const Duration(days: 1))),
-          icon: Text('›',
-              style: AppText.style(22, FontWeight.w400,
-                  day == store.today ? AppColors.border : AppColors.textPrimary)),
+          icon: Icon(Icons.chevron_right_rounded,
+              size: 28, color: day == store.today ? AppColors.border : AppColors.textPrimary),
         ),
       ]),
       body: ListView(
@@ -69,7 +68,7 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
           ),
           if (shifts.isEmpty) const EmptyNote('이날 근무가 없어요'),
           for (final s in shifts) ...[
-            const SizedBox(height: 10),
+            const SizedBox(height: 12),
             Builder(builder: (context) {
               final st = store.attendanceStatus(s);
               final (label, fg, bg) = attStyle(st);
@@ -88,7 +87,10 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
                 avatar: MemberAvatar(store.staffById(s.staffId)!),
                 title: store.nameOf(s.staffId),
                 subtitle: sub,
-                trailing: Pill(label, color: fg, background: bg),
+                trailing: st == AttStatus.normal || st == AttStatus.working
+                    ? Text(label,
+                        style: AppText.style(13, FontWeight.w400, AppColors.textSecondary))
+                    : Pill(label, color: fg, background: bg),
                 onTap: () => Navigator.push(context,
                     MaterialPageRoute(builder: (_) => AttendanceDetailScreen(shiftId: s.id))),
               );
@@ -100,15 +102,17 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
   }
 
   Widget _summary(String label, int n, AttStatus style) {
-    final (_, fg, bg) = attStyle(style);
+    final alert = n > 0 && (style == AttStatus.late || style == AttStatus.absent);
     return Container(
-      padding: const EdgeInsets.symmetric(vertical: 14),
-      decoration: BoxDecoration(color: bg, borderRadius: BorderRadius.circular(16)),
+      padding: const EdgeInsets.symmetric(vertical: 16),
+      decoration: BoxDecoration(color: AppColors.surface, borderRadius: BorderRadius.circular(16)),
       child: Column(
         children: [
-          Text(label, style: AppText.style(12, FontWeight.w400, fg)),
-          const SizedBox(height: 2),
-          Text('$n', style: AppText.style(22, FontWeight.w700, fg)),
+          Text(label, style: AppText.style(12, FontWeight.w400, AppColors.textSecondary)),
+          const SizedBox(height: 4),
+          Text('$n',
+              style: AppText.style(22, FontWeight.w500,
+                  alert ? AppColors.danger : AppColors.textPrimary)),
         ],
       ),
     );

@@ -81,7 +81,7 @@ class Pill extends StatelessWidget {
           color: background,
           borderRadius: BorderRadius.circular(999),
         ),
-        child: Text(label, style: AppText.style(12, FontWeight.w700, color)),
+        child: Text(label, style: AppText.style(12, FontWeight.w500, color)),
       );
 }
 
@@ -137,7 +137,7 @@ class AppButton extends StatelessWidget {
                 AppIcon(icon!, size: 20, color: fg),
                 const SizedBox(width: 8),
               ],
-              Text(label, style: AppText.style(fontSize, FontWeight.w700, fg)),
+              Text(label, style: AppText.style(fontSize, FontWeight.w500, fg)),
             ],
           ),
         ),
@@ -182,7 +182,7 @@ class AppHeader extends StatelessWidget implements PreferredSizeWidget {
                   Expanded(
                     child: Text(title,
                         overflow: TextOverflow.ellipsis,
-                        style: AppText.style(18, FontWeight.w700)),
+                        style: AppText.style(18, FontWeight.w500)),
                   ),
                   ...actions,
                 ],
@@ -223,7 +223,7 @@ class LetterAvatar extends StatelessWidget {
         ),
         child: Text(letter,
             style: AppText.style(
-                (size * 0.375).roundToDouble(), FontWeight.w700, color)),
+                (size * 0.375).roundToDouble(), FontWeight.w500, color)),
       );
 }
 
@@ -261,7 +261,7 @@ class PersonRow extends StatelessWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(title, style: AppText.style(15, FontWeight.w700)),
+                      Text(title, style: AppText.style(15, FontWeight.w500)),
                       if (subtitle != null) ...[
                         const SizedBox(height: 1),
                         Text(subtitle!,
@@ -288,7 +288,7 @@ class KeyValueRow extends StatelessWidget {
     this.label,
     this.value, {
     super.key,
-    this.valueWeight = FontWeight.w700,
+    this.valueWeight = FontWeight.w500,
     this.valueColor = AppColors.textPrimary,
     this.valueSize = 14,
     this.labelStyle,
@@ -302,20 +302,24 @@ class KeyValueRow extends StatelessWidget {
   final TextStyle? labelStyle;
 
   @override
-  Widget build(BuildContext context) => Row(
-        children: [
-          Expanded(
-            child: Text(label,
-                style: labelStyle ??
-                    AppText.style(14, FontWeight.w400, AppColors.textSecondary)),
-          ),
-          const SizedBox(width: 12),
-          Flexible(
-            child: Text(value,
-                textAlign: TextAlign.right,
-                style: AppText.style(valueSize, valueWeight, valueColor)),
-          ),
-        ],
+  Widget build(BuildContext context) => LayoutBuilder(
+        builder: (context, c) => Row(
+          children: [
+            Expanded(
+              child: Text(label,
+                  style: labelStyle ??
+                      AppText.style(14, FontWeight.w400, AppColors.textSecondary)),
+            ),
+            const SizedBox(width: 12),
+            // 값은 제 폭대로(최대 60%), 남는 폭은 라벨이 쓴다. 금액 옆 라벨이 반 폭에서 줄바꿈되지 않게.
+            ConstrainedBox(
+              constraints: BoxConstraints(maxWidth: c.maxWidth * 0.6),
+              child: Text(value,
+                  textAlign: TextAlign.right,
+                  style: AppText.style(valueSize, valueWeight, valueColor)),
+            ),
+          ],
+        ),
       );
 }
 
@@ -395,12 +399,12 @@ class SuccessHero extends StatelessWidget {
               decoration: const BoxDecoration(
                   color: AppColors.primarySoft, shape: BoxShape.circle),
               child:
-                  const Icon(Icons.check, size: 52, color: AppColors.primary),
+                  const Icon(Icons.check_rounded, size: 52, color: AppColors.primary),
             ),
             const SizedBox(height: 12),
             Text(title,
                 textAlign: TextAlign.center,
-                style: AppText.style(22, FontWeight.w700)),
+                style: AppText.style(22, FontWeight.w500)),
             const SizedBox(height: 12),
             Text(subtitle,
                 textAlign: TextAlign.center,
@@ -453,7 +457,7 @@ class StepRow extends StatelessWidget {
                   title,
                   style: AppText.style(
                     15,
-                    FontWeight.w700,
+                    FontWeight.w500,
                     status == StepStatus.pending
                         ? AppColors.textTertiary
                         : AppColors.textPrimary,
@@ -482,7 +486,7 @@ class LabeledField extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(label,
-              style: AppText.style(14, FontWeight.w700, AppColors.textSecondary)),
+              style: AppText.style(14, FontWeight.w500, AppColors.textSecondary)),
           const SizedBox(height: 8),
           child,
         ],
@@ -626,7 +630,7 @@ class CountBadge extends StatelessWidget {
                   borderRadius: BorderRadius.circular(9),
                 ),
                 child: Text(count > 99 ? '99+' : '$count',
-                    style: AppText.style(10, FontWeight.w700, AppColors.onPrimary)
+                    style: AppText.style(10, FontWeight.w500, AppColors.onPrimary)
                         .copyWith(height: 1.2)),
               ),
             ),
@@ -659,7 +663,7 @@ Future<bool> showConfirmDialog(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(title, style: AppText.style(18, FontWeight.w700)),
+              Text(title, style: AppText.style(18, FontWeight.w500)),
               const SizedBox(height: 8),
               Text(message,
                   style: AppText.style(
@@ -772,7 +776,7 @@ class ToggleCard extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(title,
-                      style: AppText.style(15, FontWeight.w700,
+                      style: AppText.style(15, FontWeight.w500,
                           onChanged == null ? AppColors.textTertiary : AppColors.textPrimary)),
                   const SizedBox(height: 2),
                   Text(subtitle,
@@ -836,7 +840,7 @@ class PayBreakdown extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           if (title != null) ...[
-            Text(title!, style: AppText.style(15, FontWeight.w700)),
+            Text(title!, style: AppText.style(15, FontWeight.w500)),
             const SizedBox(height: 14),
           ],
           KeyValueRow('기본급 (${hours(slip.minutes)} × ${wonText(staff.wage)})', won(slip.base),
@@ -858,7 +862,7 @@ class PayBreakdown extends StatelessWidget {
           divider,
           const SizedBox(height: 14),
           KeyValueRow('실수령액', won(slip.net),
-              labelStyle: AppText.style(16, FontWeight.w700),
+              labelStyle: AppText.style(16, FontWeight.w500),
               valueSize: 18,
               valueColor: AppColors.primary),
         ],
@@ -867,16 +871,17 @@ class PayBreakdown extends StatelessWidget {
   }
 }
 
-/// 보건증 상태 칩.
-Pill certPill(int? daysLeft) {
+/// 보건증 상태. 30일 넘게 남으면 조용한 글자, 임박 · 만료 · 미등록만 칩.
+Widget certPill(int? daysLeft) {
   if (daysLeft == null) {
     return const Pill('미등록', color: AppColors.danger, background: AppColors.dangerSoft);
   }
   if (daysLeft < 0) {
     return const Pill('만료됨', color: AppColors.danger, background: AppColors.dangerSoft);
   }
-  final label = daysLeft == 0 ? '만료 D-Day' : '만료 D-$daysLeft';
-  return daysLeft <= 30
-      ? Pill(label, color: AppColors.danger, background: AppColors.dangerSoft)
-      : Pill(label);
+  if (daysLeft > 30) {
+    return Text('D-$daysLeft', style: AppText.style(13, FontWeight.w400, AppColors.textSecondary));
+  }
+  return Pill(daysLeft == 0 ? '만료 D-Day' : '만료 D-$daysLeft',
+      color: AppColors.danger, background: AppColors.dangerSoft);
 }

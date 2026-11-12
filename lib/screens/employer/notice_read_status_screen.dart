@@ -22,7 +22,7 @@ class NoticeReadStatusScreen extends StatelessWidget {
       ..sort((a, b) => n.readBy[a.id]!.compareTo(n.readBy[b.id]!));
     final unread = store.unreadStaffOf(n);
     final ratio = staff.isEmpty ? 0.0 : read.length / staff.length;
-    final section = AppText.style(14, FontWeight.w700, AppColors.textSecondary);
+    final section = AppText.style(14, FontWeight.w500, AppColors.textSecondary);
     const unreadPill = Pill('미확인', color: AppColors.danger, background: AppColors.dangerSoft);
 
     return Scaffold(
@@ -30,7 +30,7 @@ class NoticeReadStatusScreen extends StatelessWidget {
       body: ListView(
         padding: const EdgeInsets.fromLTRB(20, 8, 20, 16),
         children: [
-          Text(n.title, style: AppText.style(17, FontWeight.w700)),
+          Text(n.title, style: AppText.style(17, FontWeight.w500)),
           const SizedBox(height: 12),
           AppCard(
             child: Column(
@@ -42,10 +42,10 @@ class NoticeReadStatusScreen extends StatelessWidget {
                           style: AppText.style(14, FontWeight.w400, AppColors.textSecondary)),
                     ),
                     Text('${read.length} / ${staff.length}명 (${(ratio * 100).round()}%)',
-                        style: AppText.style(14, FontWeight.w700, AppColors.primary)),
+                        style: AppText.style(14, FontWeight.w500)),
                   ],
                 ),
-                const SizedBox(height: 10),
+                const SizedBox(height: 12),
                 ClipRRect(
                   borderRadius: BorderRadius.circular(5),
                   child: LinearProgressIndicator(

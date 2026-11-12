@@ -51,11 +51,11 @@ class JoinPendingScreen extends StatelessWidget {
                   alignment: Alignment.center,
                   decoration:
                       const BoxDecoration(color: AppColors.accentSoft, shape: BoxShape.circle),
-                  child: Text('…', style: AppText.style(44, FontWeight.w700, AppColors.accent)),
+                  child: Text('…', style: AppText.style(44, FontWeight.w500, AppColors.accent)),
                 ),
                 const SizedBox(height: 12),
                 Text('사장님 승인을 기다리고 있어요',
-                    textAlign: TextAlign.center, style: AppText.style(22, FontWeight.w700)),
+                    textAlign: TextAlign.center, style: AppText.style(22, FontWeight.w500)),
                 const SizedBox(height: 12),
                 Text('승인되면 알림으로 알려드릴게요',
                     textAlign: TextAlign.center,
@@ -70,7 +70,7 @@ class JoinPendingScreen extends StatelessWidget {
               children: [
                 Row(
                   children: [
-                    Expanded(child: Text(st.name, style: AppText.style(17, FontWeight.w700))),
+                    Expanded(child: Text(st.name, style: AppText.style(17, FontWeight.w500))),
                     const Pill.accent('승인 대기'),
                   ],
                 ),
@@ -87,7 +87,7 @@ class JoinPendingScreen extends StatelessWidget {
           ),
           const SizedBox(height: 16),
           const NoteBox('데모: 사장님이 승인하면 새로고침으로 확인할 수 있어요. 아래 데모 버튼으로 바로 승인할 수도 있어요.',
-              color: AppColors.info, background: AppColors.infoSoft),
+              color: AppColors.textSecondary, background: AppColors.surface),
         ],
       ),
       bottomNavigationBar: BottomBar(

@@ -30,9 +30,7 @@ class StoreSwitchScreen extends StatelessWidget {
           final st = store.storeById(m.storeId)!;
           final selected = st.id == store.session.employeeStoreId;
           final pending = m.status == StaffStatus.pending;
-          final (fg, bg) = i.isEven
-              ? (AppColors.primary, AppColors.primarySoft)
-              : (AppColors.info, AppColors.infoSoft);
+          const fg = AppColors.textSecondary, bg = AppColors.bg;
           return Material(
             color: AppColors.surface,
             shape: RoundedRectangleBorder(
@@ -51,7 +49,7 @@ class StoreSwitchScreen extends StatelessWidget {
                       showToast(context, '${st.name}(으)로 전환했어요');
                     },
               child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
                 child: Row(
                   children: [
                     LetterAvatar(st.name.substring(0, 1), color: fg, background: bg),
@@ -60,7 +58,7 @@ class StoreSwitchScreen extends StatelessWidget {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text(st.name, style: AppText.style(16, FontWeight.w700)),
+                          Text(st.name, style: AppText.style(16, FontWeight.w500)),
                           Text(
                               pending
                                   ? '가입 승인 대기 중'
@@ -69,7 +67,7 @@ class StoreSwitchScreen extends StatelessWidget {
                         ],
                       ),
                     ),
-                    if (selected) ...[const SizedBox(width: 12), const Pill('현재')],
+                    if (selected) ...[const SizedBox(width: 12), Text('현재', style: AppText.style(13, FontWeight.w400, AppColors.textSecondary))],
                     if (pending) ...[const SizedBox(width: 12), const Pill.accent('승인 대기')],
                   ],
                 ),
