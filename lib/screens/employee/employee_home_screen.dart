@@ -18,8 +18,12 @@ import 'substitute_detail_screen.dart';
 class EmployeeHomeScreen extends StatelessWidget {
   const EmployeeHomeScreen({super.key});
 
-  Future<void> _checkIn(BuildContext context, Shift shift) => Navigator.push(
-      context, MaterialPageRoute(builder: (_) => QrCheckInScreen(shiftId: shift.id)));
+  Future<void> _checkIn(BuildContext context, Shift shift) async {
+    final block = AppScope.read(context).clockInBlock(shift);
+    if (block != null) return showToast(context, block);
+    await Navigator.push(
+        context, MaterialPageRoute(builder: (_) => QrCheckInScreen(shiftId: shift.id)));
+  }
 
   Future<void> _checkOut(BuildContext context) async {
     final ok = await showConfirmDialog(context,

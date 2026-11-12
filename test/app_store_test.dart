@@ -31,7 +31,8 @@ void main() {
       for (final h in [0, 9, 15, 23]) {
         final t = DateTime(2026, 12, 20 + d, h, 10);
         final s = AppStore(buildSeed(t), now: () => t);
-        expect(s.myTodayShift?.date, ymd(s.today), reason: '$t');
+        // 끝난 미출근 근무는 myTodayShift 에서 빠지므로, 오늘 근무가 있는지만 본다.
+        expect(s.myShifts.any((x) => x.date == ymd(s.today)), isTrue, reason: '$t');
         expect(s.laborTotal(t.year, t.month, projected: true), greaterThan(0), reason: '$t');
       }
     }
