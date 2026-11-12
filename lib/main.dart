@@ -20,6 +20,8 @@ Future<void> main() async {
     prefs.getString(_storageKey),
     onSave: (json) => prefs.setString(_storageKey, json),
   );
+  // 웹은 사장님 전용. 저장본이 알바생 역할이어도 사장님 매장으로 연다.
+  if (kIsWeb) store.session.role = Role.employer;
   runApp(MyApp(store: store));
 }
 
@@ -39,7 +41,7 @@ class MyApp extends StatelessWidget {
         ),
       );
 
-  // shortcut: 웹은 사장님 대시보드로 바로 진입(하드코딩 화면), 웹 연결 단계에서 교체.
+  // shortcut: 웹은 로그인 없이 사장님 대시보드로 바로 진입. 실제 로그인이 생기면 교체.
   Widget _home() {
     if (kIsWeb) return const WebShell();
     final s = store.session;

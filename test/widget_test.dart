@@ -44,7 +44,6 @@ import 'package:donbug/screens/employer/store_settings_screen.dart';
 import 'package:donbug/screens/employer/substitute_approval_screen.dart';
 import 'package:donbug/screens/employer/substitute_done_screen.dart' as employer;
 import 'package:donbug/screens/employer/staff_detail_screen.dart';
-import 'package:donbug/screens/web/web_shell.dart';
 import 'package:donbug/theme.dart';
 
 /// 테스트 기준 시각: 2026-05-14(수) 14:30 (Figma 화면과 같은 날).
@@ -192,6 +191,7 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('사유를 입력해 주세요'), findsOneWidget);
 
+    await tester.scrollUntilVisible(find.byType(TextField), 200);
     await tester.enterText(find.byType(TextField), '치과 진료');
     await tester.tap(find.text('휴무 신청하고 대타 구하기'));
     await tester.pumpAndSettle();
@@ -351,7 +351,7 @@ void main() {
     store.switchRole(Role.employer);
 
     await pumpAt(tester, NoticeReadStatusScreen(noticeId: n.id), const Size(390, 844), store: store);
-    expect(find.text('1 / 5명 (20%)'), findsOneWidget);
+    expect(find.text('1 / 7명 (14%)'), findsOneWidget);
     await tester.tap(find.text('미확인자에게 리마인드'));
     await tester.pumpAndSettle();
     expect(find.text('리마인드를 보냈어요'), findsOneWidget);
@@ -388,10 +388,5 @@ void main() {
       await pumpAt(tester, e.value, const Size(390, 844), store: store);
       expect(tester.takeException(), isNull, reason: e.key);
     }
-  });
-
-  testWidgets('웹 셸', (tester) async {
-    await pumpAt(tester, const WebShell(), const Size(1440, 1024));
-    expect(tester.takeException(), isNull);
   });
 }

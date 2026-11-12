@@ -21,6 +21,29 @@ enum StaffStatus { pending, active, left, rejected }
 
 enum SubStatus { open, accepted, approved, rejected, cancelled }
 
+/// 직원 유형. 매니저·정직원은 파트에 묶이지 않는 유동 근무(시간 직접 지정).
+enum StaffKind {
+  manager('매니저'),
+  fulltime('정직원'),
+  partTimer('알바'),
+  minor('연소자');
+
+  const StaffKind(this.label);
+  final String label;
+
+  bool get flex => this == manager || this == fulltime;
+}
+
+/// 근무표 칸 종류. 연차는 유급, 휴무는 무급.
+enum ShiftKind {
+  work('근무'),
+  leave('연차'),
+  off('휴무');
+
+  const ShiftKind(this.label);
+  final String label;
+}
+
 /// LetterAvatar 색 조합 인덱스.
 enum Tone { primary, accent, info, danger }
 
@@ -94,6 +117,7 @@ class Store {
     this.defaultDeduction = Deduction.biz33,
     required this.parts,
     Map<String, int>? monthlyTotals,
+    this.scheduleConfirmedAt,
   }) : monthlyTotals = monthlyTotals ?? {};
 
   final String id;
@@ -114,6 +138,9 @@ class Store {
   /// 'yyyy-MM' → 지난 달 인건비 합계(추이 차트용 상수).
   Map<String, int> monthlyTotals;
 
+  /// 근무표를 마지막으로 확정한 시각(ISO).
+  String? scheduleConfirmedAt;
+
   Map<String, dynamic> toJson() => {
         'id': id,
         'name': name,
@@ -126,6 +153,7 @@ class Store {
         'defaultDeduction': defaultDeduction.name,
         'parts': [for (final p in parts) p.toJson()],
         'monthlyTotals': monthlyTotals,
+        'scheduleConfirmedAt': scheduleConfirmedAt,
       };
 
   factory Store.fromJson(Map<String, dynamic> j) => Store(
@@ -140,6 +168,7 @@ class Store {
         defaultDeduction: _enum(Deduction.values, j['defaultDeduction'], Deduction.biz33),
         parts: [for (final p in j['parts']) PartTemplate.fromJson(p)],
         monthlyTotals: (j['monthlyTotals'] as Map).cast<String, int>(),
+        scheduleConfirmedAt: j['scheduleConfirmedAt'],
       );
 }
 
@@ -201,6 +230,7 @@ class Staff {
     this.weeklyHolidayAuto = true,
     this.premium = false,
     this.tone = Tone.primary,
+    this.kind = StaffKind.partTimer,
     required this.joinedAt,
     this.status = StaffStatus.active,
     this.requestedAt,
@@ -216,6 +246,7 @@ class Staff {
   bool weeklyHolidayAuto;
   bool premium;
   Tone tone;
+  StaffKind kind;
   String joinedAt;
   StaffStatus status;
   String? requestedAt;
@@ -233,6 +264,7 @@ class Staff {
         'weeklyHolidayAuto': weeklyHolidayAuto,
         'premium': premium,
         'tone': tone.name,
+        'kind': kind.name,
         'joinedAt': joinedAt,
         'status': status.name,
         'requestedAt': requestedAt,
@@ -249,6 +281,7 @@ class Staff {
         weeklyHolidayAuto: j['weeklyHolidayAuto'],
         premium: j['premium'],
         tone: _enum(Tone.values, j['tone'], Tone.primary),
+        kind: _enum(StaffKind.values, j['kind'], StaffKind.partTimer),
         joinedAt: j['joinedAt'],
         status: _enum(StaffStatus.values, j['status'], StaffStatus.active),
         requestedAt: j['requestedAt'],
@@ -268,6 +301,8 @@ class Shift {
     this.breakMin = 0,
     this.isSubstitute = false,
     this.originalStaffId,
+    this.kind = ShiftKind.work,
+    this.timeTbd = false,
   });
 
   final String id;
@@ -282,6 +317,14 @@ class Shift {
 
   /// 대타로 바뀐 경우 원래 근무자.
   String? originalStaffId;
+
+  ShiftKind kind;
+
+  /// 시간 미정(확정 전 본인 확인 필요). 시각은 추천값.
+  bool timeTbd;
+
+  /// 출근·근태·급여에 쓰는 실제 근무인지.
+  bool get isWork => kind == ShiftKind.work && !timeTbd;
 
   /// 야간이면 1440 을 더한 종료 분.
   int get endAbs => endMin <= startMin ? endMin + 1440 : endMin;
@@ -298,6 +341,8 @@ class Shift {
         'breakMin': breakMin,
         'isSubstitute': isSubstitute,
         'originalStaffId': originalStaffId,
+        'kind': kind.name,
+        'timeTbd': timeTbd,
       };
 
   factory Shift.fromJson(Map<String, dynamic> j) => Shift(
@@ -311,6 +356,8 @@ class Shift {
         breakMin: j['breakMin'],
         isSubstitute: j['isSubstitute'],
         originalStaffId: j['originalStaffId'],
+        kind: _enum(ShiftKind.values, j['kind'], ShiftKind.work),
+        timeTbd: j['timeTbd'] ?? false,
       );
 }
 
@@ -580,7 +627,7 @@ class AppState {
     this.nextId = 1,
   });
 
-  static const version = 1;
+  static const version = 2;
 
   Session session;
   List<Person> persons;

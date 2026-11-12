@@ -5,9 +5,10 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:donbug/data/app_store.dart';
 import 'package:donbug/data/format.dart';
 import 'package:donbug/data/models.dart';
+import 'package:donbug/data/payroll.dart';
 import 'package:donbug/data/seed.dart';
 
-/// 시계를 움직일 수 있는 store. 기준: 2026-05-14(수) 14:30.
+/// 시계를 움직일 수 있는 store. 기준: 2026-05-14(목) 14:30.
 ({AppStore store, void Function(DateTime) setNow}) makeStore() {
   var t = DateTime(2026, 5, 14, 14, 30);
   final store = AppStore(buildSeed(t), now: () => t);
@@ -114,12 +115,12 @@ void main() {
     s.switchRole(Role.employer);
     final n = s.publishNotice(title: '새 공지', body: '내용');
     expect(n.required, isTrue); // 매장 기본값
-    expect(s.unreadStaffOf(n).length, 5);
+    expect(s.unreadStaffOf(n).length, 7);
     s.switchRole(Role.employee);
     s.markNoticeRead(n.id);
     s.switchRole(Role.employer);
-    expect(s.unreadStaffOf(n).length, 4);
-    expect(s.remindUnread(n.id), 4);
+    expect(s.unreadStaffOf(n).length, 6);
+    expect(s.remindUnread(n.id), 6);
   });
 
   test('직원 승인 · 내보내기', () {
@@ -128,7 +129,7 @@ void main() {
     final d = s.pendingStaff.single;
     s.approveJoin(d.id, wage: 10500);
     expect(d.active, isTrue);
-    expect(s.activeStaff.length, 6);
+    expect(s.activeStaff.length, 8);
 
     final subin = s.activeStaff.firstWhere((x) => s.personOf(x).name == '수빈');
     s.removeStaff(subin.id);
@@ -145,5 +146,76 @@ void main() {
     s.resetDemo();
     expect(s.myStaff!.contract!.signed, isFalse);
     expect(s.session.loggedIn, isTrue);
+  });
+
+  group('근무표', () {
+    AppStore owner() => makeStore().store..switchRole(Role.employer);
+
+    test('시드: 이번 주 파트 인원 충족, 다음 주 일요일 마감만 비고, 미정 1건 · 연차 1건', () {
+      final s = owner();
+      final monday = mondayOf(s.today);
+      for (var i = 0; i < 14; i++) {
+        final d = monday.add(Duration(days: i));
+        for (final p in s.store.parts) {
+          final n = s.shiftsOn(d).where((x) => x.part == p.name).length;
+          final gap = i == 13 && p.name == '마감';
+          expect(n, gap ? p.need - 1 : greaterThanOrEqualTo(p.need), reason: '${ymd(d)} ${p.name}');
+        }
+      }
+      expect(s.tbdCount(2026, 5), 1);
+      expect(s.state.shifts.where((x) => x.kind == ShiftKind.leave), hasLength(1));
+      expect(s.flexStaff.single.kind, StaffKind.manager);
+    });
+
+    test('연차 · 휴무 · 미정은 근무 목록 · 출근 대상이 아니다', () {
+      final s = owner();
+      final leave = s.state.shifts.firstWhere((x) => x.kind == ShiftKind.leave);
+      expect(s.shiftsOn(parseYmd(leave.date)).contains(leave), isFalse);
+      expect(s.scheduleOn(parseYmd(leave.date)).contains(leave), isTrue);
+      expect(s.attendanceFor(leave.id), isNull);
+    });
+
+    test('연차는 유급, 휴무는 0원', () {
+      final s = owner();
+      final leave = s.state.shifts.firstWhere((x) => x.kind == ShiftKind.leave);
+      final d = parseYmd(leave.date);
+      final withLeave = s.payslip(leave.staffId, d.year, d.month, projected: true).base;
+      s.updateShift(leave.id, kind: ShiftKind.off);
+      final withOff = s.payslip(leave.staffId, d.year, d.month, projected: true).base;
+      expect(withLeave - withOff, payFor(leave.scheduledMinutes, s.staffById(leave.staffId)!.wage));
+    });
+
+    test('수정 · 이동 · 되돌리기 · 다시하기', () {
+      final s = owner();
+      final shift = s.shiftsOn(s.today.add(const Duration(days: 1))).first;
+      final date = shift.date;
+      s.updateShift(shift.id, date: s.today.add(const Duration(days: 2)), startMin: 660);
+      expect(s.shiftById(shift.id)!.startMin, 660);
+      expect(s.canUndo, isTrue);
+      s.undo();
+      expect(s.shiftById(shift.id)!.date, date);
+      expect(s.canRedo, isTrue);
+      s.redo();
+      expect(s.shiftById(shift.id)!.startMin, 660);
+    });
+
+    test('자동 채우기: 빈 칸을 겹치지 않는 사람으로 채운다', () {
+      final s = owner();
+      final nextMonday = mondayOf(s.today).add(const Duration(days: 7));
+      final sunday = nextMonday.add(const Duration(days: 6));
+      expect(s.autoFill(nextMonday), 1);
+      final added = s.shiftsOn(sunday).where((x) => x.part == '마감').single;
+      expect(s.overlappingShift(added.staffId, added), isNull);
+      expect(s.staffById(added.staffId)!.kind.flex, isFalse);
+      expect(s.autoFill(nextMonday), 0);
+    });
+
+    test('확정하기: 재직 직원에게 알림', () {
+      final s = owner();
+      final before = s.state.notifications.length;
+      s.confirmSchedule(2026, 5);
+      expect(s.store.scheduleConfirmedAt, isNotNull);
+      expect(s.state.notifications.length, before + s.activeStaff.length);
+    });
   });
 }

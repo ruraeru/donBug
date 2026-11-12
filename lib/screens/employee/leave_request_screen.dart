@@ -50,8 +50,13 @@ class _LeaveRequestScreenState extends State<LeaveRequestScreen> {
   @override
   Widget build(BuildContext context) {
     final store = AppScope.of(context);
+    // 앞으로 2주 안의 근무만(목록이 너무 길어지지 않게).
+    final until = store.today.add(const Duration(days: 15));
     final candidates = store.myUpcomingShifts
-        .where((s) => store.pendingSubFor(s.id) == null && store.shiftStart(s).isAfter(store.now))
+        .where((s) =>
+            store.pendingSubFor(s.id) == null &&
+            store.shiftStart(s).isAfter(store.now) &&
+            store.shiftStart(s).isBefore(until))
         .toList();
     final selected = _shiftId ?? candidates.firstOrNull?.id;
     final peers = store.activeStaff.length - 1;
