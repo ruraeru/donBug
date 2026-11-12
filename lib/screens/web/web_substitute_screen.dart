@@ -62,8 +62,8 @@ Widget _statusPill(SubStatus s) => switch (s) {
       SubStatus.approved => webCellText('승인'),
       SubStatus.rejected => webCellText('거절', color: AppColors.danger),
       SubStatus.cancelled => webCellText('취소', color: AppColors.textTertiary),
-      SubStatus.accepted => const Pill.accent('승인 대기'),
-      SubStatus.open => const Pill.accent('지원 대기'),
+      SubStatus.accepted => webCellText('승인 대기', color: AppColors.textSecondary),
+      SubStatus.open => webCellText('지원 대기', color: AppColors.textSecondary),
     };
 
 class _RequestCard extends StatelessWidget {

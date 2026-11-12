@@ -44,4 +44,8 @@ final appTheme = ThemeData(
   scaffoldBackgroundColor: AppColors.bg,
   fontFamily: 'Noto Sans KR',
   dividerColor: AppColors.border,
+  // 키보드 포커스 · 마우스 hover 가 보이도록 초록 계열로 지정 (기본은 12% · 4% 검정).
+  focusColor: AppColors.primary.withValues(alpha: 0.16),
+  hoverColor: AppColors.primarySoft,
+  highlightColor: AppColors.primary.withValues(alpha: 0.08),
 );

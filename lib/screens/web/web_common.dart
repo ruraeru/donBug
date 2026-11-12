@@ -141,7 +141,8 @@ class WebButton extends StatelessWidget {
         ),
       ),
     );
-    return tooltip == null ? button : Tooltip(message: tooltip!, child: button);
+    final ringed = FocusRing(radius: radius, child: button);
+    return tooltip == null ? ringed : Tooltip(message: tooltip!, child: ringed);
   }
 }
 
@@ -316,7 +317,8 @@ class WebTable extends StatelessWidget {
             if (i > 0) const Divider(height: 1, thickness: 1, color: AppColors.border),
             onRowTap == null
                 ? _row(rows[i], rowHeight)
-                : InkWell(onTap: () => onRowTap!(i), child: _row(rows[i], rowHeight)),
+                : FocusRing(
+                    radius: 0, child: InkWell(onTap: () => onRowTap!(i), child: _row(rows[i], rowHeight))),
           ],
         ]);
         if (c.maxWidth >= minWidth) return table;

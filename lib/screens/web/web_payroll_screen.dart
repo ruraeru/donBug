@@ -62,7 +62,7 @@ class _WebPayrollScreenState extends State<WebPayrollScreen> {
         WebRow(children: [
           _Stat(current ? '이번 달 예상 인건비' : '${month.month}월 인건비', wonText(total)),
           _Stat('지급 대상', '${rows.length}명'),
-          _Stat('전월 대비', '${diff > 0 ? '+' : ''}$diff%',
+          _Stat('지난달 대비', '${diff > 0 ? '+' : ''}$diff%',
               valueColor: diff > 0 ? AppColors.danger : AppColors.primary),
         ]),
         WebSplit(
@@ -92,7 +92,7 @@ class _WebPayrollScreenState extends State<WebPayrollScreen> {
                           webCellText(comma(p.base)),
                           webCellText(comma(p.weeklyHoliday)),
                           webCellText(comma(p.premium)),
-                          webCellText(p.deduction == 0 ? '0' : '−${comma(p.deduction)}'),
+                          webCellText(p.deduction == 0 ? '0' : '-${comma(p.deduction)}'),
                           webCellText(comma(p.net),
                               color: AppColors.textPrimary, weight: FontWeight.w500),
                         ]),
@@ -194,11 +194,15 @@ Future<void> _showDetail(BuildContext context, Staff s, Payslip slip, DateTime m
     builder: (ctx, _) => Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
       PayBreakdown(slip: slip, staff: s),
       const SizedBox(height: 16),
-      Text('근무 기록 ${slip.entries.length}건', style: AppText.style(14, FontWeight.w500)),
+      // 위 금액 카드 안쪽 글자와 같은 x 로 맞춘다.
+      Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 20),
+        child: Text('근무 기록 ${slip.entries.length}건', style: AppText.style(14, FontWeight.w500)),
+      ),
       const SizedBox(height: 8),
       for (final e in slip.entries)
         Padding(
-          padding: const EdgeInsets.symmetric(vertical: 6),
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 6),
           child: Row(children: [
             Expanded(child: Text(md(e.day), style: AppText.style(13, FontWeight.w500))),
             Text('${clock(e.start)}–${clock(e.end)}${e.planned ? ' (예정)' : ''}',

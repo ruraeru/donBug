@@ -254,6 +254,17 @@ class PartLabel extends StatelessWidget {
       AttStatus.absent => ('미출근', AppColors.danger, AppColors.dangerSoft),
     };
 
+/// 웹 출근 상태 표시: 정상(출근·근무 중·대기)은 회색 글자, 손볼 것(지각·미출근)만 빨간 칩.
+Widget attStatusTag(AppStore store, Shift shift, {String? label}) {
+  final st = store.attendanceStatus(shift);
+  final late = store.lateMinutes(shift) > 0;
+  final alert = st == AttStatus.absent || st == AttStatus.late || (st == AttStatus.working && late);
+  final text = label ?? (alert && st == AttStatus.working ? '근무 중 · 지각' : attStyle(st).$1);
+  return alert
+      ? Pill(text, color: AppColors.danger, background: AppColors.dangerSoft)
+      : Text(text, style: AppText.style(12, FontWeight.w500, AppColors.textSecondary));
+}
+
 /// 시각 선택. 하루 기준 분을 돌려준다.
 Future<int?> pickTime(BuildContext context, int minutes) async {
   final t = await showTimePicker(
@@ -266,7 +277,7 @@ Future<int?> pickTime(BuildContext context, int minutes) async {
 /// 시급 · 공제 입력 다이얼로그 (가입 승인용). 최저임금 미만은 막는다.
 Future<(int, Deduction)?> showWageDialog(BuildContext context,
     {required String title, required int wage, required Deduction deduction}) {
-  final ctrl = TextEditingController(text: '$wage');
+  final ctrl = TextEditingController(text: wonInput(wage));
   var d = deduction;
   String? error;
   return showDialog<(int, Deduction)>(
@@ -285,7 +296,7 @@ Future<(int, Deduction)?> showWageDialog(BuildContext context,
               Text(title, style: AppText.style(18, FontWeight.w500)),
               const SizedBox(height: 16),
               LabeledField('시급 (원)',
-                  child: AppTextField(controller: ctrl, keyboardType: TextInputType.number)),
+                  child: AppTextField(controller: ctrl, won: true)),
               if (error != null) ...[
                 const SizedBox(height: 8),
                 Text(error!, style: AppText.style(12, FontWeight.w500, AppColors.danger)),
@@ -316,7 +327,7 @@ Future<(int, Deduction)?> showWageDialog(BuildContext context,
                 const SizedBox(width: 12),
                 Expanded(
                   child: AppButton('승인', verticalPadding: 12, fontSize: 15, onPressed: () {
-                    final w = int.tryParse(ctrl.text.replaceAll(RegExp(r'[^0-9]'), ''));
+                    final w = wonDigits(ctrl.text);
                     if (w == null || w < minimumWage2026) {
                       setState(() => error = '2026 최저임금 ${wonText(minimumWage2026)} 이상이어야 해요');
                       return;

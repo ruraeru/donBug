@@ -67,22 +67,19 @@ class _WebPosQrScreenState extends State<WebPosQrScreen> {
     });
   }
 
-  /// 오늘 출근 현황 한 줄: (상태 문구, 글자색, 배경).
-  (String, Color, Color) _status(AppStore store, Shift s) {
+  /// 오늘 출근 현황 한 줄 문구.
+  String _status(AppStore store, Shift s) {
     final a = store.attendanceFor(s.id);
     final st = store.attendanceStatus(s);
-    final (label, fg, bg) = attStyle(st);
     if (a == null) {
-      return (st == AttStatus.waiting ? '${hm(s.startMin)} 출근 예정' : label, fg, bg);
+      return st == AttStatus.waiting ? '${hm(s.startMin)} 출근 예정' : attStyle(st).$1;
     }
     final inText = '${clock(DateTime.parse(a.clockIn))} 출근';
     if (a.clockOut != null) {
-      return ('$inText · ${clock(DateTime.parse(a.clockOut!))} 퇴근', fg, bg);
+      final late = store.lateMinutes(s) > 0 ? ' · 지각' : '';
+      return '$inText · ${clock(DateTime.parse(a.clockOut!))} 퇴근$late';
     }
-    if (st == AttStatus.working && store.lateMinutes(s) > 0) {
-      return ('$inText · 지각', AppColors.danger, AppColors.dangerSoft);
-    }
-    return (inText, fg, bg);
+    return store.lateMinutes(s) > 0 ? '$inText · 지각' : inText;
   }
 
   @override
@@ -196,10 +193,7 @@ class _WebPosQrScreenState extends State<WebPosQrScreen> {
                                     Expanded(
                                         child: Text(store.nameOf(s.staffId),
                                             style: AppText.style(14, FontWeight.w500))),
-                                    Builder(builder: (_) {
-                                      final (label, fg, bg) = _status(store, s);
-                                      return Pill(label, color: fg, background: bg);
-                                    }),
+                                    attStatusTag(store, s, label: _status(store, s)),
                                   ]),
                                 ),
                               ],

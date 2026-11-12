@@ -165,6 +165,8 @@ class _WeekCard extends StatelessWidget {
     final store = AppScope.of(context);
     final days = [for (var i = 0; i < 7; i++) monday.add(Duration(days: i))];
     final sunday = days.last;
+    final weekEmpty =
+        store.activeStaff.isNotEmpty && days.every((d) => store.scheduleOn(d).isEmpty);
     Widget arrow(String g, int d) => InkWell(
           onTap: () => onWeek(d),
           borderRadius: BorderRadius.circular(8),
@@ -204,7 +206,8 @@ class _WeekCard extends StatelessWidget {
             ]),
           ),
           if (store.activeStaff.isEmpty) const EmptyNote('재직 중인 직원이 없어요'),
-          for (final s in store.activeStaff) ...[
+          if (weekEmpty) const EmptyNote('이번 주 근무표가 비어 있어요'),
+          for (final s in weekEmpty ? const <Staff>[] : store.activeStaff) ...[
             const SizedBox(height: 12),
             ConstrainedBox(
               constraints: const BoxConstraints(minHeight: 48),
@@ -550,16 +553,13 @@ Future<void> showTodayAttendance(BuildContext context) {
                 const SizedBox(width: 10),
                 Expanded(
                   child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                    Text('${s.nameOf(shift.staffId)} · ${shift.part}',
+                    Text('${s.nameOf(shift.staffId)} · ${shift.part == '직원' ? '유동 근무' : shift.part}',
                         style: AppText.style(14, FontWeight.w500)),
                     Text(_attText(s, shift),
                         style: AppText.style(12, FontWeight.w400, AppColors.textSecondary)),
                   ]),
                 ),
-                Builder(builder: (_) {
-                  final (label, fg, bg) = attStyle(s.attendanceStatus(shift));
-                  return Pill(label, color: fg, background: bg);
-                }),
+                attStatusTag(s, shift),
                 const SizedBox(width: 8),
                 WebButton('수정',
                     height: 32,
