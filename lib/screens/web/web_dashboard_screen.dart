@@ -244,12 +244,12 @@ class _WeekCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(10),
         child: LayoutBuilder(builder: (context, c) {
           // 칸이 좁으면 줄을 바꿔 글자 크기를 지킨다.
-          final narrow = c.maxWidth < 96;
+          final narrow = c.maxWidth < 76;
           final range = _shortRange(shift);
           final label = narrow
               ? '${range.replaceFirst('–', '–\n')}${sub ? '\n대타' : ''}'
               : '$range${sub ? ' 대타' : ''}';
-          final pad = narrow ? const EdgeInsets.symmetric(horizontal: 4, vertical: 4) : null;
+          final pad = c.maxWidth < 96 ? const EdgeInsets.symmetric(horizontal: 4, vertical: 4) : null;
           return sub
               ? WebTag(label,
                   maxLines: 3,

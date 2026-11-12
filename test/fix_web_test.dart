@@ -21,6 +21,7 @@ Future<AppStore> _pump(WidgetTester tester, Size size, Widget home) async {
 }
 
 void main() {
+  _chipTest();
   testWidgets('파트 칸 빈 칸: 그 파트 알바가 기본 구성원, 파트 유지', (tester) async {
     late BuildContext ctx;
     final store = await _pump(tester, const Size(1440, 900),
@@ -66,5 +67,12 @@ void main() {
   testWidgets('아이콘 레일에도 데모 초기화 진입이 있다', (tester) async {
     await _pump(tester, const Size(1024, 768), const WebShell());
     expect(find.byTooltip('데모 데이터 초기화'), findsOneWidget);
+  });
+}
+
+void _chipTest() {
+  testWidgets('대시보드 근무 칩은 1440 에서 한 줄로 나온다', (tester) async {
+    await _pump(tester, const Size(1440, 900), const WebShell());
+    expect(find.textContaining(RegExp(r'^\d+(:\d+)?–\d+(:\d+)?$')), findsWidgets);
   });
 }
