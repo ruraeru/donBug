@@ -51,6 +51,9 @@ class _WebShellState extends State<WebShell> {
   ];
 
   final _scaffold = GlobalKey<ScaffoldState>();
+
+  /// 800 경계에서 부모 위치가 바뀌어도 화면 상태가 남도록 내용에 같은 key 를 준다.
+  final _contentKey = GlobalKey();
   int _page = 0;
 
   void _select(int i) {
@@ -58,7 +61,9 @@ class _WebShellState extends State<WebShell> {
     setState(() => _page = i);
   }
 
-  Widget _content() => switch (_page) {
+  Widget _content() => KeyedSubtree(key: _contentKey, child: _pageBody());
+
+  Widget _pageBody() => switch (_page) {
         0 => const WebDashboardScreen(),
         1 => const WebScheduleScreen(),
         2 => const WebStaffScreen(),
@@ -117,11 +122,18 @@ class _WebShellState extends State<WebShell> {
               ),
               const SizedBox(height: 6),
               rail
-                  ? IconButton(
-                      tooltip: '매장 POS 모드 열기',
-                      onPressed: _openPos,
-                      icon: const AppIcon('scan', color: AppColors.textPrimary),
-                    )
+                  ? Column(children: [
+                      IconButton(
+                        tooltip: '매장 POS 모드 열기',
+                        onPressed: _openPos,
+                        icon: const AppIcon('scan', color: AppColors.textPrimary),
+                      ),
+                      IconButton(
+                        tooltip: '데모 데이터 초기화',
+                        onPressed: () => _resetDemo(context),
+                        icon: const Icon(Icons.restart_alt, size: 22, color: AppColors.textTertiary),
+                      ),
+                    ])
                   : WebButton('매장 POS 모드 열기',
                       style: WebButtonStyle.dark, height: 46, expand: true, onPressed: _openPos),
               if (!rail)

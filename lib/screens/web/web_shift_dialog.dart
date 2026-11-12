@@ -41,8 +41,13 @@ Future<void> showShiftDialog(BuildContext context,
   final store = AppScope.read(context);
   final staffList = [...store.flexStaff, ...store.partStaff];
   final parts = store.store.parts;
+  // 파트 칸 빈 칸: 그 파트 알바 중 그날 근무 없는 사람이 기본 구성원.
+  final busy = store.scheduleOn(date).map((x) => x.staffId).toSet();
+  final partPeople = store.partStaff.where((s) => s.part == part).toList();
   var who = store.staffById(shift?.staffId ?? staffId) ??
       (part == flexPart ? store.flexStaff.firstOrNull : null) ??
+      partPeople.where((s) => !busy.contains(s.id)).firstOrNull ??
+      partPeople.firstOrNull ??
       staffList.first;
   PartTemplate? partOf(String name) => parts.where((p) => p.name == name).firstOrNull;
   var pt = partOf(shift?.part ?? part ?? who.part) ?? parts.first;

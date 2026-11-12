@@ -206,8 +206,8 @@ class _WeekCard extends StatelessWidget {
           if (store.activeStaff.isEmpty) const EmptyNote('재직 중인 직원이 없어요'),
           for (final s in store.activeStaff) ...[
             const SizedBox(height: 12),
-            SizedBox(
-              height: 48,
+            ConstrainedBox(
+              constraints: const BoxConstraints(minHeight: 48),
               child: Row(children: [
                 SizedBox(
                     width: 84,
@@ -235,19 +235,34 @@ class _WeekCard extends StatelessWidget {
         .firstOrNull;
     if (shift == null) return const SizedBox();
     final sub = store.pendingSubFor(shift.id) != null;
-    final label = '${_shortRange(shift)}${sub ? ' 대타' : ''}';
     return Center(
       child: InkWell(
         onTap: () => showShiftDialog(context, shift: shift, date: day),
         borderRadius: BorderRadius.circular(10),
-        child: FittedBox(
-          fit: BoxFit.scaleDown,
-          child: sub
-              ? WebTag(label, color: AppColors.accent, background: AppColors.accentSoft)
+        child: LayoutBuilder(builder: (context, c) {
+          // 칸이 좁으면 줄을 바꿔 글자 크기를 지킨다.
+          final narrow = c.maxWidth < 96;
+          final range = _shortRange(shift);
+          final label = narrow
+              ? '${range.replaceFirst('–', '–\n')}${sub ? '\n대타' : ''}'
+              : '$range${sub ? ' 대타' : ''}';
+          final pad = narrow ? const EdgeInsets.symmetric(horizontal: 4, vertical: 4) : null;
+          return sub
+              ? WebTag(label,
+                  maxLines: 3,
+                  padding: pad ?? const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                  color: AppColors.accent,
+                  background: AppColors.accentSoft)
               : day == store.today
-                  ? WebTag(label, color: AppColors.onPrimary, background: AppColors.primary)
-                  : WebTag(label),
-        ),
+                  ? WebTag(label,
+                      maxLines: 3,
+                      padding: pad ?? const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                      color: AppColors.onPrimary,
+                      background: AppColors.primary)
+                  : WebTag(label,
+                      maxLines: 3,
+                      padding: pad ?? const EdgeInsets.symmetric(horizontal: 10, vertical: 6));
+        }),
       ),
     );
   }

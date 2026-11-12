@@ -75,25 +75,30 @@ class _WebPayrollScreenState extends State<WebPayrollScreen> {
               children: [
                 Text('직원별 정산', style: AppText.style(16, FontWeight.w500)),
                 const SizedBox(height: 14),
-                WebTable(
-                  columns: const ['직원', '근무시간', '기본급', '주휴', '가산', '공제', '실수령'],
-                  flex: const [130, 100, 120, 100, 100, 100, 120],
-                  numeric: const {1, 2, 3, 4, 5, 6},
-                  onRowTap: (i) => _showDetail(context, rows[i].$1, rows[i].$2, month),
-                  rows: [
-                    for (final (s, p) in rows)
-                      [
-                        webStaffCell(store, s),
-                        webCellText(hours(p.minutes)),
-                        webCellText(comma(p.base)),
-                        webCellText(comma(p.weeklyHoliday)),
-                        webCellText(comma(p.premium)),
-                        webCellText(p.deduction == 0 ? '0' : '−${comma(p.deduction)}'),
-                        webCellText(comma(p.net),
-                            color: AppColors.textPrimary, weight: FontWeight.w500),
-                      ],
-                  ],
-                ),
+                LayoutBuilder(builder: (context, c) {
+                  // 좁아서 가로 스크롤이 생기면 실수령 열을 이름 바로 뒤로 당긴다.
+                  final narrow = c.maxWidth < 640;
+                  List<T> order<T>(List<T> l) => narrow ? [l[0], l[6], ...l.sublist(1, 6)] : l;
+                  return WebTable(
+                    columns: order(const ['직원', '근무시간', '기본급', '주휴', '가산', '공제', '실수령']),
+                    flex: order(const [130, 100, 120, 100, 100, 100, 120]),
+                    numeric: const {1, 2, 3, 4, 5, 6},
+                    onRowTap: (i) => _showDetail(context, rows[i].$1, rows[i].$2, month),
+                    rows: [
+                      for (final (s, p) in rows)
+                        order([
+                          webStaffCell(store, s),
+                          webCellText(hours(p.minutes)),
+                          webCellText(comma(p.base)),
+                          webCellText(comma(p.weeklyHoliday)),
+                          webCellText(comma(p.premium)),
+                          webCellText(p.deduction == 0 ? '0' : '−${comma(p.deduction)}'),
+                          webCellText(comma(p.net),
+                              color: AppColors.textPrimary, weight: FontWeight.w500),
+                        ]),
+                    ],
+                  );
+                }),
                 if (rows.isEmpty) const EmptyNote('정산할 직원이 없어요'),
               ],
             ),

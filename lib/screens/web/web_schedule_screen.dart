@@ -106,14 +106,16 @@ class _WebScheduleScreenState extends State<WebScheduleScreen> {
         for (final (i, d) in days.indexed) ...[
           if (i > 0) const SizedBox(width: 8),
           Expanded(
-            child: Material(
+            child: Opacity(
+              opacity: d.month == month.month ? 1 : 0.4,
+              child: Material(
               color: d == day ? AppColors.primary : AppColors.surface,
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(10),
                 side: BorderSide(color: d == day ? AppColors.primary : AppColors.border),
               ),
               child: InkWell(
-                onTap: () => setState(() => _day = d),
+                onTap: d.month == month.month ? () => setState(() => _day = d) : null,
                 borderRadius: BorderRadius.circular(10),
                 child: SizedBox(
                   height: 40,
@@ -124,6 +126,7 @@ class _WebScheduleScreenState extends State<WebScheduleScreen> {
                   ),
                 ),
               ),
+            ),
             ),
           ),
         ],
@@ -172,7 +175,9 @@ class _WebScheduleScreenState extends State<WebScheduleScreen> {
         WebButton('자동 채우기',
             style: WebButtonStyle.soft,
             onPressed: () => _autoFill(_view == 0 ? weeks : [monday])),
-        const WebButton('저장', tooltip: '바뀐 내용은 바로 저장돼요', style: WebButtonStyle.outline),
+        // 좁은 창에선 늘 비활성인 저장을 빼서 확정하기가 혼자 줄바꿈되지 않게 한다.
+        if (MediaQuery.sizeOf(context).width >= 700)
+          const WebButton('저장', tooltip: '바뀐 내용은 바로 저장돼요', style: WebButtonStyle.outline),
         WebButton('확정하기', onPressed: () => _confirm(month)),
       ],
       children: [
