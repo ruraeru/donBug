@@ -13,6 +13,33 @@ enum AttStatus { waiting, working, normal, late, absent }
 /// 매장 코드로 가입 신청한 결과.
 enum JoinResult { requested, alreadyMember, alreadyPending, notFound }
 
+/// 근무표 만들기 미리보기. [AppStore.planSchedule] 이 만들고 [AppStore.applySchedulePlan] 이 반영한다.
+class SchedulePlan {
+  SchedulePlan({
+    required this.from,
+    required this.to,
+    required this.shifts,
+    required this.unfilled,
+    required this.minutesByStaff,
+    required this.cost,
+  });
+
+  /// 만들 범위(양 끝 포함, 날짜만).
+  final DateTime from, to;
+
+  /// 새로 추가할 근무(id 비어 있음). 기존 근무는 건드리지 않는다.
+  final List<Shift> shifts;
+
+  /// 사람이 모자라 못 채운 칸 수(파트 × 날짜 × 필요 인원 기준).
+  final int unfilled;
+
+  /// 직원 id → 범위 안 총 근무 분(기존 + 새 근무).
+  final Map<String, int> minutesByStaff;
+
+  /// 새 근무의 예상 인건비(원, 기본급 기준).
+  final int cost;
+}
+
 /// 앱 전체 상태 + 액션. 화면은 [AppScope]로 받아 쓴다.
 ///
 /// 액션마다 상태를 바꾸고 [notifyListeners] 후 [onSave]로 JSON 을 넘긴다.
@@ -823,6 +850,32 @@ class AppStore extends ChangeNotifier {
       _notifyStaff(s.id, 'sub', '$month월 근무표가 확정됐어요', body: '근무표에서 내 근무를 확인해 주세요');
     }
     _commit();
+  }
+
+  /// 근무표 만들기(웹): [from]–[to] 의 오늘 이후 날짜에 파트별 [needs](store.parts 순서) 만큼 근무를 짠다.
+  /// 상태는 바꾸지 않고 미리보기만 돌려준다.
+  /// - [copyLastWeek]: 오늘이 든 주의 바로 전 주 근무(연차·휴무 제외, 재직자만)를 요일마다 반복한 뒤 빈칸을 채운다
+  /// - 빈칸은 파트 근무자 중 그 주 근무가 적은 사람부터(autoFill 과 같은 규칙). [excludeStaffIds] 는 빼고,
+  ///   그 주 소정 분이 [weeklyMaxMin] 을 넘게 되는 사람은 건너뛴다
+  /// - 이미 있는 근무 · 겹치는 시간은 그대로 두고 피한다
+  SchedulePlan planSchedule({
+    required DateTime from,
+    required DateTime to,
+    required List<int> needs,
+    bool copyLastWeek = false,
+    Set<String> excludeStaffIds = const {},
+    int weeklyMaxMin = 40 * 60,
+  }) {
+    // TODO(store 작업자): 구현
+    return SchedulePlan(
+        from: dayOf(from), to: dayOf(to), shifts: const [], unfilled: 0, minutesByStaff: const {}, cost: 0);
+  }
+
+  /// [plan] 의 근무를 추가하고 파트별 필요 인원을 [needs] 로 저장한다. 되돌리기 한 번에 묶인다.
+  /// 담당 직원들에게 알림. 추가한 수를 돌려준다.
+  int applySchedulePlan(SchedulePlan plan, {List<int>? needs}) {
+    // TODO(store 작업자): 구현
+    return 0;
   }
 
   /// 파트별 필요 인원 저장 + (선택) 지난주 근무를 이번 주로 복사.
