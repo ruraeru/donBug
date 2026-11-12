@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 
 import '../data/app_scope.dart';
@@ -533,10 +534,18 @@ class AppTextField extends StatelessWidget {
     this.maxLines = 1,
     this.maxLength,
     this.onChanged,
+    this.won = false,
+    this.suffix,
   });
 
   final TextEditingController controller;
   final String? hint;
+
+  /// true 면 숫자만 받고 천 단위 쉼표 + '원' 단위를 붙인다. 값은 `wonDigits` 로 읽는다.
+  final bool won;
+
+  /// 입력 칸 오른쪽 단위(예: '시간'). [won] 이면 기본 '원'.
+  final String? suffix;
   final TextInputType? keyboardType;
   final int maxLines;
   final int? maxLength;
@@ -550,7 +559,8 @@ class AppTextField extends StatelessWidget {
         );
     return TextField(
       controller: controller,
-      keyboardType: keyboardType,
+      keyboardType: won ? TextInputType.number : keyboardType,
+      inputFormatters: won ? const [WonInputFormatter()] : null,
       maxLines: maxLines,
       maxLength: maxLength,
       onChanged: onChanged,
@@ -558,6 +568,8 @@ class AppTextField extends StatelessWidget {
       decoration: InputDecoration(
         hintText: hint,
         hintStyle: AppText.style(15, FontWeight.w400, AppColors.textTertiary),
+        suffixText: suffix ?? (won ? '원' : null),
+        suffixStyle: AppText.style(15, FontWeight.w400, AppColors.textSecondary),
         filled: true,
         fillColor: AppColors.surface,
         isDense: true,
@@ -569,6 +581,67 @@ class AppTextField extends StatelessWidget {
     );
   }
 }
+
+/// 키보드로 포커스가 올 때만 보이는 초록 링. 안쪽 위젯(InkWell 등)의 포커스를 따라간다.
+class FocusRing extends StatefulWidget {
+  const FocusRing({super.key, required this.child, this.radius = 12});
+
+  final Widget child;
+  final double radius;
+
+  @override
+  State<FocusRing> createState() => _FocusRingState();
+}
+
+class _FocusRingState extends State<FocusRing> {
+  bool _focused = false;
+
+  @override
+  Widget build(BuildContext context) => Focus(
+        canRequestFocus: false,
+        skipTraversal: true,
+        onFocusChange: (v) => setState(() => _focused = v),
+        child: DecoratedBox(
+          position: DecorationPosition.foreground,
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(widget.radius),
+            border: _focused &&
+                    FocusManager.instance.highlightMode == FocusHighlightMode.traditional
+                ? Border.all(color: AppColors.primary, width: 2)
+                : null,
+          ),
+          child: widget.child,
+        ),
+      );
+}
+
+/// 금액 입력: 숫자만 남기고 천 단위 쉼표를 넣는다. 커서는 오른쪽에서 센 숫자 개수를 지킨다.
+class WonInputFormatter extends TextInputFormatter {
+  const WonInputFormatter();
+
+  @override
+  TextEditingValue formatEditUpdate(TextEditingValue old, TextEditingValue next) {
+    final digits = next.text.replaceAll(RegExp(r'[^0-9]'), '');
+    if (digits.isEmpty) return const TextEditingValue();
+    final text = comma(int.parse(digits));
+    final after = next.text
+        .substring(next.selection.end.clamp(0, next.text.length))
+        .replaceAll(RegExp(r'[^0-9]'), '')
+        .length;
+    var offset = text.length, seen = 0;
+    while (offset > 0 && seen < after) {
+      offset--;
+      if (text[offset] != ',') seen++;
+    }
+    return TextEditingValue(text: text, selection: TextSelection.collapsed(offset: offset));
+  }
+}
+
+/// 금액 입력 칸의 초기 텍스트('10,320').
+String wonInput(int n) => comma(n);
+
+/// 금액 입력 칸의 값. 비었으면 null.
+int? wonDigits(String text) => int.tryParse(text.replaceAll(RegExp(r'[^0-9]'), ''));
 
 /// 상세 화면의 대상이 사라졌을 때(취소·거절·삭제) 보여주는 화면.
 class MissingScreen extends StatelessWidget {
@@ -755,21 +828,33 @@ class ToggleCard extends StatelessWidget {
     required this.subtitle,
     required this.value,
     required this.onChanged,
+    this.flat = false,
   });
 
   final String title;
   final String subtitle;
   final bool value;
 
+  /// 카드 틀 없이 다른 입력 행과 같은 x 에 놓는다(웹 시트).
+  final bool flat;
+
   /// null 이면 비활성.
   final ValueChanged<bool>? onChanged;
 
   @override
-  Widget build(BuildContext context) => AppCard(
+  Widget build(BuildContext context) => flat
+      ? InkWell(
+          onTap: onChanged == null ? null : () => onChanged!(!value),
+          child: Padding(padding: const EdgeInsets.symmetric(vertical: 4), child: _row()),
+        )
+      : AppCard(
         radius: 16,
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
         onTap: onChanged == null ? null : () => onChanged!(!value),
-        child: Row(
+        child: _row(),
+      );
+
+  Widget _row() => Row(
           children: [
             Expanded(
               child: Column(
@@ -787,8 +872,7 @@ class ToggleCard extends StatelessWidget {
             const SizedBox(width: 12),
             AppToggle(value, enabled: onChanged != null),
           ],
-        ),
-      );
+        );
 }
 
 /// '‹ 5월 ›' 월 이동.

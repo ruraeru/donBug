@@ -71,7 +71,7 @@ class _WebStaffScreenState extends State<WebStaffScreen> {
         .toList();
     final filters = <(String?, String)>[
       (null, '전체 ${active.length}'),
-      if (store.flexStaff.isNotEmpty) (flexFilter, '직원 ${store.flexStaff.length}'),
+      if (store.flexStaff.isNotEmpty) (flexFilter, '유동 근무 ${store.flexStaff.length}'),
       for (final p in store.store.parts)
         (p.name, '${p.name} ${store.partStaff.where((s) => s.part == p.name).length}'),
     ];
@@ -228,7 +228,7 @@ class _StaffSheetState extends State<_StaffSheet> {
   @override
   void initState() {
     super.initState();
-    _wage.text = '${AppScope.read(context).staffById(widget.staffId)?.wage ?? ''}';
+    _wage.text = wonInput(AppScope.read(context).staffById(widget.staffId)?.wage ?? 0);
   }
 
   @override
@@ -238,7 +238,7 @@ class _StaffSheetState extends State<_StaffSheet> {
   }
 
   void _saveWage(AppStore store) {
-    final w = int.tryParse(_wage.text.replaceAll(RegExp(r'[^0-9]'), ''));
+    final w = wonDigits(_wage.text);
     if (w == null || w < minimumWage2026) {
       return setState(() => _wageError = '2026 최저임금 ${wonText(minimumWage2026)} 이상이어야 해요');
     }
@@ -311,7 +311,7 @@ class _StaffSheetState extends State<_StaffSheet> {
         webField(
           '시급 (원)',
           Row(children: [
-            Expanded(child: AppTextField(controller: _wage, keyboardType: TextInputType.number)),
+            Expanded(child: AppTextField(controller: _wage, won: true)),
             const SizedBox(width: 8),
             WebButton('저장', height: 48, onPressed: () => _saveWage(store)),
           ]),
@@ -325,12 +325,14 @@ class _StaffSheetState extends State<_StaffSheet> {
               onChanged: (d) => store.updateStaff(s.id, deduction: d),
             )),
         ToggleCard(
+          flat: true,
           title: '주휴수당 자동 계산',
           subtitle: '주 15시간 이상이면 자동으로 더해요',
           value: s.weeklyHolidayAuto,
           onChanged: (v) => store.updateStaff(s.id, weeklyHolidayAuto: v),
         ),
         ToggleCard(
+          flat: true,
           title: '가산수당 적용',
           subtitle: store.store.isSmall ? '5인 미만 사업장은 적용하지 않아요' : '야간 · 8시간 초과분 0.5배',
           value: s.premium && !store.store.isSmall,

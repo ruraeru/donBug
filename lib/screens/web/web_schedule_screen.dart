@@ -186,7 +186,7 @@ class _WebScheduleScreenState extends State<WebScheduleScreen> {
           children: [
             Wrap(spacing: 14, runSpacing: 6, children: [
               for (final p in store.store.parts) WebLegend(partColors(p.name).$1, p.name),
-              const WebLegend(AppColors.purple, '직원 근무'),
+              const WebLegend(AppColors.purple, '유동 근무'),
               const WebLegend(AppColors.danger, '시간 미정', dashed: true),
               const WebLegend(AppColors.textTertiary, '연차·휴무'),
               const WebLegend(AppColors.accent, '대타 모집'),

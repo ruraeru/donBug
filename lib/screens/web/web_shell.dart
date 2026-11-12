@@ -238,6 +238,7 @@ class _MenuItem extends StatelessWidget {
         ),
       ),
     );
-    return rail ? Tooltip(message: label, child: item) : item;
+    final ringed = FocusRing(child: item);
+    return rail ? Tooltip(message: label, child: ringed) : ringed;
   }
 }
