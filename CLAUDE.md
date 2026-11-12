@@ -68,7 +68,7 @@ Flutter SDK는 PATH에 없음. 프로젝트 루트의 로컬 SDK 사용 (`/flutt
 - `lib/data/` — 프로토타입 데이터 계층
   - `models.dart`: `Person`(보건증은 사람 단위), `Store`(`scheduleConfirmedAt`), `Staff`(매장별 소속. 가입 신청 = `status: pending`, 계약서 포함, `kind`: 매니저·정직원·알바·연소자), `Shift`(`kind`: 근무·연차·휴무, `timeTbd`: 시간 미정), `Attendance`, `SubstituteRequest`, `Notice`, `AppNotification`, `Session`, `AppState`. 수동 JSON 직렬화.
   - 매니저·정직원(`StaffKind.flex`)은 유동 근무: 파트 대신 `part: '직원'` 으로 시간을 직접 정한다.
-  - `app_store.dart`: `AppStore extends ChangeNotifier`. 조회·파생값(내 근무, 출근 상태, 대타, 급여, 인건비, 안 읽은 수)과 모든 액션(출퇴근, 대타, 근무표, 직원, 공지, 서류, 매장, 세션, 데모). 액션마다 관련자에게 `AppNotification` 을 만든다.
+  - `app_store.dart`: `AppStore extends ChangeNotifier`. 조회·파생값(내 근무, 출근 상태, 대타, 급여, 인건비, 안 읽은 수)과 모든 액션(출퇴근, 대타, 근무표(근무표 만들기: planSchedule 미리보기 → applySchedulePlan), 직원, 공지, 서류, 매장, 세션, 데모). 액션마다 관련자에게 `AppNotification` 을 만든다.
   - `seed.dart`: `buildSeed(now)`. 지난달 1일이 있는 주부터 다음 주까지 근무·출근 기록을 만든다.
   - `payroll.dart`: 급여 순수 함수(`computePayslip`, `weeklyHolidayPay`, `deductionOf`), `minimumWage2026 = 10320`.
   - `format.dart`: `won`, `wonText`, `md`, `hm`, `dDay`, `relative`, `shiftDay/Time/Caption` 등.
@@ -88,6 +88,7 @@ Flutter SDK는 PATH에 없음. 프로젝트 루트의 로컬 SDK 사용 (`/flutt
   - 웹 공용은 `web_common.dart`: `WebPage`(제목 + 액션, 안 들어가면 액션이 아래 줄), `WebButton`, `WebRow`, `WebSplit`, `WebTable`(`onRowTap`, 좁으면 가로 스크롤), `WebSegmented`, `WebSelect`, `showWebDialog`, `showWebSheet`, `webField`/`webPair`, `DashedBorderPainter`.
   - 상세·작성은 웹 전용 창이다: 근무 추가·수정(`web_shift_dialog.dart`), 직원 상세 시트·직원 초대(`web_staff_screen.dart`), 계약서 작성(`web_documents_screen.dart`), 공지 작성(`web_notice_screen.dart`), 알림·오늘 근무·근태 수정(`web_dashboard_screen.dart`).
   - 근무표(`web_schedule_screen.dart` + `web_schedule_views.dart`): 한 달·파트별·인원별·일간. 빈 칸 클릭 = 추가, 블록 클릭 = 수정, 블록 드래그 = 이동(겹침·지난 날짜 막음). 되돌리기·자동 채우기·확정하기.
+  - 근무표 만들기(`web_schedule_create_dialog.dart`): 이번 달·다음 달을 자동 배정(자기 파트 먼저, 주 근무 적은 순) 또는 지난주 반복으로 한 번에 짠다. 파트별 필요 인원·근무자 제외·주 최대 근무, 미리보기(새 근무·못 채운 칸·예상 인건비·직원별 시간). 되돌리기 한 번에 취소.
 - `assets/icons/` — Figma에서 받은 SVG (`flutter_svg`). `assets/images/app_icon.svg` — 로고 App Icon(Figma `186:174`). `assets/fonts/` — Noto Sans KR 400/500/700 (OFL).
 
 ## 프로토타입 데이터 규칙
