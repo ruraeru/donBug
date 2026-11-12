@@ -146,11 +146,9 @@ class _ShiftAddScreenState extends State<ShiftAddScreen> {
                     Expanded(
                       child: Text('매주 반복 (4주)', style: AppText.style(15, FontWeight.w500)),
                     ),
-                    Switch(
-                      value: _repeat,
-                      activeTrackColor: AppColors.primary,
-                      activeThumbColor: AppColors.onPrimary,
-                      onChanged: (v) => setState(() => _repeat = v),
+                    GestureDetector(
+                      onTap: () => setState(() => _repeat = !_repeat),
+                      child: AppToggle(_repeat),
                     ),
                   ],
                 ),

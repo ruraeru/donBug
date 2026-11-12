@@ -193,6 +193,23 @@ class AppHeader extends StatelessWidget implements PreferredSizeWidget {
       );
 }
 
+/// 헤더 오른쪽 글자 액션 (본문 오른쪽 선에 맞춘다).
+class HeaderTextAction extends StatelessWidget {
+  const HeaderTextAction(this.label, {super.key, required this.onTap});
+
+  final String label;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) => InkWell(
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 12),
+          child: Text(label, style: AppText.style(14, FontWeight.w500, AppColors.primary)),
+        ),
+      );
+}
+
 /// 이름 첫 글자 원형 아바타. [selected]면 primary 2px 테두리.
 class LetterAvatar extends StatelessWidget {
   const LetterAvatar(
@@ -516,7 +533,7 @@ class FieldBox extends StatelessWidget {
             child: Row(children: [
               Expanded(child: Text(value, style: AppText.style(15))),
               if (onTap != null)
-                Text('›', style: AppText.style(18, FontWeight.w400, AppColors.textTertiary)),
+                const Icon(Icons.chevron_right_rounded, color: AppColors.textTertiary),
             ]),
           ),
         ),
@@ -639,7 +656,11 @@ class CountBadge extends StatelessWidget {
 }
 
 /// 화면 아래에 짧은 안내를 띄운다. 이미 떠 있는 것은 바로 바꾼다(연달아 누를 때 줄 서지 않게).
-void showToast(BuildContext context, String text) => ScaffoldMessenger.of(context)
+void showToast(BuildContext context, String text) =>
+    showToastOn(ScaffoldMessenger.of(context), text);
+
+/// 화면을 닫은 뒤에도 쓰도록 messenger 를 미리 잡아 둔 경우.
+void showToastOn(ScaffoldMessengerState messenger, String text) => messenger
   ..hideCurrentSnackBar()
   ..showSnackBar(SnackBar(content: Text(text)));
 
@@ -767,7 +788,7 @@ class ToggleCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) => AppCard(
         radius: 16,
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        padding: const EdgeInsets.all(20),
         onTap: onChanged == null ? null : () => onChanged!(!value),
         child: Row(
           children: [
@@ -791,6 +812,37 @@ class ToggleCard extends StatelessWidget {
       );
 }
 
+/// 기간 이동 컨트롤 '‹ [라벨] ›' (월 · 주 · 일 공용). null 이면 그 방향은 비활성.
+class PeriodNav extends StatelessWidget {
+  const PeriodNav(
+      {super.key, required this.label, this.onPrev, this.onNext, this.prevTip = '이전', this.nextTip = '다음'});
+
+  final String label;
+  final VoidCallback? onPrev;
+  final VoidCallback? onNext;
+  final String prevTip;
+  final String nextTip;
+
+  @override
+  Widget build(BuildContext context) {
+    Widget arrow(IconData icon, String tip, VoidCallback? on) => IconButton(
+          tooltip: tip,
+          onPressed: on,
+          visualDensity: VisualDensity.compact,
+          padding: EdgeInsets.zero,
+          constraints: const BoxConstraints.tightFor(width: 32, height: 40),
+          color: AppColors.textPrimary,
+          disabledColor: AppColors.border,
+          icon: Icon(icon, size: 24),
+        );
+    return Row(mainAxisSize: MainAxisSize.min, children: [
+      arrow(Icons.chevron_left_rounded, prevTip, onPrev),
+      Pill(label),
+      arrow(Icons.chevron_right_rounded, nextTip, onNext),
+    ]);
+  }
+}
+
 /// '‹ 5월 ›' 월 이동.
 class MonthNav extends StatelessWidget {
   const MonthNav({super.key, required this.month, required this.onChanged, this.max});
@@ -805,68 +857,74 @@ class MonthNav extends StatelessWidget {
   Widget build(BuildContext context) {
     final canNext = max == null || DateTime(month.year, month.month + 1).isBefore(
         DateTime(max!.year, max!.month + 1));
-    Widget arrow(String t, bool on, int d) => InkWell(
-          onTap: on ? () => onChanged(DateTime(month.year, month.month + d)) : null,
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 8),
-            child: Text(t,
-                style: AppText.style(
-                    22, FontWeight.w400, on ? AppColors.textPrimary : AppColors.border)),
-          ),
-        );
-    return Row(mainAxisSize: MainAxisSize.min, children: [
-      arrow('‹', true, -1),
-      Pill('${month.month}월'),
-      arrow('›', canNext, 1),
-    ]);
+    return PeriodNav(
+      label: '${month.month}월',
+      prevTip: '이전 달',
+      nextTip: '다음 달',
+      onPrev: () => onChanged(DateTime(month.year, month.month - 1)),
+      onNext: canNext ? () => onChanged(DateTime(month.year, month.month + 1)) : null,
+    );
   }
 }
 
-/// 급여 내역 카드 (급여 탭 · 명세서 공용).
+/// 급여 내역 (급여 탭 · 명세서 공용): '지급 내역' 카드 + '공제 내역' 카드.
 class PayBreakdown extends StatelessWidget {
-  const PayBreakdown({super.key, required this.slip, required this.staff, this.title});
+  const PayBreakdown({super.key, required this.slip, required this.staff});
 
   final Payslip slip;
   final Staff staff;
-  final String? title;
 
   @override
   Widget build(BuildContext context) {
     const divider = Divider(height: 1, color: AppColors.border);
     const regular = FontWeight.w500;
+    const gap = SizedBox(height: 14);
     final estimate = staff.deduction == Deduction.insurance ? ' · 예상' : '';
-    return AppCard(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          if (title != null) ...[
-            Text(title!, style: AppText.style(15, FontWeight.w500)),
-            const SizedBox(height: 14),
-          ],
-          KeyValueRow('기본급 (${hours(slip.minutes)} × ${wonText(staff.wage)})', won(slip.base),
-              valueWeight: regular),
-          const SizedBox(height: 14),
-          KeyValueRow('주휴수당', won(slip.weeklyHoliday), valueWeight: regular),
-          if (slip.premium > 0) ...[
-            const SizedBox(height: 14),
-            KeyValueRow('야간·연장 가산', won(slip.premium), valueWeight: regular),
-          ],
-          const SizedBox(height: 14),
-          divider,
-          const SizedBox(height: 14),
-          KeyValueRow('총 급여', won(slip.gross), valueWeight: regular),
-          const SizedBox(height: 14),
-          KeyValueRow('${staff.deduction.label}$estimate', won(-slip.deduction),
-              valueWeight: regular, valueColor: AppColors.danger),
-          const SizedBox(height: 14),
-          divider,
-          const SizedBox(height: 14),
-          KeyValueRow('실수령액', won(slip.net),
-              labelStyle: AppText.style(16, FontWeight.w500),
-              valueSize: 18,
-              valueColor: AppColors.primary),
-        ],
-      ),
+    Widget head(String t) => Padding(
+          padding: const EdgeInsets.only(bottom: 14),
+          child: Text(t, style: AppText.style(15, FontWeight.w500)),
+        );
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        AppCard(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              head('지급 내역'),
+              KeyValueRow('기본급 (${hours(slip.minutes)} × ${wonText(staff.wage)})', won(slip.base),
+                  valueWeight: regular),
+              gap,
+              KeyValueRow('주휴수당', won(slip.weeklyHoliday), valueWeight: regular),
+              if (slip.premium > 0) ...[
+                gap,
+                KeyValueRow('야간·연장 가산', won(slip.premium), valueWeight: regular),
+              ],
+              gap,
+              divider,
+              gap,
+              KeyValueRow('세전 합계', won(slip.gross),
+                  labelStyle: AppText.style(14, FontWeight.w500), valueWeight: regular),
+            ],
+          ),
+        ),
+        const SizedBox(height: 16),
+        AppCard(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              head('공제 내역'),
+              KeyValueRow('${staff.deduction.label}$estimate', won(-slip.deduction),
+                  valueWeight: regular),
+              gap,
+              divider,
+              gap,
+              KeyValueRow('실수령액', won(slip.net),
+                  labelStyle: AppText.style(16, FontWeight.w500), valueSize: 18),
+            ],
+          ),
+        ),
+      ],
     );
   }
 }

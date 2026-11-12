@@ -36,8 +36,7 @@ class DemoMenu extends StatelessWidget {
   Widget build(BuildContext context) {
     final role = AppScope.of(context).role;
     final other = role == Role.employee ? Role.employer : Role.employee;
-    final chevron =
-        Text('›', style: AppText.style(22, FontWeight.w400, AppColors.textTertiary));
+    const chevron = Icon(Icons.chevron_right_rounded, color: AppColors.textTertiary);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [

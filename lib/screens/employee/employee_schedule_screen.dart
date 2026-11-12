@@ -41,31 +41,23 @@ class _EmployeeScheduleScreenState extends State<EmployeeScheduleScreen> {
         children: [
           TabTitle('근무표', chip: '${monday.add(const Duration(days: 3)).month}월 $weekNo주차'),
           Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 12),
-            child: Row(children: [
-              IconButton(
-                tooltip: '이전 주',
-                onPressed: () => setState(() {
+            padding: const EdgeInsets.symmetric(horizontal: 20),
+            child: Align(
+              alignment: Alignment.centerRight,
+              child: PeriodNav(
+                label: '${md(days.first)} – ${md(days.last)}',
+                prevTip: '이전 주',
+                nextTip: '다음 주',
+                onPrev: () => setState(() {
                   _weekOffset--;
                   _day = null;
                 }),
-                icon: const Icon(Icons.chevron_left_rounded),
-              ),
-              Expanded(
-                child: Text(
-                    '${md(days.first)} – ${md(days.last)}${_weekOffset == 0 ? ' · 이번 주' : ''}',
-                    textAlign: TextAlign.center,
-                    style: AppText.style(14, FontWeight.w500, AppColors.textSecondary)),
-              ),
-              IconButton(
-                tooltip: '다음 주',
-                onPressed: () => setState(() {
+                onNext: () => setState(() {
                   _weekOffset++;
                   _day = null;
                 }),
-                icon: const Icon(Icons.chevron_right_rounded),
               ),
-            ]),
+            ),
           ),
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 4),

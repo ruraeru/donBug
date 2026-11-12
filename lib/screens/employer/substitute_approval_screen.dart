@@ -28,7 +28,7 @@ class SubstituteApprovalScreen extends StatelessWidget {
     AppScope.read(context).rejectSubstitute(r.id);
     final messenger = ScaffoldMessenger.of(context);
     Navigator.pop(context);
-    messenger.showSnackBar(const SnackBar(content: Text('대타 요청을 거절했어요')));
+    showToastOn(messenger, '대타 요청을 거절했어요');
   }
 
   void _approve(BuildContext context, SubstituteRequest r) {

@@ -143,7 +143,7 @@ class _EmployerLaborCostScreenState extends State<EmployerLaborCostScreen> {
           ),
           const SizedBox(height: 12),
           SizedBox(
-            height: 130,
+            height: MediaQuery.textScalerOf(context).scale(130),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               crossAxisAlignment: CrossAxisAlignment.end,

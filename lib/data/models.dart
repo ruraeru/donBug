@@ -8,7 +8,7 @@ library;
 enum Role { employee, employer }
 
 enum Deduction {
-  biz33('사업소득세 3.3%', '3.3%'),
+  biz33('원천징수 (3.3%)', '3.3%'),
   insurance('4대보험', '4대보험'),
   none('공제 없음', '없음');
 

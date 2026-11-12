@@ -79,9 +79,11 @@ class ShiftDetailScreen extends StatelessWidget {
               ],
             ),
           ),
+          if (canRequest) ...[
           const SizedBox(height: 16),
           const NoteBox('근무 2일 전까지 신청하면 동료에게 먼저 알림이 가요.',
               color: AppColors.textSecondary, background: AppColors.surface),
+          ],
         ],
       ),
       bottomNavigationBar: BottomBar(

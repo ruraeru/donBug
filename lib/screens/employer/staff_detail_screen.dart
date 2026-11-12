@@ -24,7 +24,7 @@ class StaffDetailScreen extends StatelessWidget {
     AppScope.read(context).removeStaff(staffId);
     final messenger = ScaffoldMessenger.of(context);
     Navigator.pop(context);
-    messenger.showSnackBar(SnackBar(content: Text('$name님을 매장에서 내보냈어요')));
+    showToastOn(messenger, '$name님을 매장에서 내보냈어요');
   }
 
   @override

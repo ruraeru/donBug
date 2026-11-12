@@ -66,7 +66,7 @@ class _EmployeeSalaryScreenState extends State<EmployeeSalaryScreen> {
                   ),
                 ),
                 const SizedBox(height: 16),
-                PayBreakdown(slip: slip, staff: me, title: '급여 내역'),
+                PayBreakdown(slip: slip, staff: me),
                 const SizedBox(height: 16),
                 AppCard(
                   child: Column(

@@ -40,19 +40,12 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
     ];
     return Scaffold(
       appBar: AppHeader(day == store.today ? '오늘 근태' : '근태 현황', actions: [
-        IconButton(
-          tooltip: '이전 날',
-          onPressed: () => setState(() => _day = day.subtract(const Duration(days: 1))),
-          icon: const Icon(Icons.chevron_left_rounded, size: 28),
-        ),
-        Text(md(day), style: AppText.style(14, FontWeight.w500, AppColors.primary)),
-        IconButton(
-          tooltip: '다음 날',
-          onPressed: day == store.today
-              ? null
-              : () => setState(() => _day = day.add(const Duration(days: 1))),
-          icon: Icon(Icons.chevron_right_rounded,
-              size: 28, color: day == store.today ? AppColors.border : AppColors.textPrimary),
+        PeriodNav(
+          label: md(day),
+          prevTip: '이전 날',
+          nextTip: '다음 날',
+          onPrev: () => setState(() => _day = day.subtract(const Duration(days: 1))),
+          onNext: day == store.today ? null : () => setState(() => _day = day.add(const Duration(days: 1))),
         ),
       ]),
       body: ListView(
