@@ -866,16 +866,134 @@ class AppStore extends ChangeNotifier {
     Set<String> excludeStaffIds = const {},
     int weeklyMaxMin = 40 * 60,
   }) {
-    // TODO(store 작업자): 구현
+    final start = dayOf(from).isBefore(today) ? today : dayOf(from), end = dayOf(to);
+    final planned = <Shift>[];
+    final inRange = !end.isBefore(start);
+
+    bool onDay(String staffId, String date) =>
+        scheduleOn(parseYmd(date)).any((x) => x.staffId == staffId) ||
+        planned.any((x) => x.staffId == staffId && x.date == date);
+    bool overlaps(String staffId, Shift d) =>
+        overlappingShift(staffId, d) != null ||
+        planned.any((x) =>
+            x.staffId == staffId &&
+            shiftStart(x).isBefore(shiftEnd(d)) &&
+            shiftEnd(x).isAfter(shiftStart(d)));
+    int weekMin(String staffId, DateTime day) {
+      final mon = mondayOf(day), next = mon.add(const Duration(days: 7));
+      return [...shiftsOfStaff(staffId), ...planned.where((x) => x.staffId == staffId)]
+          .where((x) {
+            final d = parseYmd(x.date);
+            return !d.isBefore(mon) && d.isBefore(next);
+          })
+          .fold(0, (sum, x) => sum + x.scheduledMinutes);
+    }
+
+    Shift draft(DateTime day, int startMin, int endMin, String part, int breakMin, [String staffId = '']) =>
+        Shift(
+            id: '',
+            storeId: store.id,
+            staffId: staffId,
+            date: ymd(day),
+            startMin: startMin,
+            endMin: endMin,
+            part: part,
+            breakMin: breakMin);
+
+    if (inRange && copyLastWeek) {
+      final lastMon = mondayOf(today).subtract(const Duration(days: 7));
+      for (var day = start; !day.isAfter(end); day = day.add(const Duration(days: 1))) {
+        for (final s in scheduleOn(lastMon.add(Duration(days: day.weekday - 1)))) {
+          final id = s.originalStaffId ?? s.staffId;
+          if (!s.isWork || excludeStaffIds.contains(id) || !(staffById(id)?.active ?? false)) continue;
+          final d = draft(day, s.startMin, s.endMin, s.part, s.breakMin, id);
+          if (onDay(id, d.date) ||
+              overlaps(id, d) ||
+              weekMin(id, day) + d.scheduledMinutes > weeklyMaxMin) {
+            continue;
+          }
+          planned.add(d);
+        }
+      }
+    }
+
+    var unfilled = 0;
+    if (inRange) {
+      for (var day = start; !day.isAfter(end); day = day.add(const Duration(days: 1))) {
+        for (var i = 0; i < store.parts.length; i++) {
+          final p = store.parts[i], need = i < needs.length ? needs[i] : p.need;
+          final span = (p.endMin <= p.startMin ? p.endMin + 1440 : p.endMin) - p.startMin;
+          var have = scheduleOn(day).where((x) => x.part == p.name && x.kind == ShiftKind.work).length +
+              planned.where((x) => x.part == p.name && x.date == ymd(day)).length;
+          while (have < need) {
+            final d = draft(day, p.startMin, p.endMin, p.name, defaultBreak(span));
+            final free = partStaff
+                .where((m) =>
+                    !excludeStaffIds.contains(m.id) &&
+                    !onDay(m.id, d.date) &&
+                    !overlaps(m.id, d) &&
+                    weekMin(m.id, day) + d.scheduledMinutes <= weeklyMaxMin)
+                .toList()
+              ..sort((a, b) => weekMin(a.id, day).compareTo(weekMin(b.id, day)));
+            if (free.isEmpty) {
+              unfilled += need - have;
+              break;
+            }
+            d.staffId = free.first.id;
+            planned.add(d);
+            have++;
+          }
+        }
+      }
+    }
+
+    final minutes = <String, int>{};
+    void add(Shift x) => minutes[x.staffId] = (minutes[x.staffId] ?? 0) + x.scheduledMinutes;
+    for (final m in activeStaff) {
+      for (final x in shiftsOfStaff(m.id)) {
+        final d = parseYmd(x.date);
+        if (!d.isBefore(dayOf(from)) && !d.isAfter(end)) add(x);
+      }
+    }
+    planned.forEach(add);
     return SchedulePlan(
-        from: dayOf(from), to: dayOf(to), shifts: const [], unfilled: 0, minutesByStaff: const {}, cost: 0);
+      from: dayOf(from),
+      to: end,
+      shifts: planned,
+      unfilled: unfilled,
+      minutesByStaff: minutes,
+      cost: planned.fold(0, (sum, x) => sum + plannedPay(x)),
+    );
   }
 
   /// [plan] 의 근무를 추가하고 파트별 필요 인원을 [needs] 로 저장한다. 되돌리기 한 번에 묶인다.
   /// 담당 직원들에게 알림. 추가한 수를 돌려준다.
   int applySchedulePlan(SchedulePlan plan, {List<int>? needs}) {
-    // TODO(store 작업자): 구현
-    return 0;
+    if (plan.shifts.isEmpty) return 0;
+    _snapshot();
+    if (needs != null) {
+      for (var i = 0; i < needs.length && i < store.parts.length; i++) {
+        store.parts[i].need = needs[i];
+      }
+    }
+    final counts = <String, int>{};
+    for (final x in plan.shifts) {
+      state.shifts.add(Shift(
+        id: _id('s'),
+        storeId: store.id,
+        staffId: x.staffId,
+        date: x.date,
+        startMin: x.startMin,
+        endMin: x.endMin,
+        part: x.part,
+        breakMin: x.breakMin,
+      ));
+      counts[x.staffId] = (counts[x.staffId] ?? 0) + 1;
+    }
+    counts.forEach((id, n) =>
+        _notifyStaff(id, 'sub', '${plan.from.month}월 근무가 추가됐어요', body: '$n건 · 근무표에서 확인해 주세요'));
+    _commit();
+    return plan.shifts.length;
   }
 
   /// 파트별 필요 인원 저장 + (선택) 지난주 근무를 이번 주로 복사.
