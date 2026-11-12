@@ -79,7 +79,10 @@ class _WebPosQrScreenState extends State<WebPosQrScreen> {
     if (a.clockOut != null) {
       return ('$inText · ${clock(DateTime.parse(a.clockOut!))} 퇴근', fg, bg);
     }
-    return (st == AttStatus.working && store.lateMinutes(s) > 0 ? '$inText · 지각' : inText, fg, bg);
+    if (st == AttStatus.working && store.lateMinutes(s) > 0) {
+      return ('$inText · 지각', AppColors.danger, AppColors.dangerSoft);
+    }
+    return (inText, fg, bg);
   }
 
   @override
@@ -212,7 +215,7 @@ class _WebPosQrScreenState extends State<WebPosQrScreen> {
           ]),
           if (_checked case (final title, final caption))
             Positioned(
-              top: 96,
+              bottom: 32,
               left: 0,
               right: 0,
               child: Center(child: _CheckedInToast(title, caption)),

@@ -55,7 +55,7 @@ class ShiftBlock extends StatelessWidget {
           '${_hourText(span)}h · 휴게 ${s.breakMin >= 60 ? '${s.breakMin ~/ 60}h' : '${s.breakMin}분'}',
           AppColors.textPrimary
         ),
-      _ => (s.part, '${hm(s.startMin)}–${hm(s.endMin)}${sub ? ' · 대타 모집' : ''}', AppColors.textPrimary),
+      _ => (s.part, '${hm(s.startMin)}–${hm(s.endMin)}', AppColors.textPrimary),
     };
     final body = Container(
       width: double.infinity,
@@ -75,6 +75,11 @@ class ShiftBlock extends StatelessWidget {
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
               style: AppText.style(11, FontWeight.w400, AppColors.textSecondary)),
+        if (sub && s.isWork)
+          Text('대타 모집',
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: AppText.style(11, FontWeight.w500, AppColors.accent)),
       ]),
     );
     final block = s.timeTbd
@@ -197,8 +202,7 @@ class _Grid extends StatelessWidget {
       final min = labelWidth + 7 * 110;
       return c.maxWidth >= min
           ? grid
-          : SingleChildScrollView(
-              scrollDirection: Axis.horizontal, child: SizedBox(width: min, child: grid));
+          : HScroll(width: min, child: grid);
     });
   }
 }
@@ -227,10 +231,19 @@ void _drop(BuildContext context, String shiftId, DateTime day,
   final problem = moveProblem(store, s,
       day: day, staffId: staffId, start: part?.startMin, end: part?.endMin);
   if (problem != null) return showToast(context, problem);
+  // 유동 직원 칸에 파트 근무를 놓으면 '직원' 근무로, 반대로 알바 칸에 놓으면 그 알바의 파트로.
+  final target = store.staffById(staffId);
+  final flexShift = isFlexShift(store, s);
+  final partName = part?.name ??
+      (target == null
+          ? null
+          : target.kind.flex
+              ? (flexShift ? null : flexPart)
+              : (flexShift ? target.part : null));
   store.updateShift(shiftId,
       date: day,
       staffId: staffId,
-      part: part?.name,
+      part: partName,
       startMin: part?.startMin,
       endMin: part?.endMin);
 }
@@ -612,7 +625,10 @@ class DayTimelineView extends StatelessWidget {
                                   child: Container(
                                     color: bar.withValues(alpha: 0.18),
                                     alignment: Alignment.center,
-                                    child: Text('휴게', style: AppText.style(10, FontWeight.w500, AppColors.textSecondary)),
+                                    child: Text('휴게',
+                                        softWrap: false,
+                                        overflow: TextOverflow.clip,
+                                        style: AppText.style(10, FontWeight.w500, AppColors.textSecondary)),
                                   ),
                                 ),
                               Padding(
