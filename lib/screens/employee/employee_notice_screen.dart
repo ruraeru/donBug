@@ -56,7 +56,9 @@ class _EmployeeNoticeScreenState extends State<EmployeeNoticeScreen> {
             child: ListView(
               padding: const EdgeInsets.fromLTRB(20, 8, 20, 16),
               children: [
-                Row(
+                SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  child: Row(
                   children: [
                     for (var i = 0; i < filters.length; i++) ...[
                       if (i > 0) const SizedBox(width: 8),
@@ -67,6 +69,7 @@ class _EmployeeNoticeScreenState extends State<EmployeeNoticeScreen> {
                       ),
                     ],
                   ],
+                  ),
                 ),
                 if (shown.isEmpty) const EmptyNote('공지가 없어요'),
                 for (final n in pinned) ...[

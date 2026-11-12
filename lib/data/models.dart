@@ -627,7 +627,7 @@ class AppState {
     this.nextId = 1,
   });
 
-  static const version = 2;
+  static const version = 3;
 
   Session session;
   List<Person> persons;

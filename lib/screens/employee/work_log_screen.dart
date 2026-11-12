@@ -45,7 +45,7 @@ class _WorkLogScreenState extends State<WorkLogScreen> {
                       children: [
                         Row(
                           children: [
-                            Text(md(e.day), style: AppText.style(15, FontWeight.w500)),
+                            Flexible(child: Text(md(e.day), style: AppText.style(15, FontWeight.w500))),
                             if (e.isSubstitute) ...[
                               const SizedBox(width: 6),
                               const Pill.accent('대타'),

@@ -41,7 +41,10 @@ class QrCheckInScreen extends StatelessWidget {
 
   // 출근 기록을 만들고 출근 완료 화면으로 교체.
   void _scanned(BuildContext context) {
-    final a = AppScope.read(context).clockIn(shiftId);
+    final store = AppScope.read(context);
+    final block = store.clockInBlock(store.shiftById(shiftId)!);
+    if (block != null) return showToast(context, block);
+    final a = store.clockIn(shiftId);
     Navigator.pushReplacement(
       context,
       MaterialPageRoute(builder: (_) => ClockInDoneScreen(attendanceId: a.id)),

@@ -148,9 +148,23 @@ class AppStore extends ChangeNotifier {
 
   /// 오늘 내 근무 (끝나지 않은 것 우선).
   Shift? get myTodayShift {
-    final list = myShifts.where((s) => s.date == ymd(today)).toList();
+    // 종료 시각이 지났는데 출근 기록이 없는 근무는 오늘 근무로 치지 않는다.
+    final list = myShifts
+        .where((s) =>
+            s.date == ymd(today) &&
+            (attendanceFor(s.id) != null || !shiftEnd(s).isBefore(now)))
+        .toList();
     return list.where((s) => attendanceFor(s.id)?.clockOut == null).firstOrNull ??
         list.firstOrNull;
+  }
+
+  /// 출근은 시작 30분 전부터. 막힐 때 안내 문구, 가능하면 null.
+  String? clockInBlock(Shift s) {
+    if (shiftEnd(s).isBefore(now)) return '근무 시간이 지나 출근할 수 없어요';
+    if (now.isBefore(shiftStart(s).subtract(const Duration(minutes: 30)))) {
+      return '근무 시작 30분 전부터 출근할 수 있어요';
+    }
+    return null;
   }
 
   List<Shift> get myUpcomingShifts => myShifts
@@ -187,12 +201,20 @@ class AppStore extends ChangeNotifier {
     return d > 0 ? d : 0;
   }
 
+  /// 급여는 소정 시작과 출근 중 늦은 쪽부터 계산한다(일찍 찍어도 부풀지 않음).
+  DateTime _paidStart(Attendance a, Shift? s) {
+    final inAt = DateTime.parse(a.clockIn);
+    if (s == null) return inAt;
+    final start = shiftStart(s);
+    return inAt.isBefore(start) ? start : inAt;
+  }
+
   /// 실근무 분(휴게 제외). 근무 중이면 지금까지.
   int workedMinutes(Attendance a) {
     final s = shiftById(a.shiftId);
     final end = a.clockOut == null ? now : DateTime.parse(a.clockOut!);
     return WorkEntry(
-      start: DateTime.parse(a.clockIn),
+      start: _paidStart(a, s),
       end: end,
       breakMin: a.clockOut == null ? 0 : (s?.breakMin ?? 0),
     ).minutes;
@@ -314,7 +336,7 @@ class AppStore extends ChangeNotifier {
       final a = attendanceFor(s.id);
       if (a?.clockOut != null) {
         entries.add(WorkEntry(
-          start: DateTime.parse(a!.clockIn),
+          start: _paidStart(a!, s),
           end: DateTime.parse(a.clockOut!),
           breakMin: s.breakMin,
           isSubstitute: s.isSubstitute,
@@ -419,9 +441,12 @@ class AppStore extends ChangeNotifier {
     _commit();
   }
 
-  void switchStore(String storeId) {
+  /// 근무 중이면 전환하지 않고 false.
+  bool switchStore(String storeId) {
+    if (isWorking) return false;
     session.employeeStoreId = storeId;
     _commit();
+    return true;
   }
 
   /// 시드로 되돌린다. 로그인·역할은 유지.
