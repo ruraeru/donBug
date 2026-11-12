@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 
 import '../../theme.dart';
 import 'kakao_consent_screen.dart';
@@ -20,20 +21,9 @@ class LoginScreen extends StatelessWidget {
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      Container(
-                        width: 88,
-                        height: 88,
-                        alignment: Alignment.center,
-                        decoration: BoxDecoration(
-                          color: AppColors.primary,
-                          borderRadius: BorderRadius.circular(28),
-                        ),
-                        child: Text('₩',
-                            style: AppText.style(
-                                44, FontWeight.w700, AppColors.onPrimary)),
-                      ),
+                      SvgPicture.asset('assets/images/app_icon.svg', width: 88, height: 88),
                       const SizedBox(height: 16),
-                      Text('돈벌래', style: AppText.style(34, FontWeight.w700)),
+                      Text('돈벌래', style: AppText.style(34, FontWeight.w500)),
                       const SizedBox(height: 16),
                       Text(
                         '사장님의 행정 부담은 덜고,\n알바생의 권리는 지키는\n스마트 매장 관리',
@@ -85,7 +75,7 @@ class KakaoButton extends StatelessWidget {
           child: Padding(
             padding: const EdgeInsets.symmetric(vertical: 16),
             child: Center(
-                child: Text(label, style: AppText.style(16, FontWeight.w700))),
+                child: Text(label, style: AppText.style(16, FontWeight.w500))),
           ),
         ),
       );

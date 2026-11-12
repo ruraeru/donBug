@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import '../../data/app_scope.dart';
 import '../../theme.dart';
 import '../../widgets/common.dart';
 import 'staff_approval_screen.dart';
@@ -8,18 +9,22 @@ import 'employer_parts.dart';
 
 /// 매장 코드 공유 (Figma 47:78).
 class StoreCodeScreen extends StatelessWidget {
-  const StoreCodeScreen({super.key});
+  const StoreCodeScreen({super.key, this.invite = false});
 
-  static const _code = 'CAFE-8K2D';
+  /// 직원 관리의 "+ 초대"에서 열면 true (매장 만들기 직후가 아님).
+  final bool invite;
 
   @override
-  Widget build(BuildContext context) => Scaffold(
+  Widget build(BuildContext context) {
+    final st = AppScope.of(context).store;
+    final code = st.code;
+    return Scaffold(
         body: SafeArea(
           child: ListView(
             padding: const EdgeInsets.fromLTRB(20, 8, 20, 16),
             children: [
-              const SuccessHero(
-                title: '매장이 만들어졌어요',
+              SuccessHero(
+                title: invite ? '직원을 초대해요' : '매장이 만들어졌어요',
                 subtitle: '직원에게 매장 코드를 알려주세요',
               ),
               const SizedBox(height: 16),
@@ -30,9 +35,9 @@ class StoreCodeScreen extends StatelessWidget {
                         style: AppText.style(
                             13, FontWeight.w400, AppColors.textSecondary)),
                     const SizedBox(height: 12),
-                    Text(_code,
+                    Text(code,
                         style: AppText.style(
-                            32, FontWeight.w700, AppColors.primary)),
+                            32, FontWeight.w500, AppColors.primary)),
                     const SizedBox(height: 12),
                     Container(
                       width: 140,
@@ -44,15 +49,17 @@ class StoreCodeScreen extends StatelessWidget {
                       ),
                       child: Text('QR',
                           style: AppText.style(
-                              28, FontWeight.w700, AppColors.textTertiary)),
+                              28, FontWeight.w500, AppColors.textTertiary)),
                     ),
                     const SizedBox(height: 12),
                     SmallButton(
                       '코드 복사',
                       background: AppColors.primarySoft,
                       color: AppColors.primary,
-                      onPressed: () => Clipboard.setData(
-                          const ClipboardData(text: _code)),
+                      onPressed: () {
+                        Clipboard.setData(ClipboardData(text: code));
+                        showToast(context, '매장 코드를 복사했어요');
+                      },
                     ),
                   ],
                 ),
@@ -62,26 +69,34 @@ class StoreCodeScreen extends StatelessWidget {
         ),
         bottomNavigationBar: BottomBar(children: [
           AppButton(
-            '직원 승인하러 가기',
-            onPressed: () => Navigator.push(
-              context,
-              MaterialPageRoute(builder: (_) => const StaffApprovalScreen()),
-            ),
+            invite ? '닫기' : '직원 승인하러 가기',
+            onPressed: () => invite
+                ? Navigator.pop(context)
+                : Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => const StaffApprovalScreen(onboarding: true)),
+                  ),
           ),
           Material(
             color: AppColors.kakao,
             borderRadius: BorderRadius.circular(14),
             clipBehavior: Clip.antiAlias,
             child: InkWell(
-              onTap: () {},
+              // shortcut: 카카오톡 공유 대신 공유 문구를 복사(데모).
+              onTap: () {
+                Clipboard.setData(ClipboardData(
+                    text: '[돈벌래] ${st.name} 매장 코드: $code\n앱에서 매장 가입 > 코드 입력'));
+                showToast(context, '공유 문구를 복사했어요 (데모)');
+              },
               child: Container(
                 height: 54,
                 alignment: Alignment.center,
                 child: Text('카카오톡으로 코드 공유',
-                    style: AppText.style(16, FontWeight.w700)),
+                    style: AppText.style(16, FontWeight.w500)),
               ),
             ),
           ),
         ]),
       );
+  }
 }

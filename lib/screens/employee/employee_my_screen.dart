@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
 
+import '../../data/app_scope.dart';
 import '../../theme.dart';
 import '../../widgets/common.dart';
-import 'login_screen.dart';
+import '../../widgets/demo_menu.dart';
 import 'my_documents_screen.dart';
 import 'notification_center_screen.dart';
 import 'store_switch_screen.dart';
@@ -16,27 +17,31 @@ class EmployeeMyScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final chevron =
-        Text('›', style: AppText.style(22, FontWeight.w400, AppColors.textTertiary));
+    final store = AppScope.of(context);
+    final p = store.person(store.session.employeeId);
+    final others = store.myMemberships.length - 1;
+    final docAlert = (store.certDaysLeft(p) ?? -1) <= 30 ||
+        (store.myStaff?.contract != null && !store.myStaff!.contract!.signed);
+    const chevron = Icon(Icons.chevron_right_rounded, color: AppColors.textTertiary);
     return SafeArea(
       child: ListView(
-        padding: const EdgeInsets.fromLTRB(20, 10, 20, 16),
+        padding: const EdgeInsets.fromLTRB(20, 12, 20, 16),
         children: [
-          Text('MY', style: AppText.style(24, FontWeight.w700)),
-          const SizedBox(height: 18),
+          Text('MY', style: AppText.style(24, FontWeight.w500)),
+          const SizedBox(height: 16),
           AppCard(
             child: Row(
               children: [
-                const LetterAvatar('태',
+                LetterAvatar(p.letter,
                     color: AppColors.primary, background: AppColors.primarySoft),
-                const SizedBox(width: 14),
+                const SizedBox(width: 12),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text('김태우', style: AppText.style(18, FontWeight.w700)),
+                      Text(p.fullName, style: AppText.style(18, FontWeight.w500)),
                       const SizedBox(height: 2),
-                      Text('알바생 · 카페 커푸치노',
+                      Text('알바생 · ${store.store.name}',
                           style: AppText.style(13, FontWeight.w400, AppColors.textSecondary)),
                     ],
                   ),
@@ -47,24 +52,25 @@ class EmployeeMyScreen extends StatelessWidget {
           const SizedBox(height: 12),
           PersonRow(
             avatar: const LetterAvatar('매',
-                color: AppColors.primary, background: AppColors.primarySoft),
+                color: AppColors.textSecondary, background: AppColors.bg),
             title: '근무 매장 전환',
-            subtitle: '카페 커푸치노 외 1곳',
+            subtitle: others > 0 ? '${store.store.name} 외 $others곳' : store.store.name,
             trailing: chevron,
             onTap: () => _push(context, const StoreSwitchScreen()),
           ),
           const SizedBox(height: 12),
           PersonRow(
-            avatar: const LetterAvatar('서', color: AppColors.info, background: AppColors.infoSoft),
+            avatar: const LetterAvatar('서',
+                color: AppColors.textSecondary, background: AppColors.bg),
             title: '내 서류',
             subtitle: '보건증 · 근로계약서',
-            trailing: chevron,
+            trailing: docAlert ? const Pill.accent('확인 필요') : chevron,
             onTap: () => _push(context, const MyDocumentsScreen()),
           ),
           const SizedBox(height: 12),
           PersonRow(
             avatar: const LetterAvatar('알',
-                color: AppColors.accent, background: AppColors.accentSoft),
+                color: AppColors.textSecondary, background: AppColors.bg),
             title: '알림 설정',
             subtitle: '대타 · 공지 · 만료 알림',
             trailing: chevron,
@@ -77,10 +83,10 @@ class EmployeeMyScreen extends StatelessWidget {
                 color: AppColors.textSecondary, background: AppColors.bg),
             title: '로그아웃',
             trailing: chevron,
-            onTap: () => Navigator.of(context).pushAndRemoveUntil(
-                MaterialPageRoute(builder: (_) => const LoginScreen()),
-                (_) => false),
+            onTap: () => logoutToLogin(context),
           ),
+          const SizedBox(height: 24),
+          const DemoMenu(),
         ],
       ),
     );

@@ -17,6 +17,10 @@ class AppColors {
   static const dangerSoft = Color(0xFFFDECEC);
   static const info = Color(0xFF3B82F6);
   static const infoSoft = Color(0xFFE8F0FE);
+
+  /// 직원(유동) 근무 · 매니저 칩.
+  static const purple = Color(0xFF8B5CF6);
+  static const purpleSoft = Color(0xFFF0EAFE);
   static const kakao = Color(0xFFFEE500);
 }
 
@@ -40,4 +44,8 @@ final appTheme = ThemeData(
   scaffoldBackgroundColor: AppColors.bg,
   fontFamily: 'Noto Sans KR',
   dividerColor: AppColors.border,
+  // 키보드 포커스 · 마우스 hover 가 보이도록 초록 계열로 지정 (기본은 12% · 4% 검정).
+  focusColor: AppColors.primary.withValues(alpha: 0.16),
+  hoverColor: AppColors.primarySoft,
+  highlightColor: AppColors.primary.withValues(alpha: 0.08),
 );

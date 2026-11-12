@@ -1,85 +1,113 @@
 import 'package:flutter/material.dart';
 
+import '../../data/app_scope.dart';
+import '../../data/app_store.dart';
+import '../../data/format.dart';
 import '../../theme.dart';
 import '../../widgets/common.dart';
 import 'attendance_detail_screen.dart';
+import 'employer_parts.dart';
 
-/// 오늘 근태 현황 (Figma 47:402).
-class AttendanceScreen extends StatelessWidget {
+/// 근태 현황 (Figma 47:402). 날짜를 바꿔 지난 기록도 본다.
+class AttendanceScreen extends StatefulWidget {
   const AttendanceScreen({super.key});
 
-  static const _rows = [
-    (initial: '지', name: '지민', sub: '10:00 출근 · 정상', status: '출근', color: AppColors.primary, bg: AppColors.primarySoft),
-    (initial: '수', name: '수빈', sub: '10:12 출근 · 12분 지각', status: '지각', color: AppColors.danger, bg: AppColors.dangerSoft),
-    (initial: '태', name: '태우', sub: '14:02 출근 · 근무 중', status: '근무 중', color: AppColors.info, bg: AppColors.infoSoft),
-    (initial: '하', name: '하윤', sub: '18:00 출근 예정', status: '대기', color: AppColors.accent, bg: AppColors.accentSoft),
-  ];
+  @override
+  State<AttendanceScreen> createState() => _AttendanceScreenState();
+}
 
-  static const _summary = [
-    (label: '출근', count: '2', color: AppColors.primary, bg: AppColors.primarySoft),
-    (label: '지각', count: '1', color: AppColors.danger, bg: AppColors.dangerSoft),
-    (label: '대기', count: '1', color: AppColors.accent, bg: AppColors.accentSoft),
-  ];
+class _AttendanceScreenState extends State<AttendanceScreen> {
+  DateTime? _day;
 
   @override
-  Widget build(BuildContext context) => Scaffold(
-        appBar: AppHeader('오늘 근태', actions: [
-          Padding(
-            padding: const EdgeInsets.only(right: 20),
-            child: Center(
-              child: Text('5/14',
-                  style: AppText.style(14, FontWeight.w700, AppColors.primary)),
-            ),
-          ),
-        ]),
-        body: ListView(
-          padding: const EdgeInsets.fromLTRB(20, 8, 20, 16),
-          children: [
-            Row(
-              children: [
-                for (var i = 0; i < _summary.length; i++) ...[
-                  if (i > 0) const SizedBox(width: 8),
-                  Expanded(
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(vertical: 14),
-                      decoration: BoxDecoration(
-                        color: _summary[i].bg,
-                        borderRadius: BorderRadius.circular(16),
-                      ),
-                      child: Column(
-                        children: [
-                          Text(_summary[i].label,
-                              style: AppText.style(
-                                  12, FontWeight.w400, _summary[i].color)),
-                          const SizedBox(height: 2),
-                          Text(_summary[i].count,
-                              style: AppText.style(
-                                  22, FontWeight.w700, _summary[i].color)),
-                        ],
-                      ),
-                    ),
-                  ),
-                ],
-              ],
-            ),
-            for (final r in _rows) ...[
-              const SizedBox(height: 10),
-              PersonRow(
-                avatar: LetterAvatar(r.initial, color: r.color, background: r.bg),
-                title: r.name,
-                subtitle: r.sub,
-                trailing: Pill(r.status, color: r.color, background: r.bg),
-                // 더미: 상세 화면은 수빈(지각) 기록만 있다.
-                onTap: r.name == '수빈'
-                    ? () => Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                              builder: (_) => const AttendanceDetailScreen()),
-                        )
-                    : null,
-              ),
-            ],
-          ],
+  Widget build(BuildContext context) {
+    final store = AppScope.of(context);
+    final day = _day ?? store.today;
+    final shifts = store.shiftsOn(day);
+    // 출근(정상) · 지각(근무 중 포함) · 대기 · 미출근
+    String bucket(s) {
+      final st = store.attendanceStatus(s);
+      if (st == AttStatus.waiting || st == AttStatus.absent) return st.name;
+      return store.lateMinutes(s) > 0 ? 'late' : 'normal';
+    }
+    final buckets = [for (final s in shifts) bucket(s)];
+    int count(String b) => buckets.where((x) => x == b).length;
+    final summary = [
+      ('출근', count('normal'), AttStatus.normal),
+      ('지각', count('late'), AttStatus.late),
+      ('대기', count('waiting'), AttStatus.waiting),
+      ('미출근', count('absent'), AttStatus.absent),
+    ];
+    return Scaffold(
+      appBar: AppHeader(day == store.today ? '오늘 근태' : '근태 현황', actions: [
+        PeriodNav(
+          label: md(day),
+          prevTip: '이전 날',
+          nextTip: '다음 날',
+          onPrev: () => setState(() => _day = day.subtract(const Duration(days: 1))),
+          onNext: day == store.today ? null : () => setState(() => _day = day.add(const Duration(days: 1))),
         ),
-      );
+      ]),
+      body: ListView(
+        padding: const EdgeInsets.fromLTRB(20, 8, 20, 16),
+        children: [
+          Row(
+            children: [
+              for (var i = 0; i < summary.length; i++) ...[
+                if (i > 0) const SizedBox(width: 8),
+                Expanded(child: _summary(summary[i].$1, summary[i].$2, summary[i].$3)),
+              ],
+            ],
+          ),
+          if (shifts.isEmpty) const EmptyNote('이날 근무가 없어요'),
+          for (final s in shifts) ...[
+            const SizedBox(height: 12),
+            Builder(builder: (context) {
+              final st = store.attendanceStatus(s);
+              final (label, fg, bg) = attStyle(st);
+              final a = store.attendanceFor(s.id);
+              final late = store.lateMinutes(s);
+              final sub = switch (st) {
+                AttStatus.waiting => '${hm(s.startMin)} 출근 예정 · ${s.part}',
+                AttStatus.absent => '${shiftTime(s)} · 출근 기록 없음',
+                AttStatus.working =>
+                  '${clock(DateTime.parse(a!.clockIn))} 출근 · 근무 중${late > 0 ? ' · $late분 지각' : ''}',
+                _ =>
+                  '${clock(DateTime.parse(a!.clockIn))}–${clock(DateTime.parse(a.clockOut!))}'
+                      '${late > 0 ? ' · $late분 지각' : ' · 정상'}${a.editReason != null ? ' · 수정됨' : ''}',
+              };
+              return PersonRow(
+                avatar: MemberAvatar(store.staffById(s.staffId)!),
+                title: store.nameOf(s.staffId),
+                subtitle: sub,
+                trailing: st == AttStatus.normal || st == AttStatus.working
+                    ? Text(label,
+                        style: AppText.style(13, FontWeight.w400, AppColors.textSecondary))
+                    : Pill(label, color: fg, background: bg),
+                onTap: () => Navigator.push(context,
+                    MaterialPageRoute(builder: (_) => AttendanceDetailScreen(shiftId: s.id))),
+              );
+            }),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _summary(String label, int n, AttStatus style) {
+    final alert = n > 0 && (style == AttStatus.late || style == AttStatus.absent);
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 16),
+      decoration: BoxDecoration(color: AppColors.surface, borderRadius: BorderRadius.circular(16)),
+      child: Column(
+        children: [
+          Text(label, style: AppText.style(12, FontWeight.w400, AppColors.textSecondary)),
+          const SizedBox(height: 4),
+          Text('$n',
+              style: AppText.style(22, FontWeight.w500,
+                  alert ? AppColors.danger : AppColors.textPrimary)),
+        ],
+      ),
+    );
+  }
 }

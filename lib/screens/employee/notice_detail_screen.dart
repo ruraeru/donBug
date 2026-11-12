@@ -1,62 +1,90 @@
 import 'package:flutter/material.dart';
 
+import '../../data/app_scope.dart';
 import '../../theme.dart';
 import '../../widgets/common.dart';
+import 'employee_notice_screen.dart';
 
-/// 공지 상세.
-class NoticeDetailScreen extends StatelessWidget {
-  const NoticeDetailScreen({super.key});
+/// 공지 상세. 필독이 아니면 열면 읽음, 필독이면 '확인했어요'로 읽음.
+class NoticeDetailScreen extends StatefulWidget {
+  const NoticeDetailScreen({super.key, required this.noticeId});
+
+  final String noticeId;
 
   @override
-  Widget build(BuildContext context) => Scaffold(
-        appBar: const AppHeader('공지'),
-        body: ListView(
-          padding: const EdgeInsets.fromLTRB(20, 8, 20, 16),
-          children: [
-            AppCard(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      const Pill('필독', color: AppColors.danger, background: AppColors.dangerSoft),
-                      const SizedBox(width: 8),
-                      Text('5/12 · 사장님',
-                          style: AppText.style(12, FontWeight.w400, AppColors.textTertiary)),
-                    ],
-                  ),
-                  const SizedBox(height: 12),
-                  Text('5월 마감 청소 방법 안내', style: AppText.style(20, FontWeight.w700)),
-                  const SizedBox(height: 12),
-                  const Divider(height: 1, color: AppColors.border),
-                  const SizedBox(height: 12),
-                  Text(
-                    '5월부터 마감 근무자는 아래 순서로 청소해 주세요.\n\n'
-                    '1. 에스프레소 머신 세척 및 그룹 헤드 청소\n'
-                    '2. 홀 바닥 · 테이블 소독\n'
-                    '3. 쓰레기 분리배출 후 마감 체크리스트 작성\n\n'
-                    '체크리스트는 앱 공지 하단에서 확인할 수 있어요.',
-                    style: AppText.style(15).copyWith(height: 1.6),
-                  ),
-                ],
-              ),
+  State<NoticeDetailScreen> createState() => _NoticeDetailScreenState();
+}
+
+class _NoticeDetailScreenState extends State<NoticeDetailScreen> {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      final store = AppScope.read(context);
+      final n = store.noticeById(widget.noticeId);
+      if (n != null && !n.required) store.markNoticeRead(n.id);
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final store = AppScope.of(context);
+    final n = store.noticeById(widget.noticeId);
+    if (n == null) return const MissingScreen(title: '공지');
+    final read = store.isNoticeReadByMe(n);
+    final active = store.activeStaff.length;
+    final readCount = active - store.unreadStaffOf(n).length;
+    return Scaffold(
+      appBar: const AppHeader('공지'),
+      body: ListView(
+        padding: const EdgeInsets.fromLTRB(20, 8, 20, 16),
+        children: [
+          AppCard(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    noticeTags(n),
+                    const SizedBox(width: 8),
+                    Text('${noticeTime(n)} · 사장님',
+                        style: AppText.style(12, FontWeight.w400, AppColors.textTertiary)),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                Text(n.title, style: AppText.style(20, FontWeight.w500)),
+                const SizedBox(height: 12),
+                const Divider(height: 1, color: AppColors.border),
+                const SizedBox(height: 12),
+                Text(n.body, style: AppText.style(15).copyWith(height: 1.6)),
+              ],
             ),
-            const SizedBox(height: 16),
-            AppCard(
-              child: Row(
-                children: [
-                  Expanded(
-                    child: Text('확인 현황',
-                        style: AppText.style(14, FontWeight.w700, AppColors.textSecondary)),
-                  ),
-                  Text('3 / 5명', style: AppText.style(14, FontWeight.w700, AppColors.primary)),
-                ],
-              ),
+          ),
+          const SizedBox(height: 16),
+          AppCard(
+            child: Row(
+              children: [
+                Expanded(
+                  child: Text('확인 현황',
+                      style: AppText.style(14, FontWeight.w500, AppColors.textSecondary)),
+                ),
+                Text('$readCount / $active명',
+                    style: AppText.style(14, FontWeight.w500, AppColors.textSecondary)),
+              ],
             ),
-          ],
-        ),
-        bottomNavigationBar: BottomBar(
-          child: AppButton('확인했어요 (필독)', onPressed: () => Navigator.pop(context)),
-        ),
-      );
+          ),
+        ],
+      ),
+      bottomNavigationBar: BottomBar(
+        child: read
+            ? AppButton('확인 완료 · 닫기',
+                variant: AppButtonVariant.outline, onPressed: () => Navigator.pop(context))
+            : AppButton(n.required ? '확인했어요 (필독)' : '확인했어요', onPressed: () {
+                AppScope.read(context).markNoticeRead(n.id);
+                Navigator.pop(context);
+              }),
+      ),
+    );
+  }
 }

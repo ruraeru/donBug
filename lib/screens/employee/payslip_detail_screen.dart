@@ -1,19 +1,25 @@
 import 'package:flutter/material.dart';
 
+import '../../data/app_scope.dart';
+import '../../data/format.dart';
 import '../../theme.dart';
 import '../../widgets/common.dart';
 import 'work_log_screen.dart';
 
 /// 급여 명세서 상세.
 class PayslipDetailScreen extends StatelessWidget {
-  const PayslipDetailScreen({super.key});
+  const PayslipDetailScreen({super.key, required this.month});
+
+  final DateTime month;
 
   @override
   Widget build(BuildContext context) {
-    final section = AppText.style(14, FontWeight.w700, AppColors.textSecondary);
-    const regular = FontWeight.w400;
+    final store = AppScope.of(context);
+    final me = store.myStaff!;
+    final current = month.year == store.today.year && month.month == store.today.month;
+    final slip = store.payslip(me.id, month.year, month.month, projected: current);
     return Scaffold(
-      appBar: const AppHeader('5월 급여 명세서'),
+      appBar: AppHeader('${month.month}월 급여 명세서'),
       body: ListView(
         padding: const EdgeInsets.fromLTRB(20, 8, 20, 16),
         children: [
@@ -22,60 +28,38 @@ class PayslipDetailScreen extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('실수령액',
+                Text(current ? '실수령액 (예정 근무 포함 예상)' : '실수령액',
                     style: AppText.style(13, FontWeight.w500, AppColors.onPrimary)),
                 const SizedBox(height: 6),
-                Text('₩ 842,257',
-                    style: AppText.style(34, FontWeight.w700, AppColors.onPrimary)),
+                Text(won(slip.net), style: AppText.style(34, FontWeight.w500, AppColors.onPrimary)),
                 const SizedBox(height: 6),
-                Text('세전 ₩871,000 − 공제 ₩28,743 (3.3%)',
+                Text('세전 ${won(slip.gross)} − 공제 ${won(slip.deduction)} (${me.deduction.short})',
                     style: AppText.style(13, FontWeight.w400, AppColors.onPrimary)),
               ],
             ),
           ),
-          const SizedBox(height: 14),
-          AppCard(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text('지급 내역', style: section),
-                const SizedBox(height: 12),
-                const KeyValueRow('기본급 (62시간 × 10,030원)', '621,860원', valueWeight: regular),
-                const SizedBox(height: 12),
-                const KeyValueRow('주휴수당', '120,360원', valueWeight: regular),
-                const SizedBox(height: 12),
-                const KeyValueRow('야간·연장 가산', '128,780원', valueWeight: regular),
-                const SizedBox(height: 12),
-                const KeyValueRow('휴일 가산', '0원', valueWeight: regular),
-                const SizedBox(height: 12),
-                const Divider(height: 1, color: AppColors.border),
-                const SizedBox(height: 12),
-                const KeyValueRow('세전 합계', '871,000원'),
-              ],
-            ),
-          ),
-          const SizedBox(height: 14),
-          AppCard(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text('공제 내역', style: section),
-                const SizedBox(height: 12),
-                const KeyValueRow('사업소득세 3.3%', '−28,743원', valueWeight: regular),
-              ],
-            ),
-          ),
-          const SizedBox(height: 14),
-          AppCard(
+          const SizedBox(height: 16),
+          PayBreakdown(slip: slip, staff: me),
+          const SizedBox(height: 16),
+          Material(
             color: AppColors.infoSoft,
-            radius: 14,
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-            onTap: () => Navigator.push(
-              context,
-              MaterialPageRoute(builder: (_) => const WorkLogScreen()),
+            borderRadius: BorderRadius.circular(14),
+            clipBehavior: Clip.antiAlias,
+            child: InkWell(
+              onTap: () => Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => WorkLogScreen(month: month)),
+              ),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                child: Row(children: [
+                  Expanded(
+                      child: Text('일자별 근무 내역 보기',
+                          style: AppText.style(14, FontWeight.w500, AppColors.info))),
+                  const Icon(Icons.chevron_right_rounded, color: AppColors.info),
+                ]),
+              ),
             ),
-            child: Text('일자별 근무 내역 보기  ›',
-                style: AppText.style(14, FontWeight.w700, AppColors.info)),
           ),
         ],
       ),
