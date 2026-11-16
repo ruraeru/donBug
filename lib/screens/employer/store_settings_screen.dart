@@ -1,9 +1,11 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 import '../../data/app_scope.dart';
 import '../../theme.dart';
 import '../../widgets/common.dart';
 import '../../widgets/demo_menu.dart';
+import '../web/web_view_mode.dart';
 
 /// 매장 설정.
 class StoreSettingsScreen extends StatefulWidget {
@@ -56,6 +58,16 @@ class _StoreSettingsScreenState extends State<StoreSettingsScreen> {
           for (final (title, sub, value, onChanged) in toggles) ...[
             const SizedBox(height: 12),
             ToggleCard(title: title, subtitle: sub, value: value, onChanged: onChanged),
+          ],
+          if (kIsWeb && AppScope.of(context).remote) ...[
+            const SizedBox(height: 12),
+            PersonRow(
+              avatar: const LetterAvatar('P', color: AppColors.textSecondary, background: AppColors.bg),
+              title: 'PC 화면으로',
+              subtitle: '웹 사장님 대시보드로 바꿔요',
+              trailing: const Icon(Icons.chevron_right_rounded, color: AppColors.textTertiary),
+              onTap: () => openPcView(context),
+            ),
           ],
           const SizedBox(height: 12),
           PersonRow(

@@ -7,7 +7,8 @@ import 'web_common.dart';
 
 /// 서버 모드 첫 로그인: 사장님이 아직 매장이 없을 때.
 class WebCreateStoreScreen extends StatefulWidget {
-  const WebCreateStoreScreen({super.key, required this.onCreate, required this.onLogout});
+  const WebCreateStoreScreen(
+      {super.key, required this.onCreate, required this.onLogout, this.onEmployee});
 
   final Future<void> Function({
     required String name,
@@ -16,6 +17,9 @@ class WebCreateStoreScreen extends StatefulWidget {
     required Deduction deduction,
   }) onCreate;
   final VoidCallback onLogout;
+
+  /// 알바생: 모바일 화면에서 매장 코드로 가입.
+  final VoidCallback? onEmployee;
 
   @override
   State<WebCreateStoreScreen> createState() => _WebCreateStoreScreenState();
@@ -86,6 +90,14 @@ class _WebCreateStoreScreenState extends State<WebCreateStoreScreen> {
                 const SizedBox(height: 24),
                 WebButton(_busy ? '만드는 중…' : '매장 만들기',
                     height: 50, expand: true, onPressed: _busy ? null : _submit),
+                if (widget.onEmployee != null) ...[
+                  const SizedBox(height: 8),
+                  WebButton('알바생이에요 · 매장 코드로 가입',
+                      style: WebButtonStyle.outline,
+                      height: 50,
+                      expand: true,
+                      onPressed: widget.onEmployee),
+                ],
                 const SizedBox(height: 8),
                 TextButton(
                   onPressed: widget.onLogout,

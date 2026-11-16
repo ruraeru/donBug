@@ -8,8 +8,9 @@ import 'web_create_store_screen.dart';
 import 'web_login_screen.dart';
 import 'web_shell.dart';
 import 'web_url.dart';
+import 'web_view_mode.dart';
 
-enum _Phase { loading, login, createStore, ready }
+enum _Phase { loading, login, createStore, ready, mobile }
 
 /// 서버 모드 웹 진입. 토큰 확인 → 상태 읽기 → (매장 없으면 만들기) → [WebShell].
 class WebBoot extends StatefulWidget {
@@ -34,9 +35,7 @@ class _WebBootState extends State<WebBoot> {
   @override
   void initState() {
     super.initState();
-    _api.onUnauthorized = () {
-      if (mounted) setState(() => _phase = _Phase.login);
-    };
+    // 로그인이 풀리면 main 의 onUnauthorized 가 새 WebBoot 로 돌린다.
     _start();
   }
 
@@ -65,6 +64,13 @@ class _WebBootState extends State<WebBoot> {
     try {
       await widget.store.reload();
       if (!mounted) return;
+      if (wantsMobileView(context, widget.store)) {
+        setState(() => _phase = _Phase.mobile);
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted) openMobileView(context, remember: false);
+        });
+        return;
+      }
       setState(() => _phase = widget.store.session.ownerStoreId.isEmpty
           ? _Phase.createStore
           : _Phase.ready);
@@ -96,7 +102,7 @@ class _WebBootState extends State<WebBoot> {
 
   @override
   Widget build(BuildContext context) => switch (_phase) {
-        _Phase.loading => const Scaffold(
+        _Phase.loading || _Phase.mobile => const Scaffold(
             backgroundColor: AppColors.bg,
             body: Center(child: CircularProgressIndicator(color: AppColors.primary)),
           ),
@@ -107,7 +113,11 @@ class _WebBootState extends State<WebBoot> {
               navigateTo(_api.kakaoLoginUrl);
             },
           ),
-        _Phase.createStore => WebCreateStoreScreen(onCreate: _create, onLogout: _logout),
+        _Phase.createStore => WebCreateStoreScreen(
+            onCreate: _create,
+            onLogout: _logout,
+            onEmployee: () => openMobileView(context),
+          ),
         _Phase.ready => const WebShell(),
       };
 }
