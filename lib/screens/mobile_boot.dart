@@ -75,6 +75,39 @@ Future<void> kakaoAppLogin(BuildContext context) async {
   }
 }
 
+/// 테스트 계정 로그인: 서버 TEST_LOGIN_TOKEN 과 같은 비밀 토큰을 카카오 토큰 자리에 보낸다.
+/// 로그인 화면 로고를 길게 누르면 열린다.
+Future<void> testAccountLogin(BuildContext context) async {
+  final store = AppScope.read(context);
+  final ctrl = TextEditingController();
+  final token = await showDialog<String>(
+    context: context,
+    builder: (ctx) => AlertDialog(
+      title: const Text('테스트 계정 로그인'),
+      content: TextField(
+        controller: ctrl,
+        autofocus: true,
+        obscureText: true,
+        decoration: const InputDecoration(hintText: '테스트 토큰'),
+      ),
+      actions: [
+        TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('취소')),
+        TextButton(onPressed: () => Navigator.pop(ctx, ctrl.text.trim()), child: const Text('로그인')),
+      ],
+    ),
+  );
+  if (token == null || token.isEmpty) return;
+  try {
+    final j = await store.api!.post('/api/auth/kakao/token', {'accessToken': token})
+        as Map<String, dynamic>;
+    await store.api!.setTokens(j['accessToken'] as String, j['refreshToken'] as String);
+    await store.reload();
+    if (context.mounted) enterApp(context);
+  } catch (e) {
+    if (context.mounted) showToast(context, '테스트 로그인 실패: $e');
+  }
+}
+
 /// 서버 상태로 첫 화면을 정한다: 매장 없음 → 역할 선택, 가입 대기 → 대기 화면, 그 밖 → 역할별 셸.
 void enterApp(BuildContext context) {
   final store = AppScope.read(context);

@@ -57,4 +57,30 @@ void main() {
     expect(find.byType(JoinPendingScreen), findsOneWidget);
     expect(find.text('사장님이 승인한 것으로 (데모)'), findsNothing);
   });
+
+  testWidgets('로고 길게 누르기 → 테스트 토큰으로 로그인', (t) async {
+    SharedPreferences.setMockInitialValues({});
+    final prefs = await SharedPreferences.getInstance();
+    final state = utf8.encode(jsonEncode(buildSeed(_now).toJson()));
+    Object? sent;
+    final api = ApiClient(
+        prefs: prefs,
+        baseUrl: 'http://x',
+        client: MockClient((req) async {
+          if (req.url.path == '/api/auth/kakao/token') {
+            sent = jsonDecode(req.body);
+            return http.Response('{"accessToken":"a","refreshToken":"r"}', 200);
+          }
+          return http.Response.bytes(state, 200);
+        }));
+    final store = AppStore(buildSeed(_now), now: () => _now, api: api);
+    await t.pumpWidget(AppScope(store: store, child: const MaterialApp(home: LoginScreen())));
+    await t.longPress(find.byType(GestureDetector).first);
+    await t.pumpAndSettle();
+    await t.enterText(find.byType(TextField), 'secret-token-123456');
+    await t.tap(find.text('로그인'));
+    await t.pump(const Duration(seconds: 1));
+    expect(sent, {'accessToken': 'secret-token-123456'});
+    expect(api.hasToken, isTrue);
+  });
 }

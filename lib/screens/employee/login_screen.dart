@@ -23,7 +23,13 @@ class LoginScreen extends StatelessWidget {
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      SvgPicture.asset('assets/images/app_icon.svg', width: 88, height: 88),
+                      GestureDetector(
+                        // 서버 모드: 로고 길게 누르기 = 테스트 계정 로그인
+                        onLongPress: AppScope.read(context).remote
+                            ? () => testAccountLogin(context)
+                            : null,
+                        child: SvgPicture.asset('assets/images/app_icon.svg', width: 88, height: 88),
+                      ),
                       const SizedBox(height: 16),
                       Text('돈벌래', style: AppText.style(34, FontWeight.w500)),
                       const SizedBox(height: 16),
