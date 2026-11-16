@@ -52,12 +52,25 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
   Timer? _poll;
 
   // 서버 모드: 다른 사람이 한 일(대타 요청·지원, 가입 신청 등)이 보이도록 주기적으로, 앱으로 돌아올 때 다시 읽는다.
-  Future<void> _refresh() async {
+  Future<void> _refresh() => widget.store.refreshNow(quiet: true);
+
+  /// 변경 신호 기다리기(롱 폴링): 내 매장이 바뀌면 서버가 바로 응답하고, 그때 다시 읽는다.
+  Future<void> _watchChanges() async {
     final st = widget.store;
-    if (!st.remote || st.scheduleDirty || !st.api!.hasToken || !st.session.loggedIn) return;
-    try {
-      await st.reload(storeId: st.session.storeId);
-    } catch (_) {}
+    var since = -1;
+    while (mounted) {
+      if (!st.api!.hasToken || !st.session.loggedIn) {
+        await Future<void>.delayed(const Duration(seconds: 5));
+        continue;
+      }
+      try {
+        final j = await st.api!.get('/api/v1/me/changes?since=$since') as Map<String, dynamic>;
+        since = (j['seq'] as num).toInt();
+        if (j['changed'] == true) await _refresh();
+      } catch (_) {
+        await Future<void>.delayed(const Duration(seconds: 5));
+      }
+    }
   }
 
   @override
@@ -70,7 +83,9 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
     super.initState();
     if (widget.store.remote) {
       WidgetsBinding.instance.addObserver(this);
-      _poll = Timer.periodic(const Duration(seconds: 20), (_) => _refresh());
+      // 변경 신호가 끊겼을 때를 대비한 주기 확인.
+      _poll = Timer.periodic(const Duration(seconds: 60), (_) => _refresh());
+      _watchChanges();
     }
     widget.store.remoteError.addListener(_showError);
     // 서버 모드: 토큰 갱신이 실패하면 로그인으로. 웹은 WebBoot 가 로그인 화면을 띄운다.

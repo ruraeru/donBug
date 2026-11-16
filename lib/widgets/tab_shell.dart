@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../data/app_scope.dart';
 import '../theme.dart';
 import 'common.dart';
 
@@ -28,7 +29,17 @@ class TabShellState extends State<TabShell> {
   Widget build(BuildContext context) => Scaffold(
         body: IndexedStack(
           index: _index,
-          children: [for (final t in widget.tabs) t.page],
+          children: [
+            for (final t in widget.tabs)
+              // 서버 모드: 아래로 당기면 다시 읽는다.
+              AppScope.of(context).remote
+                  ? RefreshIndicator(
+                      color: AppColors.primary,
+                      onRefresh: () => AppScope.read(context).refreshNow(),
+                      child: t.page,
+                    )
+                  : t.page,
+          ],
         ),
         bottomNavigationBar: Container(
           decoration: const BoxDecoration(
