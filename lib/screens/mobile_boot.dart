@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_web_auth_2/flutter_web_auth_2.dart';
@@ -11,6 +12,7 @@ import 'employee/join_pending_screen.dart';
 import 'employee/login_screen.dart';
 import 'employee/role_select_screen.dart';
 import 'employee/store_code_screen.dart';
+import 'web/web_boot.dart';
 
 /// 서버 모드 앱 진입. 토큰이 있으면 상태를 읽고 [enterApp], 없으면 [LoginScreen].
 class MobileBoot extends StatefulWidget {
@@ -101,6 +103,13 @@ Future<void> testAccountLogin(BuildContext context) async {
     final j = await store.api!.post('/api/auth/kakao/token', {'accessToken': token})
         as Map<String, dynamic>;
     await store.api!.setTokens(j['accessToken'] as String, j['refreshToken'] as String);
+    if (!context.mounted) return;
+    // 웹은 WebBoot 가 상태를 읽고 PC/모바일 화면을 고른다.
+    if (kIsWeb) {
+      Navigator.of(context).pushAndRemoveUntil(
+          MaterialPageRoute(builder: (_) => WebBoot(store: store)), (_) => false);
+      return;
+    }
     await store.reload();
     if (context.mounted) enterApp(context);
   } catch (e) {

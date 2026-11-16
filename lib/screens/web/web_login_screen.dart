@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 
 import '../../theme.dart';
+import '../mobile_boot.dart';
 import 'web_common.dart';
 
 /// 서버 모드 웹 로그인. 카카오 로그인 페이지로 보낸다.
@@ -20,9 +21,13 @@ class WebLoginScreen extends StatelessWidget {
             child: ConstrainedBox(
               constraints: const BoxConstraints(maxWidth: 400),
               child: Column(mainAxisSize: MainAxisSize.min, children: [
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(18),
-                  child: SvgPicture.asset('assets/images/app_icon.svg', width: 72, height: 72),
+                GestureDetector(
+                  // 로고 길게 누르기 = 테스트 계정 로그인
+                  onLongPress: () => testAccountLogin(context),
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(18),
+                    child: SvgPicture.asset('assets/images/app_icon.svg', width: 72, height: 72),
+                  ),
                 ),
                 const SizedBox(height: 20),
                 Text('돈벌래', style: AppText.style(28, FontWeight.w700)),

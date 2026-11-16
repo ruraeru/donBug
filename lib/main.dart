@@ -108,8 +108,12 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
       navigatorKey: navigatorKey,
       theme: appTheme,
       // 웹 모바일 화면: PC 에서도 폰 폭으로 가운데에 보여 준다.
-      builder: kIsWeb
-          ? (context, child) => ValueListenableBuilder<bool>(
+      builder: (context, child) => GestureDetector(
+        // 빈 곳을 누르면 키보드를 내린다 (숫자 키패드엔 닫기 키가 없다). 버튼 탭은 안쪽이 먼저 받는다.
+        onTap: () => FocusManager.instance.primaryFocus?.unfocus(),
+        child: !kIsWeb
+            ? child
+            : ValueListenableBuilder<bool>(
                 valueListenable: webMobileFrame,
                 builder: (context, on, _) => !on
                     ? child!
@@ -122,8 +126,8 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
                           ),
                         ),
                       ),
-              )
-          : null,
+              ),
+      ),
       home: _home(),
     ),
   );
