@@ -157,7 +157,7 @@ class _RequestCard extends StatelessWidget {
               approved ? '${store.nameOf(s.staffId)}님 근무로 바뀌었어요' : '승인 후 자동 반영'),
           if (r.pending) ...[
             const SizedBox(height: 16),
-            if (r.status == SubStatus.open) ...[
+            if (r.status == SubStatus.open && !store.remote) ...[
               AppButton(
                 '동료 수락 (데모)',
                 variant: AppButtonVariant.soft,

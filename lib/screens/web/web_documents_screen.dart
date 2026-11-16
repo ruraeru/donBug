@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../data/api_client.dart';
 import '../../data/app_scope.dart';
 import '../../data/app_store.dart';
 import '../../data/format.dart';
@@ -7,6 +8,7 @@ import '../../data/models.dart';
 import '../../theme.dart';
 import '../../data/payroll.dart';
 import '../../widgets/common.dart';
+import '../../widgets/signature_input.dart';
 import 'web_common.dart';
 import 'web_staff_screen.dart';
 
@@ -135,6 +137,8 @@ Future<void> showContractDialog(BuildContext context, {String? staffId}) {
   final days = TextEditingController(), duty = TextEditingController();
   var start = store.today, end = DateTime(store.today.year + 1, store.today.month, store.today.day);
   String? error;
+  var busy = false;
+  final sig = SignatureInput.newController();
 
   void fill(Staff s) {
     who = s;
@@ -189,6 +193,10 @@ Future<void> showContractDialog(BuildContext context, {String? staffId}) {
       webField('근무 요일', AppTextField(controller: days, hint: '예: 월·수·금')),
       const SizedBox(height: 14),
       webField('업무 내용', AppTextField(controller: duty, hint: '예: 홀 서빙')),
+      if (store.remote) ...[
+        const SizedBox(height: 14),
+        webField('사장님 서명', SignatureInput(controller: sig)),
+      ],
       if (error != null) ...[
         const SizedBox(height: 12),
         Text(error!, style: AppText.style(13, FontWeight.w500, AppColors.danger)),
@@ -196,7 +204,8 @@ Future<void> showContractDialog(BuildContext context, {String? staffId}) {
     ]),
     actions: (ctx, set) => [
       WebButton('취소', style: WebButtonStyle.outline, onPressed: () => Navigator.pop(ctx)),
-      WebButton('서명하고 요청 보내기', onPressed: () {
+      WebButton(busy ? '보내는 중…' : '서명하고 요청 보내기', onPressed: () async {
+        if (busy) return;
         final w = wonDigits(wage.text);
         final h = int.tryParse(hoursCtrl.text);
         if (w == null || w < minimumWage2026) {
@@ -206,16 +215,38 @@ Future<void> showContractDialog(BuildContext context, {String? staffId}) {
           return set(() => error = '주 시간 · 근무 요일 · 업무 내용을 채워 주세요');
         }
         if (!end.isAfter(start)) return set(() => error = '종료일이 시작일보다 뒤여야 해요');
-        store.createContract(
-            who.id,
-            Contract(
-              start: ymd(start),
-              end: ymd(end),
-              wage: w,
-              weeklyHours: h,
-              workDays: days.text.trim(),
-              duty: duty.text.trim(),
-            ));
+        final c = Contract(
+          start: ymd(start),
+          end: ymd(end),
+          wage: w,
+          weeklyHours: h,
+          workDays: days.text.trim(),
+          duty: duty.text.trim(),
+        );
+        if (store.remote) {
+          final png = await SignatureInput.png(sig);
+          if (png == null) return set(() => error = '서명해 주세요');
+          set(() {
+            busy = true;
+            error = null;
+          });
+          try {
+            await store.createContractRemote(who.id, c, png);
+          } on ApiException catch (e) {
+            return set(() {
+              busy = false;
+              error = e.message;
+            });
+          } catch (_) {
+            return set(() {
+              busy = false;
+              error = '서버와 통신하지 못했어요';
+            });
+          }
+        } else {
+          store.createContract(who.id, c);
+        }
+        if (!ctx.mounted) return;
         Navigator.pop(ctx);
         showToast(context, '${store.personOf(who).name}님에게 서명 요청을 보냈어요');
       }),

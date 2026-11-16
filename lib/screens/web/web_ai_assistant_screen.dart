@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../../data/ai_api.dart';
+import '../../data/app_scope.dart';
 import '../../theme.dart';
 import '../../widgets/common.dart';
 import 'web_common.dart';
@@ -21,6 +23,9 @@ class _WebAiAssistantScreenState extends State<WebAiAssistantScreen> {
   ];
 
   final _input = TextEditingController();
+  // 서버 모드 대화: (질문, 답). 답이 null 이면 답변 중.
+  final _msgs = <(String, String?)>[];
+  bool _loading = false;
 
   @override
   void dispose() {
@@ -28,11 +33,77 @@ class _WebAiAssistantScreenState extends State<WebAiAssistantScreen> {
     super.dispose();
   }
 
-  @override
-  Widget build(BuildContext context) => WebPage(
-        title: 'AI 노무 도우미',
-        subtitle: 'Gemini 기반 · 5인 미만 사업장 노무 질의응답',
+  Future<void> _send() async {
+    final q = _input.text.trim();
+    if (q.isEmpty || _loading) return;
+    final store = AppScope.read(context);
+    setState(() {
+      _msgs.add((q, null));
+      _loading = true;
+    });
+    _input.clear();
+    final i = _msgs.length - 1;
+    try {
+      final r = await askLaborQuestion(store.api!, store.session.storeId, q);
+      if (mounted) setState(() => _msgs[i] = (q, r.answer));
+    } catch (e) {
+      if (mounted) {
+        showToast(context, aiErrorText(e));
+        setState(() => _msgs.removeAt(i));
+        if (_input.text.isEmpty) _input.text = q;
+      }
+    }
+    if (mounted) setState(() => _loading = false);
+  }
+
+  Widget _chat() => Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          if (_msgs.isEmpty)
+            Text('궁금한 노무 질문을 아래에 입력하거나 오른쪽 추천 질문을 눌러 보세요.',
+                style: AppText.style(14, FontWeight.w400, AppColors.textSecondary)),
+          for (final (q, a) in _msgs) ...[
+            Align(
+              alignment: Alignment.centerRight,
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 420),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
+                  decoration: BoxDecoration(
+                      color: AppColors.primary, borderRadius: BorderRadius.circular(16)),
+                  child: Text(q,
+                      style: AppText.style(15, FontWeight.w400, AppColors.onPrimary)
+                          .copyWith(height: 22 / 15)),
+                ),
+              ),
+            ),
+            const SizedBox(height: 16),
+            ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 640),
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 18),
+                decoration: BoxDecoration(
+                    color: AppColors.bg, borderRadius: BorderRadius.circular(16)),
+                child: a == null
+                    ? Text('답변을 만들고 있어요...',
+                        style: AppText.style(14, FontWeight.w400, AppColors.textTertiary))
+                    : SelectableText(a,
+                        style: AppText.style(14).copyWith(height: 23 / 14)),
+              ),
+            ),
+            const SizedBox(height: 16),
+          ],
+        ],
+      );
+
+  @override
+  Widget build(BuildContext context) {
+    final remote = AppScope.read(context).remote;
+    return WebPage(
+        title: 'AI 노무 도우미',
+        subtitle: remote ? 'Claude 기반 · 5인 미만 사업장 노무 질의응답' : 'Gemini 기반 · 5인 미만 사업장 노무 질의응답',
+        children: [
+          if (!remote)
           const NoteBox('추후 개발 예정인 기능이에요. 아래 화면은 예시예요.',
               color: AppColors.accent, background: AppColors.accentSoft),
           WebSplit(
@@ -42,7 +113,7 @@ class _WebAiAssistantScreenState extends State<WebAiAssistantScreen> {
               padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 22),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
+                children: remote ? [_chat(), const SizedBox(height: 120), _inputBar()] : [
                   ConstrainedBox(
                     constraints: const BoxConstraints(maxWidth: 420),
                     child: Container(
@@ -84,29 +155,7 @@ class _WebAiAssistantScreenState extends State<WebAiAssistantScreen> {
                   ),
                   // 대화가 쌓일 빈 공간(Figma 의 flex spacer).
                   const SizedBox(height: 320),
-                  Container(
-                    height: 52,
-                    padding: const EdgeInsets.only(left: 18, right: 5),
-                    decoration: BoxDecoration(
-                        color: AppColors.bg, borderRadius: BorderRadius.circular(14)),
-                    child: Row(children: [
-                      Expanded(
-                        child: TextField(
-                          controller: _input,
-                          style: AppText.style(14),
-                          decoration: InputDecoration(
-                            border: InputBorder.none,
-                            isDense: true,
-                            hintText: '궁금한 노무 질문을 입력하세요',
-                            hintStyle: AppText.style(
-                                14, FontWeight.w400, AppColors.textTertiary),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 10),
-                      WebButton('보내기', onPressed: _input.clear),
-                    ]),
-                  ),
+                  _inputBar(),
                 ],
               ),
             ),
@@ -143,4 +192,33 @@ class _WebAiAssistantScreenState extends State<WebAiAssistantScreen> {
           ),
         ],
       );
+  }
+
+  Widget _inputBar() {
+    final remote = AppScope.read(context).remote;
+    return Container(
+      height: 52,
+      padding: const EdgeInsets.only(left: 18, right: 5),
+      decoration: BoxDecoration(
+          color: AppColors.bg, borderRadius: BorderRadius.circular(14)),
+      child: Row(children: [
+        Expanded(
+          child: TextField(
+            controller: _input,
+            onSubmitted: remote ? (_) => _send() : null,
+            style: AppText.style(14),
+            decoration: InputDecoration(
+              border: InputBorder.none,
+              isDense: true,
+              hintText: '궁금한 노무 질문을 입력하세요',
+              hintStyle: AppText.style(
+                  14, FontWeight.w400, AppColors.textTertiary),
+            ),
+          ),
+        ),
+        const SizedBox(width: 10),
+        WebButton('보내기', onPressed: remote ? (_loading ? null : _send) : _input.clear),
+      ]),
+    );
+  }
 }

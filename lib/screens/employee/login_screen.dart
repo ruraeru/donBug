@@ -1,8 +1,12 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 
+import '../../data/app_scope.dart';
 import '../../theme.dart';
+import '../mobile_boot.dart';
 import 'kakao_consent_screen.dart';
+import '../web/web_url.dart';
 
 
 /// A1 로그인 (앱 진입점).
@@ -21,7 +25,13 @@ class LoginScreen extends StatelessWidget {
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      SvgPicture.asset('assets/images/app_icon.svg', width: 88, height: 88),
+                      GestureDetector(
+                        // 서버 모드: 로고 길게 누르기 = 테스트 계정 로그인
+                        onLongPress: AppScope.read(context).remote
+                            ? () => testAccountLogin(context)
+                            : null,
+                        child: SvgPicture.asset('assets/images/app_icon.svg', width: 88, height: 88),
+                      ),
                       const SizedBox(height: 16),
                       Text('돈벌래', style: AppText.style(34, FontWeight.w500)),
                       const SizedBox(height: 16),
@@ -41,10 +51,14 @@ class LoginScreen extends StatelessWidget {
                 child: Column(
                   children: [
                     KakaoButton('카카오로 시작하기',
-                        onPressed: () => Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                                builder: (_) => const KakaoConsentScreen()))),
+                        onPressed: () => AppScope.read(context).remote
+                            ? (kIsWeb
+                                ? navigateTo(AppScope.read(context).api!.kakaoLoginUrl)
+                                : kakaoAppLogin(context))
+                            : Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                    builder: (_) => const KakaoConsentScreen()))),
                     const SizedBox(height: 12),
                     Text('로그인 후 사장님 / 알바생 역할을 선택해요',
                         style: AppText.style(
