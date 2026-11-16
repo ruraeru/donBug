@@ -11,6 +11,7 @@ import '../../widgets/common.dart';
 import '../employer/employer_parts.dart';
 import 'web_common.dart';
 import 'web_documents_screen.dart';
+import 'web_settings_screen.dart' show TimeRange;
 
 /// W3 직원 관리 (Figma 151:3613). 가입 대기는 위 카드에서 바로 승인 · 거절, 행을 누르면 상세 시트.
 class WebStaffScreen extends StatefulWidget {
@@ -291,23 +292,44 @@ class _StaffSheetState extends State<_StaffSheet> {
       ]),
       const SizedBox(height: 18),
       _section('근무 설정', [
-        webPair(
-          webField(
-              '유형',
-              WebSelect<StaffKind>(
-                value: s.kind,
-                items: [for (final k in StaffKind.values) (k, k.label)],
-                onChanged: (k) => store.updateStaff(s.id, kind: k),
-              )),
+        webField(
+          '고용 형태',
+          Align(
+            alignment: Alignment.centerLeft,
+            child: WebSegmented(
+              labels: const ['알바생 (파트 근무)', '직원'],
+              selected: s.kind.flex ? 1 : 0,
+              onChanged: (i) => store.updateStaff(s.id, kind: employmentKind(s.kind, flex: i == 1)),
+            ),
+          ),
+        ),
+        if (!s.kind.flex) ...[
+          InkWell(
+            onTap: () => store.updateStaff(s.id,
+                kind: s.kind == StaffKind.minor ? StaffKind.partTimer : StaffKind.minor),
+            child: Row(children: [
+              Checkbox(
+                value: s.kind == StaffKind.minor,
+                onChanged: (v) => store.updateStaff(s.id,
+                    kind: v == true ? StaffKind.minor : StaffKind.partTimer),
+              ),
+              Expanded(
+                child: Text('연소근로자 (만 18세 미만 · 1일 7시간, 22시 이후 근무 불가)',
+                    style: AppText.style(13)),
+              ),
+            ]),
+          ),
           webField(
               '기본 파트',
               WebSelect<String>(
-                value: store.store.parts.any((x) => x.name == s.part) ? s.part : store.store.parts.first.name,
-                enabled: !s.kind.flex,
+                value: store.store.parts.any((x) => x.name == s.part)
+                    ? s.part
+                    : store.store.parts.first.name,
                 items: [for (final x in store.store.parts) (x.name, x.name)],
                 onChanged: (v) => store.updateStaff(s.id, part: v),
               )),
-        ),
+        ],
+        FixedWorkEditor(key: ValueKey('fixed${s.id}${s.kind.flex}'), staffId: s.id),
         webField(
           '시급 (원)',
           Row(children: [
@@ -372,6 +394,228 @@ class _StaffSheetState extends State<_StaffSheet> {
       const SizedBox(height: 18),
       WebButton('매장에서 내보내기',
           style: WebButtonStyle.danger, expand: true, onPressed: () => _remove(store, s)),
+    ]);
+  }
+}
+
+/// 고용 형태를 바꿀 때의 kind. 직원 → 알바생은 partTimer, 알바생 → 직원은 fulltime, 같은 쪽이면 그대로(매니저·연소자 유지).
+StaffKind employmentKind(StaffKind current, {required bool flex}) =>
+    current.flex == flex ? current : (flex ? StaffKind.fulltime : StaffKind.partTimer);
+
+const _dayLabels = ['월', '화', '수', '목', '금', '토', '일'];
+
+List<List<String>> _copyFixed(List<List<String>> f) => [for (final d in f) [...d]];
+
+/// 칸 하나 토글.
+List<List<String>> toggleFixedCell(List<List<String>> f, int day, String part) {
+  final r = _copyFixed(f);
+  r[day].contains(part) ? r[day].remove(part) : r[day].add(part);
+  return r;
+}
+
+/// 파트 이름(행 전체) 토글: 모든 요일에 있으면 모두 빼고, 아니면 모두 넣는다.
+List<List<String>> toggleFixedPart(List<List<String>> f, String part) {
+  final all = f.every((d) => d.contains(part));
+  final r = _copyFixed(f);
+  for (final d in r) {
+    d.remove(part);
+    if (!all) d.add(part);
+  }
+  return r;
+}
+
+/// 요일 머리(열 전체) 토글: 모든 파트가 있으면 비우고, 아니면 모든 파트를 넣는다.
+List<List<String>> toggleFixedDay(List<List<String>> f, int day, List<String> parts) {
+  final all = parts.every(f[day].contains);
+  final r = _copyFixed(f);
+  r[day] = all ? [] : [...parts];
+  return r;
+}
+
+/// 직원 근무 시간 검증. 문제 없으면 null.
+String? workHoursError(List<WorkHours?> wh) {
+  if (wh.every((w) => w == null)) return '근무 요일을 하나 이상 고르세요.';
+  return null;
+}
+
+bool workHoursBad(WorkHours w) => w.startMin >= w.endMin;
+
+/// 직원 상세의 고정 근무: 알바생 = 파트×요일 격자, 직원 = 요일별 출퇴근.
+class FixedWorkEditor extends StatefulWidget {
+  const FixedWorkEditor({super.key, required this.staffId});
+
+  final String staffId;
+
+  @override
+  State<FixedWorkEditor> createState() => _FixedWorkEditorState();
+}
+
+class _FixedWorkEditorState extends State<FixedWorkEditor> {
+  late List<WorkHours?> _wh;
+
+  @override
+  void initState() {
+    super.initState();
+    final s = AppScope.read(context).staffById(widget.staffId)!;
+    _wh = [
+      for (var i = 0; i < 7; i++)
+        i < s.workHours.length && s.workHours[i] != null
+            ? WorkHours(s.workHours[i]!.startMin, s.workHours[i]!.endMin)
+            : null
+    ];
+    // 직원인데 아직 정한 적이 없으면 평일 9–18 로 시작한다.
+    if (s.kind.flex && _wh.every((w) => w == null)) {
+      for (var i = 0; i < 5; i++) {
+        _wh[i] = WorkHours(540, 1080);
+      }
+    }
+  }
+
+  void _setDay(int d, WorkHours? w) {
+    setState(() => _wh[d] = w);
+    final bad = _wh.any((x) => x != null && workHoursBad(x));
+    if (bad || workHoursError(_wh) != null) return;
+    AppScope.read(context).updateStaff(widget.staffId, workHours: [..._wh]);
+  }
+
+  WorkHours _prev(int d) {
+    for (var i = d - 1; i >= 0; i--) {
+      if (_wh[i] != null) return _wh[i]!;
+    }
+    final any = _wh.firstWhere((w) => w != null, orElse: () => null);
+    return any ?? WorkHours(540, 1080);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final store = AppScope.of(context);
+    final s = store.staffById(widget.staffId);
+    if (s == null) return const SizedBox.shrink();
+    return s.kind.flex ? _flex() : _parts(store, s);
+  }
+
+  Widget _head(String title, String hint) => Padding(
+        padding: const EdgeInsets.only(bottom: 8),
+        child: Wrap(spacing: 8, crossAxisAlignment: WrapCrossAlignment.center, children: [
+          Text(title, style: AppText.style(13, FontWeight.w500)),
+          Text(hint, style: AppText.style(11, FontWeight.w400, AppColors.textTertiary)),
+        ]),
+      );
+
+  Widget _flex() {
+    final err = workHoursError(_wh);
+    return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+      _head('고정 근무 요일·시간', '요일을 눌러 근무·쉼 전환'),
+      for (var d = 0; d < 7; d++)
+        Padding(
+          padding: const EdgeInsets.only(bottom: 6),
+          child: Wrap(spacing: 8, runSpacing: 4, crossAxisAlignment: WrapCrossAlignment.center, children: [
+            Semantics(
+              button: true,
+              toggled: _wh[d] != null,
+              label: '${_dayLabels[d]}요일 근무',
+              child: InkWell(
+                borderRadius: BorderRadius.circular(8),
+                onTap: () => _setDay(d, _wh[d] != null ? null : (_prev(d))),
+                child: Container(
+                  width: 40,
+                  height: 36,
+                  alignment: Alignment.center,
+                  decoration: BoxDecoration(
+                      color: _wh[d] != null ? AppColors.purpleSoft : AppColors.bg,
+                      borderRadius: BorderRadius.circular(8)),
+                  child: Text(_dayLabels[d],
+                      style: AppText.style(13, FontWeight.w500,
+                          _wh[d] != null ? AppColors.purple : AppColors.textSecondary)),
+                ),
+              ),
+            ),
+            if (_wh[d] case final w?) ...[
+              TimeRange(
+                  label: _dayLabels[d],
+                  start: w.startMin,
+                  end: w.endMin,
+                  onChanged: (a, b) => _setDay(d, WorkHours(a, b))),
+              if (workHoursBad(w))
+                Text('시각 확인', style: AppText.style(12, FontWeight.w400, AppColors.danger)),
+            ] else
+              Text('쉼', style: AppText.style(12, FontWeight.w400, AppColors.textSecondary)),
+          ]),
+        ),
+      if (err != null) Text(err, style: AppText.style(12, FontWeight.w400, AppColors.danger)),
+    ]);
+  }
+
+  Widget _parts(AppStore store, Staff s) {
+    final parts = store.store.parts;
+    if (parts.isEmpty) {
+      return Text('매장 설정에서 알바생 근무 파트를 먼저 추가하세요.',
+          style: AppText.style(12, FontWeight.w400, AppColors.textSecondary));
+    }
+    void save(List<List<String>> f) => store.updateStaff(s.id, fixedParts: f);
+    final names = [for (final p in parts) p.name];
+    final fixed = s.fixedParts.length == 7 ? s.fixedParts : List.generate(7, (_) => <String>[]);
+    Widget cell(Widget child, {VoidCallback? onTap, String? label, bool? on}) => Padding(
+          padding: const EdgeInsets.all(2),
+          child: Semantics(
+            button: true,
+            toggled: on,
+            label: label,
+            child: InkWell(borderRadius: BorderRadius.circular(6), onTap: onTap, child: child),
+          ),
+        );
+    return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+      _head('근무 파트', '요일·파트 이름을 누르면 한 줄 전체 전환'),
+      Table(
+        columnWidths: const {0: IntrinsicColumnWidth()},
+        defaultColumnWidth: const FlexColumnWidth(),
+        defaultVerticalAlignment: TableCellVerticalAlignment.middle,
+        children: [
+          TableRow(children: [
+            const SizedBox(),
+            for (var d = 0; d < 7; d++)
+              cell(
+                  SizedBox(
+                      height: 28,
+                      child: Center(
+                          child: Text(_dayLabels[d],
+                              style: AppText.style(12, FontWeight.w400, AppColors.textSecondary)))),
+                  onTap: () => save(toggleFixedDay(fixed, d, names)),
+                  label: '${_dayLabels[d]}요일 전체'),
+          ]),
+          for (final p in parts)
+            TableRow(children: [
+              cell(
+                  Padding(
+                    padding: const EdgeInsets.only(right: 8),
+                    child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                      Text(p.name, style: AppText.style(12, FontWeight.w500)),
+                      Text(range(p.startMin, p.endMin == 1440 ? 1440 : p.endMin),
+                          style: AppText.style(11, FontWeight.w400, AppColors.textTertiary)),
+                    ]),
+                  ),
+                  onTap: () => save(toggleFixedPart(fixed, p.name)),
+                  label: '${p.name} 전체'),
+              for (var d = 0; d < 7; d++)
+                cell(
+                    Container(
+                      height: 32,
+                      alignment: Alignment.center,
+                      decoration: BoxDecoration(
+                          color: fixed[d].contains(p.name)
+                              ? AppColors.primarySoft
+                              : AppColors.bg,
+                          borderRadius: BorderRadius.circular(6)),
+                      child: fixed[d].contains(p.name)
+                          ? const Icon(Icons.check, size: 16, color: AppColors.primary)
+                          : null,
+                    ),
+                    onTap: () => save(toggleFixedCell(fixed, d, p.name)),
+                    label: '${_dayLabels[d]} ${p.name}',
+                    on: fixed[d].contains(p.name)),
+            ]),
+        ],
+      ),
     ]);
   }
 }

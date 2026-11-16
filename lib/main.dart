@@ -54,7 +54,7 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
   // 서버 모드: 다른 사람이 한 일(대타 요청·지원, 가입 신청 등)이 보이도록 주기적으로, 앱으로 돌아올 때 다시 읽는다.
   Future<void> _refresh() async {
     final st = widget.store;
-    if (!st.remote || !st.api!.hasToken || !st.session.loggedIn) return;
+    if (!st.remote || st.scheduleDirty || !st.api!.hasToken || !st.session.loggedIn) return;
     try {
       await st.reload(storeId: st.session.storeId);
     } catch (_) {}

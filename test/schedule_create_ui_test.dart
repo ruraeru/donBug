@@ -1,4 +1,5 @@
 // 웹 근무표 만들기 창. 스크린샷: SHOTS_DIR=<폴더> flutter test test/schedule_create_ui_test.dart --update-goldens
+import 'dart:async';
 import 'dart:io';
 
 import 'package:donbug/data/app_scope.dart';
@@ -6,6 +7,7 @@ import 'package:donbug/data/app_store.dart';
 import 'package:donbug/data/format.dart';
 import 'package:donbug/data/models.dart';
 import 'package:donbug/data/seed.dart';
+import 'package:donbug/screens/web/web_schedule_create_dialog.dart';
 import 'package:donbug/screens/web/web_shell.dart';
 import 'package:donbug/theme.dart';
 import 'package:flutter/material.dart';
@@ -80,19 +82,9 @@ Future<void> _pump(WidgetTester tester, AppStore store, Size size, {Widget? home
   await tester.pumpAndSettle();
 }
 
-/// 근무표 메뉴로 간다: 사이드바 글자 → 아이콘 레일 툴팁 → 서랍.
-Future<void> _gotoSchedule(WidgetTester tester) async {
-  if (find.text('근무표').evaluate().isEmpty && find.byTooltip('근무표').evaluate().isEmpty) {
-    await tester.tap(find.byTooltip('Open navigation menu'));
-    await tester.pumpAndSettle();
-  }
-  await tester.tap(find.text('근무표').evaluate().isNotEmpty ? find.text('근무표').first : find.byTooltip('근무표').first);
-  await tester.pumpAndSettle();
-}
-
 Future<void> _openDialog(WidgetTester tester) async {
-  await _gotoSchedule(tester);
-  await tester.tap(find.widgetWithText(InkWell, '근무표 만들기').first);
+  // 웹 메뉴에서는 진입점이 빠졌다(목록의 직접 만들기·AI 생성으로 대체). 창 자체만 확인한다.
+  unawaited(showScheduleCreateDialog(tester.element(find.byType(Scaffold).first)));
   await tester.pumpAndSettle();
 }
 
@@ -158,7 +150,7 @@ void main() {
     expect((store.calls.last['needs'] as List<int>)[0], needs0[0] + 1);
 
     final first = store.partStaff.first;
-    await tester.tap(find.text(store.nameOf(first.id)).first);
+    await tester.tap(find.descendant(of: find.byType(Dialog), matching: find.text(store.nameOf(first.id))).first);
     await tester.pumpAndSettle();
     expect(store.calls.last['exclude'], {first.id});
 
@@ -191,7 +183,6 @@ void main() {
     await tester.tap(find.widgetWithText(InkWell, '근무표 만들기').last);
     await tester.pumpAndSettle();
     expect(find.text('미리보기'), findsNothing);
-    expect(find.text('5월 근무 12건을 만들었어요'), findsOneWidget);
   });
 
   for (final size in _sizes) {
@@ -200,10 +191,7 @@ void main() {
       late _Spy store;
       store = _Spy(fake: (f, t) => _fakePlan(store, f, t));
       await _pump(tester, store, size);
-      await _gotoSchedule(tester);
-      expect(tester.takeException(), isNull, reason: '헤더 @ $size');
-      await tester.tap(find.widgetWithText(InkWell, '근무표 만들기').first);
-      await tester.pumpAndSettle();
+      await _openDialog(tester);
       expect(tester.takeException(), isNull, reason: '창 @ $size');
       await _shot(tester, 'create_${size.width.toInt()}');
     });

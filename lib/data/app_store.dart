@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:flutter/foundation.dart';
 
 import 'api_client.dart';
+import 'autoschedule.dart' as auto;
 import 'format.dart';
 import 'models.dart';
 import 'payroll.dart';
@@ -96,7 +97,8 @@ class AppStore extends ChangeNotifier {
   /// 서버 상태로 덮는다. [storeId] 를 주면 그 매장을 지금 보는 매장으로.
   Future<void> reload({String? storeId}) async {
     final a = api;
-    if (a == null) return;
+    // 웹 근무표 초안에 저장 안 한 편집이 있으면 서버 상태로 덮지 않는다.
+    if (a == null || scheduleDirty) return;
     final q = storeId == null || storeId.isEmpty ? '' : '?storeId=$storeId';
     final j = await a.get('/api/v1/me/state$q') as Map<String, dynamic>;
     final s = AppState.fromJson(j);
@@ -795,13 +797,110 @@ class AppStore extends ChangeNotifier {
     }
   }
 
+  // ───────────────────────── 웹 근무표 초안 ─────────────────────────
+  //
+  // 초안 모드(웹 편집기): 근무 편집(add/update/deleteShift, autoFill)은 서버로 안 보내고 로컬 + 되돌리기만.
+  // 바뀐 달은 dirty. [saveSchedule] 이 그 달 근무를 통째로 PUT 한다.
+
+  bool _draft = false;
+  final _dirtyMonths = <String>{};
+  String? _draftBase; // 데모 모드 되돌리기 기준
+
+  bool get scheduleDirty => _draft && _dirtyMonths.isNotEmpty;
+
+  void setScheduleDraft(bool on) {
+    if (on == _draft) return;
+    _draft = on;
+    _dirtyMonths.clear();
+    _undo.clear();
+    _redo.clear();
+    _draftBase = on && !remote ? toJson() : null;
+  }
+
+  void _markDirty(String month) {
+    if (_draft) _dirtyMonths.add(month);
+  }
+
+  /// 근무 편집의 서버 전송. 초안 모드면 보내지 않는다.
+  void _shiftRemote(Future<void> Function(ApiClient api) call) {
+    if (_draft) return;
+    _remote(call);
+  }
+
+  /// 서버 호출을 [ApiException] 으로 던진다(화면이 메시지를 보여 준다).
+  Future<T> _try<T>(Future<T> Function(ApiClient api) call) async {
+    try {
+      return await call(api!);
+    } on ApiException {
+      rethrow;
+    } catch (_) {
+      throw ApiException(0, 'network', '서버와 통신하지 못했어요');
+    }
+  }
+
+  Future<void> _reloadQuiet() async {
+    try {
+      await reload();
+    } catch (_) {}
+  }
+
+  /// [month] 근무를 서버에 통째로 저장한다. 성공하면 dirty 해제 후 다시 읽는다.
+  /// 출근 기록 때문에 건너뛴 것이 있으면 [remoteError] 로 안내. 실패하면 [ApiException].
+  Future<void> saveSchedule(String month) async {
+    if (!remote) {
+      _dirtyMonths.remove(month);
+      _undo.clear();
+      _redo.clear();
+      _commit();
+      return;
+    }
+    final body = {
+      'shifts': [
+        for (final x in state.shifts.where((x) => x.storeId == store.id && x.date.startsWith(month)))
+          {
+            // 로컬에서 새로 만든 근무(숫자 아닌 임시 id)는 id 없이 보낸다.
+            'id': ?int.tryParse(x.id),
+            'staffId': _n(x.staffId),
+            'date': x.date,
+            'startMin': x.startMin,
+            'endMin': x.endMin,
+            'part': x.part,
+            'breakMin': x.breakMin,
+            'kind': x.kind.name,
+            'timeTbd': x.timeTbd,
+          }
+      ]
+    };
+    final r = await _try((a) => a.put('${_sp(store.id)}/schedules/$month/shifts', body));
+    _dirtyMonths.remove(month);
+    await _reloadQuiet();
+    final skipped = r is Map ? (r['skipped'] as List? ?? const []) : const [];
+    if (skipped.isNotEmpty) {
+      remoteError.value = '출근 기록이 있는 근무 ${skipped.length}건은 바꾸지 않았어요';
+    }
+  }
+
+  /// 저장 안 한 편집을 버린다.
+  Future<void> discardScheduleDraft() async {
+    _dirtyMonths.clear();
+    _undo.clear();
+    _redo.clear();
+    final base = _draftBase;
+    if (!remote && base != null) {
+      state = AppState.fromJson(jsonDecode(base) as Map<String, dynamic>)!;
+      _commit();
+      return;
+    }
+    await _reloadQuiet();
+  }
+
   // ───────────────────────── 근무표 ─────────────────────────
 
   // 되돌리기: 근무표를 바꾸기 직전 상태(JSON)를 쌓는다. 메모리에만 둔다.
   final _undo = <String>[];
   final _redo = <String>[];
-  bool get canUndo => !remote && _undo.isNotEmpty;
-  bool get canRedo => !remote && _redo.isNotEmpty;
+  bool get canUndo => (!remote || _draft) && _undo.isNotEmpty;
+  bool get canRedo => (!remote || _draft) && _redo.isNotEmpty;
 
   void _snapshot() {
     _undo.add(toJson());
@@ -810,7 +909,7 @@ class AppStore extends ChangeNotifier {
   }
 
   void _restore(List<String> from, List<String> to) {
-    if (remote || from.isEmpty) return;
+    if ((remote && !_draft) || from.isEmpty) return;
     to.add(toJson());
     state = AppState.fromJson(jsonDecode(from.removeLast()) as Map<String, dynamic>)!;
     _commit();
@@ -857,7 +956,10 @@ class AppStore extends ChangeNotifier {
       }
     }
     _commit();
-    _remote((api) => api.post('${_sp(store.id)}/shifts', {
+    for (var w = 0; w < repeatWeeks; w++) {
+      _markDirty(ym(dayOf(date).add(Duration(days: 7 * w))));
+    }
+    _shiftRemote((api) => api.post('${_sp(store.id)}/shifts', {
           'date': ymd(date),
           'startMin': startMin,
           'endMin': endMin,
@@ -886,7 +988,8 @@ class AppStore extends ChangeNotifier {
     }
     if (s.isWork) _notifyStaff(s.staffId, 'sub', '근무가 삭제됐어요', body: _shiftLabel(s));
     _commit();
-    _remote((api) => api.delete('${_sp(s.storeId)}/shifts/$shiftId'));
+    _markDirty(s.date.substring(0, 7));
+    _shiftRemote((api) => api.delete('${_sp(s.storeId)}/shifts/$shiftId'));
     return true;
   }
 
@@ -905,7 +1008,7 @@ class AppStore extends ChangeNotifier {
     final s = shiftById(shiftId);
     if (s == null) return;
     _snapshot();
-    final before = _shiftLabel(s), oldStaff = s.staffId, wasWork = s.isWork;
+    final before = _shiftLabel(s), oldStaff = s.staffId, wasWork = s.isWork, oldMonth = s.date.substring(0, 7);
     if (staffId != null) s.staffId = staffId;
     if (date != null) s.date = ymd(date);
     if (startMin != null) s.startMin = startMin;
@@ -924,7 +1027,9 @@ class AppStore extends ChangeNotifier {
       _notifyStaff(s.staffId, 'sub', '근무가 수정됐어요', body: after);
     }
     _commit();
-    _remote((api) => api.patch('${_sp(s.storeId)}/shifts/$shiftId', {
+    _markDirty(oldMonth);
+    _markDirty(s.date.substring(0, 7));
+    _shiftRemote((api) => api.patch('${_sp(s.storeId)}/shifts/$shiftId', {
           if (staffId case final staffIdV?) 'staffId': _n(staffIdV),
           if (date case final dateV?) 'date': ymd(dateV),
           'startMin': ?startMin,
@@ -988,7 +1093,9 @@ class AppStore extends ChangeNotifier {
     }
     if (added == 0) _undo.removeLast();
     _commit();
-    _remote((api) => api.post('${_sp(store.id)}/schedule/auto-fill', {'weekMonday': ymd(monday)}));
+    _markDirty(ym(monday));
+    _markDirty(ym(monday.add(const Duration(days: 6))));
+    _shiftRemote((api) => api.post('${_sp(store.id)}/schedule/auto-fill', {'weekMonday': ymd(monday)}));
     return added;
   }
 
@@ -1298,9 +1405,13 @@ class AppStore extends ChangeNotifier {
       bool? weeklyHolidayAuto,
       bool? premium,
       String? part,
-      StaffKind? kind}) {
+      StaffKind? kind,
+      List<List<String>>? fixedParts,
+      List<WorkHours?>? workHours}) {
     final s = staffById(staffId)!;
     if (kind != null) s.kind = kind;
+    if (fixedParts != null) s.fixedParts = [for (final l in fixedParts) [...l]];
+    if (workHours != null) s.workHours = [...workHours];
     if (wage != null) s.wage = wage;
     if (deduction != null) s.deduction = deduction;
     if (weeklyHolidayAuto != null) s.weeklyHolidayAuto = weeklyHolidayAuto;
@@ -1314,6 +1425,8 @@ class AppStore extends ChangeNotifier {
           'premium': ?premium,
           'part': ?part,
           'kind': ?kind?.name,
+          'fixedParts': ?fixedParts,
+          if (workHours != null) 'workHours': [for (final w in workHours) w?.toJson()],
         }));
   }
 
@@ -1556,5 +1669,320 @@ class AppStore extends ChangeNotifier {
           'noticeRequiredDefault': ?noticeRequiredDefault,
           'substitutePush': ?substitutePush,
         }));
+  }
+
+  // ───────────────────────── 매장 설정 · 파트 (웹) ─────────────────────────
+
+  /// 영업시간 검증. 문제 없으면 null.
+  static String? validateHours(int open, int close, int wOpen, int wClose) {
+    if (close <= open) return '평일 영업 종료 시각은 시작 시각보다 늦어야 합니다.';
+    if (wClose <= wOpen) return '주말·공휴일 영업 종료 시각은 시작 시각보다 늦어야 합니다.';
+    if (close - open > 1440 || wClose - wOpen > 1440) return '영업시간은 24시간을 넘을 수 없습니다.';
+    return null;
+  }
+
+  /// 매장 설정 저장. 실패 시 [ApiException].
+  Future<void> updateStoreSettings({
+    String? name,
+    int? openMin,
+    int? closeMin,
+    int? weekendOpenMin,
+    int? weekendCloseMin,
+    SizeMode? sizeMode,
+    bool? noticeRequiredDefault,
+    bool? substitutePush,
+    Deduction? defaultDeduction,
+  }) async {
+    final st = store;
+    final err = validateHours(openMin ?? st.openMin, closeMin ?? st.closeMin,
+        weekendOpenMin ?? st.weekendOpenMin, weekendCloseMin ?? st.weekendCloseMin);
+    if (err != null) throw ApiException(400, 'validation', err);
+    if (remote) {
+      await _try((a) => a.patch('${_sp(st.id)}/settings', {
+            'name': ?name,
+            'openMin': ?openMin,
+            'closeMin': ?closeMin,
+            'weekendOpenMin': ?weekendOpenMin,
+            'weekendCloseMin': ?weekendCloseMin,
+            'sizeMode': ?sizeMode?.name,
+            'noticeRequiredDefault': ?noticeRequiredDefault,
+            'substitutePush': ?substitutePush,
+            'defaultDeduction': ?defaultDeduction?.name,
+          }));
+      await _reloadQuiet();
+      return;
+    }
+    if (name != null) st.name = name;
+    if (openMin != null) st.openMin = openMin;
+    if (closeMin != null) st.closeMin = closeMin;
+    if (weekendOpenMin != null) st.weekendOpenMin = weekendOpenMin;
+    if (weekendCloseMin != null) st.weekendCloseMin = weekendCloseMin;
+    if (sizeMode != null) {
+      st.sizeMode = sizeMode;
+      st.isSmall = switch (sizeMode) {
+        SizeMode.auto => state.staff.where((x) => x.storeId == st.id && x.active).length < 5,
+        SizeMode.under5 => true,
+        SizeMode.over5 => false,
+      };
+    }
+    if (noticeRequiredDefault != null) st.noticeRequiredDefault = noticeRequiredDefault;
+    if (substitutePush != null) st.substitutePush = substitutePush;
+    if (defaultDeduction != null) st.defaultDeduction = defaultDeduction;
+    _commit();
+  }
+
+  /// 파트 목록을 통째로 저장(추가·수정·삭제). 이름이 바뀌면 근무·직원·고정 파트의 이름도 따라 바뀐다. 실패 시 [ApiException].
+  Future<void> saveParts(List<PartTemplate> parts) async {
+    final names = <String>{};
+    for (final p in parts) {
+      final n = p.name.trim();
+      if (n.isEmpty) throw ApiException(400, 'validation', '파트 이름을 입력하세요.');
+      if (p.endMin <= p.startMin) {
+        throw ApiException(400, 'validation', '$n 종료 시각은 시작 시각보다 늦어야 합니다.');
+      }
+      if (!names.add(n)) throw ApiException(400, 'validation', '파트 이름이 겹쳐요: $n');
+    }
+    final st = store;
+    if (remote) {
+      await _try((a) => a.put('${_sp(st.id)}/parts', {
+            'parts': [
+              for (final p in parts)
+                {
+                  if (p.id.isNotEmpty) 'id': _n(p.id),
+                  'name': p.name.trim(),
+                  'tone': p.tone.name,
+                  'startMin': p.startMin,
+                  'endMin': p.endMin,
+                  'breakMin': p.breakMin,
+                  'need': p.need,
+                }
+            ]
+          }));
+      await _reloadQuiet();
+      return;
+    }
+    final old = {for (final p in st.parts) p.id: p.name};
+    final renames = <String, String>{};
+    final next = <PartTemplate>[];
+    for (final p in parts) {
+      final c = p.copy()..name = p.name.trim();
+      if (c.id.isEmpty) {
+        c.id = _id('part');
+      } else if (old[c.id] case final o? when o != c.name) {
+        renames[o] = c.name;
+      }
+      next.add(c);
+    }
+    st.parts = next;
+    if (renames.isNotEmpty) {
+      for (final x in state.shifts.where((x) => x.storeId == st.id)) {
+        x.part = renames[x.part] ?? x.part;
+      }
+      for (final m in state.staff.where((x) => x.storeId == st.id)) {
+        m.part = renames[m.part] ?? m.part;
+        m.fixedParts = [
+          for (final l in m.fixedParts) [for (final n in l) renames[n] ?? n]
+        ];
+      }
+    }
+    _commit();
+  }
+
+  // ───────────────────────── 월 근무표 · 템플릿 (웹) ─────────────────────────
+
+  List<MonthSchedule> get schedules =>
+      state.schedules.where((m) => m.storeId == store.id).toList()
+        ..sort((a, b) => b.month.compareTo(a.month));
+
+  MonthSchedule? monthSchedule(String month) =>
+      state.schedules.where((m) => m.storeId == store.id && m.month == month).firstOrNull;
+
+  List<ScheduleTemplate> get templates =>
+      state.templates.where((t) => t.storeId == store.id).toList();
+
+  /// 그 달 대상 날짜: max(월초, 오늘) ~ 월말.
+  List<DateTime> _targetDates(String month) => auto.monthDates(month, today);
+
+  List<Shift> _monthShifts(String month) =>
+      state.shifts.where((x) => x.storeId == store.id && x.date.startsWith(month)).toList();
+
+  MonthSchedule _metaFor(String month, ScheduleSource source) {
+    var m = monthSchedule(month);
+    if (m == null) {
+      m = MonthSchedule(id: _id('ms'), storeId: store.id, month: month, source: source);
+      state.schedules.add(m);
+    }
+    m
+      ..source = source
+      ..status = ScheduleStatus.draft
+      ..updatedAt = _iso(now);
+    return m;
+  }
+
+  void _addAll(List<Shift> list) {
+    for (final x in list) {
+      state.shifts.add(Shift(
+        id: _id('s'),
+        storeId: store.id,
+        staffId: x.staffId,
+        date: x.date,
+        startMin: x.startMin,
+        endMin: x.endMin,
+        part: x.part,
+        breakMin: x.breakMin,
+        kind: x.kind,
+        timeTbd: x.timeTbd,
+      ));
+    }
+  }
+
+  /// 오늘 이후·출근 기록 없는 그 달 근무를 지운다.
+  void _clearFuture(String month) => state.shifts.removeWhere((x) =>
+      x.storeId == store.id &&
+      x.date.startsWith(month) &&
+      !parseYmd(x.date).isBefore(today) &&
+      attendanceFor(x.id) == null);
+
+  /// 직접 만들기. 있으면 draft 를 manual 로 갱신. [prefillFixed] 면 고정 근무를 채운다.
+  Future<void> createMonthSchedule(String month, {bool prefillFixed = true}) async {
+    if (remote) {
+      await _try((a) => a.post('${_sp(store.id)}/schedules', {'month': month, 'prefillFixed': prefillFixed}));
+      await _reloadQuiet();
+      return;
+    }
+    _snapshot();
+    _metaFor(month, ScheduleSource.manual);
+    if (prefillFixed) {
+      _addAll(auto.autofill(_monthShifts(month), auto.fixedShifts(store, activeStaff, _targetDates(month))));
+    }
+    _commit();
+  }
+
+  /// 고정 근무 중 빠진 것만 추가. 웹 초안 모드에서는 로컬에서만 하고(저장 때 올라간다) 아니면 서버에서 한다.
+  Future<void> autofillMonth(String month) async {
+    if (remote && !_draft) {
+      await _try((a) => a.post('${_sp(store.id)}/schedules/$month/autofill'));
+      await _reloadQuiet();
+      return;
+    }
+    _snapshot();
+    final add = auto.autofill(_monthShifts(month), auto.fixedShifts(store, activeStaff, _targetDates(month)));
+    if (add.isEmpty) {
+      _undo.removeLast();
+      return;
+    }
+    _addAll(add);
+    _markDirty(month);
+    _commit();
+  }
+
+  /// AI 생성. 서버: 작업을 올리고 2초마다 물어본다(done 이면 reload, failed 면 [ApiException]).
+  /// 데모: 고정 근무 + 직원 근무 시간으로 채운다.
+  Future<void> generateSchedule(String month,
+      {required HolidayPolicy weeklyHolidayPay, required SchedulePriority priority}) async {
+    if (remote) {
+      final r = await _try((a) => a.post('${_sp(store.id)}/schedules/generate', {
+            'month': month,
+            'weeklyHolidayPay': weeklyHolidayPay.name,
+            'priority': priority.name,
+          })) as Map;
+      final jobId = r['jobId'];
+      while (true) {
+        await Future<void>.delayed(const Duration(seconds: 2));
+        final j = await _try((a) => a.get('${_sp(store.id)}/schedule-jobs/$jobId')) as Map;
+        if (j['status'] == 'done') break;
+        if (j['status'] == 'failed') {
+          throw ApiException(500, 'generate_failed', '${j['message'] ?? 'AI 근무표 생성에 실패했어요'}');
+        }
+      }
+      await _reloadQuiet();
+      return;
+    }
+    _snapshot();
+    _clearFuture(month);
+    _addAll(auto.autofill(_monthShifts(month), auto.fixedShifts(store, activeStaff, _targetDates(month))));
+    _metaFor(month, ScheduleSource.ai)
+      ..aiComment = '데모: AI 없이 고정 근무로 채웠어요'
+      ..weeklyHolidayPay = weeklyHolidayPay
+      ..priority = priority;
+    _commit();
+  }
+
+  /// 확정. 시간 미정이 있으면 409 [ApiException].
+  Future<void> confirmMonth(String month) async {
+    if (remote) {
+      await _try((a) => a.post('${_sp(store.id)}/schedules/$month/confirm'));
+      await _reloadQuiet();
+      return;
+    }
+    if (_monthShifts(month).any((x) => x.timeTbd)) {
+      throw ApiException(409, 'conflict', '시간 미정을 먼저 해결하세요');
+    }
+    _metaFor(month, monthSchedule(month)?.source ?? ScheduleSource.manual).status = ScheduleStatus.confirmed;
+    store.scheduleConfirmedAt = _iso(now);
+    final mm = int.parse(month.substring(5));
+    for (final x in activeStaff) {
+      _notifyStaff(x.id, 'sub', '$mm월 근무표가 확정됐어요', body: '근무표에서 내 근무를 확인해 주세요');
+    }
+    _commit();
+  }
+
+  /// 그 달 근무표 삭제(출근 기록 없는 근무 + 메타).
+  Future<void> deleteMonthSchedule(String month) async {
+    if (remote) {
+      await _try((a) => a.delete('${_sp(store.id)}/schedules/$month'));
+      _dirtyMonths.remove(month);
+      await _reloadQuiet();
+      return;
+    }
+    _snapshot();
+    state.shifts.removeWhere((x) =>
+        x.storeId == store.id && x.date.startsWith(month) && attendanceFor(x.id) == null);
+    state.schedules.removeWhere((m) => m.storeId == store.id && m.month == month);
+    _dirtyMonths.remove(month);
+    _commit();
+  }
+
+  Future<void> saveScheduleTemplate(String name, String month) async {
+    if (remote) {
+      await _try((a) => a.post('${_sp(store.id)}/schedule-templates', {'name': name, 'month': month}));
+      await _reloadQuiet();
+      return;
+    }
+    state.templates.add(ScheduleTemplate(
+      id: _id('tp'),
+      storeId: store.id,
+      name: name,
+      createdAt: _iso(now),
+      shifts: auto.toPattern(_monthShifts(month), month),
+    ));
+    _commit();
+  }
+
+  /// 템플릿을 그 달에 적용(오늘 이후·출근 기록 없는 기존 근무는 교체).
+  Future<void> applyScheduleTemplate(String templateId, String month) async {
+    if (remote) {
+      await _try((a) => a.post('${_sp(store.id)}/schedule-templates/$templateId/apply', {'month': month}));
+      await _reloadQuiet();
+      return;
+    }
+    final t = state.templates.where((x) => x.id == templateId).firstOrNull;
+    if (t == null) throw ApiException(404, 'not_found', '템플릿을 찾을 수 없어요');
+    _snapshot();
+    _clearFuture(month);
+    final activeIds = {for (final x in activeStaff) x.id};
+    _addAll(auto.fillMonth([for (final x in t.shifts) if (activeIds.contains(x.staffId)) x], month, today));
+    _metaFor(month, ScheduleSource.template).aiComment = '템플릿 "${t.name}"을 적용했어요';
+    _commit();
+  }
+
+  Future<void> deleteScheduleTemplate(String templateId) async {
+    if (remote) {
+      await _try((a) => a.delete('${_sp(store.id)}/schedule-templates/$templateId'));
+      await _reloadQuiet();
+      return;
+    }
+    state.templates.removeWhere((x) => x.id == templateId);
+    _commit();
   }
 }

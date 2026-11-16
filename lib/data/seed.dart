@@ -168,6 +168,14 @@ AppState buildSeed(DateTime now) {
     taewooMoa: const _Pattern('야간', 1320, 360, 60, {6, 7}),
   };
 
+  // 고정 근무: 알바생은 근무 패턴의 파트·요일, 지훈은 요일별 출퇴근.
+  patterns.forEach((s, p) {
+    for (final d in p.days) {
+      s.fixedParts[d - 1] = [p.part];
+    }
+  });
+  _managerTimes.forEach((d, t) => jihun.workHours[d - 1] = WorkHours(t.$1, t.$2));
+
   // 인건비 추이: 2달 전 이전은 근무를 만들지 않으므로, 패턴으로 낸 한 달 인건비(주휴 포함)에 작은 변동을 준다.
   var monthlyBase = 0.0;
   void addMonthly(int weeklyMin, int wage) {
@@ -197,9 +205,9 @@ AppState buildSeed(DateTime now) {
       // 재직 7명: 상시 5인 이상.
       isSmall: false,
       parts: [
-        PartTemplate('오픈', open.$1, open.$2, 1),
-        PartTemplate('미들', middle.$1, middle.$2, 1),
-        PartTemplate('마감', close.$1, close.$2, 1),
+        PartTemplate('오픈', open.$1, open.$2, 1, id: 'part-open', tone: PartTone.open, breakMin: 30),
+        PartTemplate('미들', middle.$1, middle.$2, 1, id: 'part-middle', tone: PartTone.middle, breakMin: 30),
+        PartTemplate('마감', close.$1, close.$2, 1, id: 'part-close', tone: PartTone.close),
       ],
       monthlyTotals: monthly,
     ),
@@ -208,7 +216,7 @@ AppState buildSeed(DateTime now) {
       name: '편의점 모아',
       address: '서울특별시 마포구 어울마당로 35',
       code: 'MOA-27QX',
-      parts: [PartTemplate('야간', 1320, 360, 1)],
+      parts: [PartTemplate('야간', 1320, 360, 1, id: 'part-night', tone: PartTone.close, breakMin: 60)],
     ),
     // 태우가 가입하지 않은 데모 매장: 가입 신청 → 대기 → 승인 시연용. 사장님 화면 없음.
     Store(
@@ -216,7 +224,7 @@ AppState buildSeed(DateTime now) {
       name: '베이커리 밀',
       address: '서울특별시 마포구 독막로 12',
       code: 'BAKE-5TQ1',
-      parts: [PartTemplate('오전', 420, 840, 1)],
+      parts: [PartTemplate('오전', 420, 840, 1, id: 'part-am', tone: PartTone.open, breakMin: 30)],
     ),
   ];
 
