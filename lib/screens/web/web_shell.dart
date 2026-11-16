@@ -15,6 +15,7 @@ import 'web_pos_qr_screen.dart';
 import 'web_schedule_screen.dart';
 import 'web_staff_screen.dart';
 import 'web_substitute_screen.dart';
+import 'web_view_mode.dart';
 
 /// 웹 메뉴 번호 ([WebShell] 순서).
 abstract final class WebMenu {
@@ -131,6 +132,17 @@ class _WebShellState extends State<WebShell> {
                       )
                     : WebButton('매장 POS 모드 열기',
                         style: WebButtonStyle.dark, height: 46, expand: true, onPressed: _openPos),
+                rail
+                    ? IconButton(
+                        tooltip: '모바일 화면',
+                        onPressed: () => openMobileView(context),
+                        icon: const Icon(Icons.smartphone, size: 22, color: AppColors.textTertiary),
+                      )
+                    : TextButton(
+                        onPressed: () => openMobileView(context),
+                        child: Text('모바일 화면',
+                            style: AppText.style(12, FontWeight.w500, AppColors.textTertiary)),
+                      ),
                 rail
                     ? IconButton(
                         tooltip: '로그아웃',

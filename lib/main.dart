@@ -16,6 +16,7 @@ import 'screens/employer/employer_shell.dart';
 import 'screens/mobile_boot.dart';
 import 'screens/web/web_boot.dart';
 import 'screens/web/web_shell.dart';
+import 'screens/web/web_view_mode.dart';
 import 'theme.dart';
 
 const _storageKey = 'donbug.state';
@@ -72,10 +73,12 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
       _poll = Timer.periodic(const Duration(seconds: 20), (_) => _refresh());
     }
     widget.store.remoteError.addListener(_showError);
-    // 앱 서버 모드: 토큰 갱신이 실패하면 로그인 화면으로. (웹은 WebBoot 가 처리)
-    if (!kIsWeb && widget.store.remote) {
+    // 서버 모드: 토큰 갱신이 실패하면 로그인으로. 웹은 WebBoot 가 로그인 화면을 띄운다.
+    if (widget.store.remote) {
       widget.store.api!.onUnauthorized = () => navigatorKey.currentState?.pushAndRemoveUntil(
-          MaterialPageRoute(builder: (_) => const LoginScreen()), (_) => false);
+          MaterialPageRoute(
+              builder: (_) => kIsWeb ? WebBoot(store: widget.store) : const LoginScreen()),
+          (_) => false);
     }
   }
 
@@ -104,6 +107,23 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
       scaffoldMessengerKey: messengerKey,
       navigatorKey: navigatorKey,
       theme: appTheme,
+      // 웹 모바일 화면: PC 에서도 폰 폭으로 가운데에 보여 준다.
+      builder: kIsWeb
+          ? (context, child) => ValueListenableBuilder<bool>(
+                valueListenable: webMobileFrame,
+                builder: (context, on, _) => !on
+                    ? child!
+                    : ColoredBox(
+                        color: AppColors.border,
+                        child: Center(
+                          child: ConstrainedBox(
+                            constraints: const BoxConstraints(maxWidth: 480),
+                            child: child,
+                          ),
+                        ),
+                      ),
+              )
+          : null,
       home: _home(),
     ),
   );

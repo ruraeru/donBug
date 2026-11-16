@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 
@@ -5,6 +6,7 @@ import '../../data/app_scope.dart';
 import '../../theme.dart';
 import '../mobile_boot.dart';
 import 'kakao_consent_screen.dart';
+import '../web/web_url.dart';
 
 
 /// A1 로그인 (앱 진입점).
@@ -50,7 +52,9 @@ class LoginScreen extends StatelessWidget {
                   children: [
                     KakaoButton('카카오로 시작하기',
                         onPressed: () => AppScope.read(context).remote
-                            ? kakaoAppLogin(context)
+                            ? (kIsWeb
+                                ? navigateTo(AppScope.read(context).api!.kakaoLoginUrl)
+                                : kakaoAppLogin(context))
                             : Navigator.push(
                                 context,
                                 MaterialPageRoute(
