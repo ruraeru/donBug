@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import 'package:flutter/foundation.dart';
 
+import 'api_client.dart';
 import 'format.dart';
 import 'models.dart';
 import 'payroll.dart';
@@ -44,7 +45,7 @@ class SchedulePlan {
 ///
 /// 액션마다 상태를 바꾸고 [notifyListeners] 후 [onSave]로 JSON 을 넘긴다.
 class AppStore extends ChangeNotifier {
-  AppStore(this.state, {this.onSave, DateTime Function()? now})
+  AppStore(this.state, {this.onSave, DateTime Function()? now, this.api})
       : _now = now ?? DateTime.now;
 
   factory AppStore.seeded({DateTime? now, void Function(String)? onSave}) {
@@ -78,6 +79,74 @@ class AppStore extends ChangeNotifier {
     notifyListeners();
     onSave?.call(toJson());
   }
+
+  // ───────────────────────── 서버 연동 ─────────────────────────
+  //
+  // [api] 가 있으면 서버 모드. 액션은 지금처럼 로컬 상태를 먼저 바꿔 화면에 바로 보이고(동기 시그니처 유지),
+  // 같은 변경을 서버에 보낸 뒤 [reload] 로 서버 상태(`GET /api/v1/me/state`)로 덮는다.
+  // 실패하면 [remoteError] 에 메시지를 넣고 역시 [reload] 해서 로컬 변경을 되돌린다.
+
+  /// 서버 클라이언트. null 이면 기기 안 데모 모드.
+  final ApiClient? api;
+  bool get remote => api != null;
+
+  /// 서버 요청 실패 메시지. 화면(main)이 듣고 토스트로 보여 준다.
+  final ValueNotifier<String?> remoteError = ValueNotifier(null);
+
+  /// 서버 상태로 덮는다. [storeId] 를 주면 그 매장을 지금 보는 매장으로.
+  Future<void> reload({String? storeId}) async {
+    final a = api;
+    if (a == null) return;
+    final q = storeId == null || storeId.isEmpty ? '' : '?storeId=$storeId';
+    final j = await a.get('/api/v1/me/state$q') as Map<String, dynamic>;
+    final s = AppState.fromJson(j);
+    if (s == null) throw StateError('서버 상태 버전이 앱과 달라요 (v=${j['v']})');
+    state = s;
+    _undo.clear();
+    _redo.clear();
+    notifyListeners();
+  }
+
+  /// [call] 을 서버에 보내고 서버 상태로 다시 읽는다. 데모 모드면 아무것도 안 한다.
+  void _remote(Future<void> Function(ApiClient api) call) {
+    final a = api;
+    if (a == null || _skipRemote) return;
+    () async {
+      try {
+        await call(a);
+      } on ApiException catch (e) {
+        remoteError.value = e.message;
+      } catch (e) {
+        remoteError.value = '서버와 통신하지 못했어요';
+      }
+      try {
+        await reload();
+      } catch (_) {}
+    }();
+  }
+
+  /// 서버 모드 매장 만들기 (사장님 첫 로그인). 만든 뒤 그 매장으로 다시 읽는다.
+  Future<void> createStoreRemote({
+    required String name,
+    required String address,
+    required bool isSmall,
+    Deduction deduction = Deduction.biz33,
+  }) async {
+    final j = await api!.post('/api/v1/stores', {
+      'name': name,
+      'address': address,
+      'isSmall': isSmall,
+      'defaultDeduction': deduction.name,
+    }) as Map<String, dynamic>;
+    await reload(storeId: '${j['id']}');
+  }
+
+  String _sp(String storeId) => '/api/v1/stores/$storeId';
+  // 서버 id 는 숫자. 문자열 숫자면 숫자로 보낸다.
+  Object _n(String id) => int.tryParse(id) ?? id;
+
+  /// 서버 모드에서 아직 지원 안 하는 동작. 안내만 띄운다.
+  void _unsupported() => remoteError.value = '추후 지원 예정이에요';
 
   String _id(String prefix) => '$prefix${state.nextId++}';
   String _iso(DateTime t) => t.toIso8601String();
@@ -440,6 +509,7 @@ class AppStore extends ChangeNotifier {
   void markNotificationRead(String id) {
     state.notifications.where((x) => x.id == id).forEach((x) => x.read = true);
     _commit();
+    _remote((api) => api.post('/api/v1/me/notifications/$id/read'));
   }
 
   void markAllNotificationsRead() {
@@ -447,6 +517,8 @@ class AppStore extends ChangeNotifier {
       x.read = true;
     }
     _commit();
+    final sid = store.id;
+    _remote((api) => api.post('/api/v1/me/notifications/read-all?storeId=$sid'));
   }
 
   // ───────────────────────── 세션 ─────────────────────────
@@ -461,9 +533,11 @@ class AppStore extends ChangeNotifier {
   void logout() {
     session.loggedIn = false;
     _commit();
+    api?.logout();
   }
 
   void switchRole(Role role) {
+    if (remote) return;
     session.role = role;
     _commit();
   }
@@ -473,11 +547,17 @@ class AppStore extends ChangeNotifier {
     if (isWorking) return false;
     session.employeeStoreId = storeId;
     _commit();
+    if (remote) {
+      reload(storeId: storeId).catchError((Object _) {
+        remoteError.value = '서버와 통신하지 못했어요';
+      });
+    }
     return true;
   }
 
   /// 시드로 되돌린다. 로그인·역할은 유지.
   void resetDemo() {
+    if (remote) return;
     final keep = session;
     state = buildSeed(now);
     _undo.clear();
@@ -504,6 +584,7 @@ class AppStore extends ChangeNotifier {
     );
     state.attendance.add(a);
     _commit();
+    _remote((api) => api.post('${_sp(s.storeId)}/shifts/$shiftId/clock-in'));
     return a;
   }
 
@@ -512,6 +593,7 @@ class AppStore extends ChangeNotifier {
     if (a == null) return null;
     a.clockOut = _iso(now);
     _commit();
+    _remote((api) => api.post('${_sp(a.storeId)}/attendance/clock-out'));
     return a;
   }
 
@@ -524,6 +606,11 @@ class AppStore extends ChangeNotifier {
       ..editReason = reason;
     _notifyStaff(a.staffId, 'pay', '근태 기록이 수정됐어요', body: reason);
     _commit();
+    _remote((api) => api.patch('${_sp(a.storeId)}/attendance/$attendanceId', {
+          'clockIn': _iso(clockIn),
+          if (clockOut case final clockOutV?) 'clockOut': _iso(clockOutV),
+          'reason': reason,
+        }));
   }
 
   /// 사장님이 출근 기록을 새로 만든다(미출근 처리용).
@@ -541,6 +628,11 @@ class AppStore extends ChangeNotifier {
     );
     state.attendance.add(a);
     _commit();
+    _remote((api) => api.post('${_sp(s.storeId)}/shifts/$shiftId/attendance', {
+          'clockIn': _iso(clockIn),
+          if (clockOut case final clockOutV?) 'clockOut': _iso(clockOutV),
+          'reason': reason,
+        }));
     return a;
   }
 
@@ -565,6 +657,8 @@ class AppStore extends ChangeNotifier {
         body: _shiftLabel(s), refId: r.id);
     if (notifyPeers) _notifyPeers(r, '$who님이 대타를 구해요');
     _commit();
+    _remote((api) => api.post('${_sp(s.storeId)}/shifts/$shiftId/substitute-requests',
+        {'reason': reason, 'notifyPeers': notifyPeers}));
     return r;
   }
 
@@ -595,10 +689,12 @@ class AppStore extends ChangeNotifier {
         '${nameOf(who)}님이 ${nameOf(r.requesterId)}님 대타를 수락했어요',
         body: '승인하면 근무표에 반영돼요', refId: r.id);
     _commit();
+    _remote((api) => api.post('${_sp(r.storeId)}/substitute-requests/$requestId/apply'));
   }
 
   /// 데모: 같은 시간에 근무가 없는 동료 한 명이 수락한 것으로 만든다.
   bool simulatePeerAccept(String requestId) {
+    if (remote) return false;
     final r = subById(requestId)!;
     final s = shiftById(r.shiftId)!;
     final peer = state.staff
@@ -624,6 +720,7 @@ class AppStore extends ChangeNotifier {
     _notifyOwner(r.storeId, 'sub', '${nameOf(r.requesterId)}님이 대타 요청을 취소했어요',
         refId: r.id);
     _commit();
+    _remote((api) => api.post('${_sp(r.storeId)}/substitute-requests/$requestId/cancel'));
   }
 
   void approveSubstitute(String requestId) {
@@ -640,6 +737,7 @@ class AppStore extends ChangeNotifier {
     _notifyStaff(r.acceptedId, 'sub', '대타 근무가 확정됐어요',
         body: _shiftLabel(s), refId: r.id);
     _commit();
+    _remote((api) => api.post('${_sp(r.storeId)}/substitute-requests/$requestId/approve'));
   }
 
   void rejectSubstitute(String requestId) {
@@ -652,6 +750,7 @@ class AppStore extends ChangeNotifier {
       _notifyStaff(r.acceptedId, 'sub', '대타 요청이 거절됐어요', body: _shiftLabel(s), refId: r.id);
     }
     _commit();
+    _remote((api) => api.post('${_sp(r.storeId)}/substitute-requests/$requestId/reject'));
   }
 
   void resendSubstitute(String requestId) {
@@ -659,6 +758,7 @@ class AppStore extends ChangeNotifier {
     r.notifiedAt = _iso(now);
     _notifyPeers(r, '${nameOf(r.requesterId)}님 대타를 다시 구해요');
     _commit();
+    _remote((api) => api.post('${_sp(r.storeId)}/substitute-requests/$requestId/resend'));
   }
 
   /// 사장님이 직접 대타자를 정하고 바로 승인한다.
@@ -666,7 +766,26 @@ class AppStore extends ChangeNotifier {
     final r = subById(requestId)!;
     if (!r.applicantIds.contains(staffId)) r.applicantIds.add(staffId);
     r.acceptedId = staffId;
-    approveSubstitute(requestId);
+    // 로컬 변경만 하고(approve 의 서버 호출은 건너뛴다) 서버에는 assign 한 번만 보낸다.
+    final api0 = api;
+    final sid = r.storeId;
+    if (api0 == null) {
+      approveSubstitute(requestId);
+      return;
+    }
+    _localOnly(() => approveSubstitute(requestId));
+    _remote((api) => api.post('${_sp(sid)}/substitute-requests/$requestId/assign',
+        {'staffId': _n(staffId)}));
+  }
+
+  bool _skipRemote = false;
+  void _localOnly(void Function() f) {
+    _skipRemote = true;
+    try {
+      f();
+    } finally {
+      _skipRemote = false;
+    }
   }
 
   // ───────────────────────── 근무표 ─────────────────────────
@@ -674,8 +793,8 @@ class AppStore extends ChangeNotifier {
   // 되돌리기: 근무표를 바꾸기 직전 상태(JSON)를 쌓는다. 메모리에만 둔다.
   final _undo = <String>[];
   final _redo = <String>[];
-  bool get canUndo => _undo.isNotEmpty;
-  bool get canRedo => _redo.isNotEmpty;
+  bool get canUndo => !remote && _undo.isNotEmpty;
+  bool get canRedo => !remote && _redo.isNotEmpty;
 
   void _snapshot() {
     _undo.add(toJson());
@@ -684,7 +803,7 @@ class AppStore extends ChangeNotifier {
   }
 
   void _restore(List<String> from, List<String> to) {
-    if (from.isEmpty) return;
+    if (remote || from.isEmpty) return;
     to.add(toJson());
     state = AppState.fromJson(jsonDecode(from.removeLast()) as Map<String, dynamic>)!;
     _commit();
@@ -731,6 +850,17 @@ class AppStore extends ChangeNotifier {
       }
     }
     _commit();
+    _remote((api) => api.post('${_sp(store.id)}/shifts', {
+          'date': ymd(date),
+          'startMin': startMin,
+          'endMin': endMin,
+          'part': part,
+          'staffIds': [for (final id in staffIds) _n(id)],
+          'breakMin': ?breakMin,
+          if (repeatWeeks > 1) 'repeatWeeks': repeatWeeks,
+          'kind': kind.name,
+          'timeTbd': timeTbd,
+        }));
     return created;
   }
 
@@ -749,6 +879,7 @@ class AppStore extends ChangeNotifier {
     }
     if (s.isWork) _notifyStaff(s.staffId, 'sub', '근무가 삭제됐어요', body: _shiftLabel(s));
     _commit();
+    _remote((api) => api.delete('${_sp(s.storeId)}/shifts/$shiftId'));
     return true;
   }
 
@@ -786,6 +917,16 @@ class AppStore extends ChangeNotifier {
       _notifyStaff(s.staffId, 'sub', '근무가 수정됐어요', body: after);
     }
     _commit();
+    _remote((api) => api.patch('${_sp(s.storeId)}/shifts/$shiftId', {
+          if (staffId case final staffIdV?) 'staffId': _n(staffIdV),
+          if (date case final dateV?) 'date': ymd(dateV),
+          'startMin': ?startMin,
+          'endMin': ?endMin,
+          'part': ?part,
+          'breakMin': ?breakMin,
+          'kind': ?kind?.name,
+          'timeTbd': ?timeTbd,
+        }));
   }
 
   /// 그 주 파트별 필요 인원이 모자라는 칸을 채운다. 오늘 이후 날짜만.
@@ -840,6 +981,7 @@ class AppStore extends ChangeNotifier {
     }
     if (added == 0) _undo.removeLast();
     _commit();
+    _remote((api) => api.post('${_sp(store.id)}/schedule/auto-fill', {'weekMonday': ymd(monday)}));
     return added;
   }
 
@@ -850,6 +992,7 @@ class AppStore extends ChangeNotifier {
       _notifyStaff(s.id, 'sub', '$month월 근무표가 확정됐어요', body: '근무표에서 내 근무를 확인해 주세요');
     }
     _commit();
+    _remote((api) => api.post('${_sp(store.id)}/schedule/confirm', {'year': year, 'month': month}));
   }
 
   /// 근무표 만들기(웹): [from]–[to] 의 오늘 이후 날짜에 파트별 [needs](store.parts 순서) 만큼 근무를 짠다.
@@ -858,6 +1001,9 @@ class AppStore extends ChangeNotifier {
   /// - 빈칸은 그 파트가 자기 파트인 근무자 먼저, 그다음 그 주 근무가 적은 사람부터. [excludeStaffIds] 는 빼고,
   ///   그 주 소정 분이 [weeklyMaxMin] 을 넘게 되는 사람은 건너뛴다
   /// - 이미 있는 근무 · 겹치는 시간은 그대로 두고 피한다
+  // 서버 적용 때 미리보기를 다시 올리려고 마지막 인자를 기억한다.
+  Map<String, dynamic>? _lastPlanArgs;
+
   SchedulePlan planSchedule({
     required DateTime from,
     required DateTime to,
@@ -866,6 +1012,14 @@ class AppStore extends ChangeNotifier {
     Set<String> excludeStaffIds = const {},
     int weeklyMaxMin = 40 * 60,
   }) {
+    _lastPlanArgs = {
+      'from': ymd(dayOf(from)),
+      'to': ymd(dayOf(to)),
+      'needs': needs,
+      'copyLastWeek': copyLastWeek,
+      'excludeStaffIds': [for (final id in excludeStaffIds) _n(id)],
+      'weeklyMaxMin': weeklyMaxMin,
+    };
     final start = dayOf(from).isBefore(today) ? today : dayOf(from), end = dayOf(to);
     final planned = <Shift>[];
     final inRange = !end.isBefore(start);
@@ -974,6 +1128,15 @@ class AppStore extends ChangeNotifier {
   /// 담당 직원들에게 알림. 추가한 수를 돌려준다.
   int applySchedulePlan(SchedulePlan plan, {List<int>? needs}) {
     if (plan.shifts.isEmpty) return 0;
+    final sid = store.id;
+    final sendNeeds = needs ?? [for (final p in store.parts) p.need];
+    final body = _lastPlanArgs ??
+        {
+          'from': ymd(plan.from),
+          'to': ymd(plan.to),
+          'needs': sendNeeds,
+          'copyLastWeek': false,
+        };
     _snapshot();
     if (needs != null) {
       for (var i = 0; i < needs.length && i < store.parts.length; i++) {
@@ -997,6 +1160,11 @@ class AppStore extends ChangeNotifier {
     counts.forEach((id, n) =>
         _notifyStaff(id, 'sub', '${plan.from.month}월 근무가 추가됐어요', body: '$n건 · 근무표에서 확인해 주세요'));
     _commit();
+    _remote((api) async {
+      final r = await api.post('${_sp(sid)}/schedule-plans', {...body, 'needs': sendNeeds})
+          as Map<String, dynamic>;
+      await api.post('${_sp(sid)}/schedule-plans/${r['planId']}/apply', {'needs': sendNeeds});
+    });
     return plan.shifts.length;
   }
 
@@ -1033,6 +1201,8 @@ class AppStore extends ChangeNotifier {
       }
     }
     _commit();
+    _remote((api) => api.post('${_sp(store.id)}/schedule/template',
+        {'needs': needs, 'copyLastWeek': copyLastWeek}));
     return copied;
   }
 
@@ -1070,6 +1240,27 @@ class AppStore extends ChangeNotifier {
     return (JoinResult.requested, st);
   }
 
+  /// 서버 모드 가입 신청. 서버 응답의 result 를 [JoinResult] 로 돌려준다. 신청이 됐으면 서버 상태로 다시 읽는다.
+  Future<(JoinResult, Store?)> requestJoinRemote(String code) async {
+    final j = await api!.post('/api/v1/stores/join-requests', {'code': code.trim()})
+        as Map<String, dynamic>;
+    final result = JoinResult.values.firstWhere((r) => r.name == j['result'],
+        orElse: () => JoinResult.notFound);
+    final ref = j['store'] as Map<String, dynamic>?;
+    if (result == JoinResult.requested || result == JoinResult.alreadyMember) {
+      try {
+        await reload();
+      } catch (_) {}
+    }
+    if (ref == null) return (result, null);
+    final id = '${ref['id']}';
+    return (
+      result,
+      storeById(id) ??
+          Store(id: id, name: '${ref['name']}', address: '', code: _normCode(code), parts: [])
+    );
+  }
+
   void approveJoin(String staffId, {required int wage, Deduction? deduction}) {
     final s = staffById(staffId)!;
     s
@@ -1080,6 +1271,10 @@ class AppStore extends ChangeNotifier {
     _notifyStaff(s.id, 'join', '${storeById(s.storeId)!.name} 가입이 승인됐어요',
         body: '시급 ${wonText(wage)}', refId: s.id);
     _commit();
+    _remote((api) => api.post('${_sp(s.storeId)}/staff/$staffId/approve', {
+          'wage': wage,
+          'deduction': ?deduction?.name,
+        }));
   }
 
   void rejectJoin(String staffId) {
@@ -1087,6 +1282,7 @@ class AppStore extends ChangeNotifier {
     s.status = StaffStatus.rejected;
     _notifyStaff(s.id, 'join', '${storeById(s.storeId)!.name} 가입이 거절됐어요');
     _commit();
+    _remote((api) => api.post('${_sp(s.storeId)}/staff/$staffId/reject'));
   }
 
   void updateStaff(String staffId,
@@ -1104,6 +1300,14 @@ class AppStore extends ChangeNotifier {
     if (premium != null) s.premium = premium;
     if (part != null) s.part = part;
     _commit();
+    _remote((api) => api.patch('${_sp(s.storeId)}/staff/$staffId', {
+          'wage': ?wage,
+          'deduction': ?deduction?.name,
+          'weeklyHolidayAuto': ?weeklyHolidayAuto,
+          'premium': ?premium,
+          'part': ?part,
+          'kind': ?kind?.name,
+        }));
   }
 
   /// 매장에서 내보낸다. 오늘 이후(아직 출근 안 한) 근무는 지우고, 대기 대타에서 뺀다.
@@ -1128,6 +1332,7 @@ class AppStore extends ChangeNotifier {
     }
     _notifyStaff(staffId, 'join', '${storeById(s.storeId)!.name}에서 퇴사 처리됐어요');
     _commit();
+    _remote((api) => api.delete('${_sp(s.storeId)}/staff/$staffId'));
   }
 
   // ───────────────────────── 공지 ─────────────────────────
@@ -1152,6 +1357,12 @@ class AppStore extends ChangeNotifier {
       _notifyStaff(s.id, 'notice', n.required ? '새 필독 공지' : '새 공지', body: title, refId: n.id);
     }
     _commit();
+    _remote((api) => api.post('${_sp(n.storeId)}/notices', {
+          'title': title,
+          'body': body,
+          'category': category,
+          'required': ?required,
+        }));
     return n;
   }
 
@@ -1161,6 +1372,7 @@ class AppStore extends ChangeNotifier {
     if (m == null || n == null || n.readBy.containsKey(m.id)) return;
     n.readBy[m.id] = _iso(now);
     _commit();
+    _remote((api) => api.post('${_sp(n.storeId)}/notices/$noticeId/read'));
   }
 
   void markAllNoticesRead() {
@@ -1170,6 +1382,8 @@ class AppStore extends ChangeNotifier {
       n.readBy.putIfAbsent(m.id, () => _iso(now));
     }
     _commit();
+    final sid = store.id;
+    _remote((api) => api.post('${_sp(sid)}/notices/read-all'));
   }
 
   List<Staff> unreadStaffOf(Notice n) => state.staff
@@ -1185,6 +1399,7 @@ class AppStore extends ChangeNotifier {
     }
     n.remindedAt = _iso(now);
     _commit();
+    _remote((api) => api.post('${_sp(n.storeId)}/notices/$noticeId/remind'));
     return targets.length;
   }
 
@@ -1192,6 +1407,7 @@ class AppStore extends ChangeNotifier {
 
   /// 알바생(나)이 보건증 갱신본을 등록한다.
   void uploadHealthCert({required DateTime expiry, required List<int> alertDays}) {
+    if (remote) return _unsupported(); // 사진 업로드(multipart) 미구현
     final p = person(session.employeeId);
     p
       ..certExpiry = ymd(expiry)
@@ -1212,6 +1428,7 @@ class AppStore extends ChangeNotifier {
         left == null ? '보건증을 등록해 주세요' : '보건증 만료 ${left >= 0 ? 'D-$left' : '지남'}',
         body: '내 서류에서 갱신본을 등록해 주세요');
     _commit();
+    _remote((api) => api.post('${_sp(s.storeId)}/staff/$staffId/cert-renewal-requests'));
   }
 
   /// 사장님이 계약서를 작성하고 서명해 보낸다.
@@ -1223,6 +1440,14 @@ class AppStore extends ChangeNotifier {
     s.contract = c;
     _notifyStaff(staffId, 'contract', '근로계약서 서명 요청', body: '내 서류에서 확인하고 서명해 주세요');
     _commit();
+    _remote((api) => api.put('${_sp(s.storeId)}/staff/$staffId/contract', {
+          'start': c.start,
+          'end': c.end,
+          'wage': c.wage,
+          'weeklyHours': c.weeklyHours,
+          'workDays': c.workDays,
+          'duty': c.duty,
+        }));
   }
 
   /// 알바생(나)이 현재 매장 계약서에 서명한다.
@@ -1231,6 +1456,9 @@ class AppStore extends ChangeNotifier {
     s.contract!.employeeSignedAt = _iso(now);
     _notifyOwner(s.storeId, 'contract', '${me.name}님이 근로계약서에 서명했어요');
     _commit();
+    // 서명 이미지는 아직 올리지 않는다. 서버는 비어 있지 않은 문자열만 요구한다.
+    _remote((api) => api.post('${_sp(s.storeId)}/staff/${s.id}/contract/sign',
+        {'signatureUrl': 'app-signature'}));
   }
 
   // ───────────────────────── 매장 ─────────────────────────
@@ -1249,6 +1477,12 @@ class AppStore extends ChangeNotifier {
       ..isSmall = isSmall
       ..defaultDeduction = deduction;
     _commit();
+    _remote((api) => api.patch(_sp(st.id), {
+          'name': name,
+          'address': address,
+          'isSmall': isSmall,
+          'defaultDeduction': deduction.name,
+        }));
     return st;
   }
 
@@ -1261,5 +1495,10 @@ class AppStore extends ChangeNotifier {
     if (noticeRequiredDefault != null) store.noticeRequiredDefault = noticeRequiredDefault;
     if (substitutePush != null) store.substitutePush = substitutePush;
     _commit();
+    _remote((api) => api.patch('${_sp(store.id)}/settings', {
+          'isSmall': ?isSmall,
+          'noticeRequiredDefault': ?noticeRequiredDefault,
+          'substitutePush': ?substitutePush,
+        }));
   }
 }
