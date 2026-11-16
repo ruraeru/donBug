@@ -1,12 +1,17 @@
-import 'package:flutter/material.dart';
+import 'dart:async';
+import 'dart:typed_data';
 
+import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
+
+import '../../data/api_client.dart';
 import '../../data/app_scope.dart';
 import '../../data/format.dart';
 import '../../theme.dart';
 import '../../widgets/common.dart';
 import 'employee_parts.dart';
 
-/// 보건증 등록: 사진(데모) · 만료일 · 만료 알림.
+/// 보건증 등록: 사진(서버 모드는 카메라·앨범, 데모는 탭) · 만료일 · 만료 알림.
 class HealthCertRegisterScreen extends StatefulWidget {
   const HealthCertRegisterScreen({super.key});
 
@@ -18,6 +23,9 @@ class _HealthCertRegisterScreenState extends State<HealthCertRegisterScreen> {
   static const _alerts = [(30, 'D-30', '한 달 전 알림'), (14, 'D-14', null), (7, 'D-7', null), (0, 'D-Day', null)];
 
   bool _photo = false;
+  bool _busy = false;
+  Uint8List? _bytes; // 서버 모드: 고른 사진
+  String _name = 'health-cert.jpg';
   late DateTime _expiry;
   late Set<int> _days;
 
@@ -41,8 +49,64 @@ class _HealthCertRegisterScreenState extends State<HealthCertRegisterScreen> {
     if (d != null) setState(() => _expiry = d);
   }
 
+  Future<void> _choose() async {
+    final src = await showModalBottomSheet<ImageSource>(
+      context: context,
+      builder: (ctx) => SafeArea(
+        child: Column(mainAxisSize: MainAxisSize.min, children: [
+          ListTile(
+              leading: const Icon(Icons.photo_camera_outlined),
+              title: const Text('카메라로 촬영'),
+              onTap: () => Navigator.pop(ctx, ImageSource.camera)),
+          ListTile(
+              leading: const Icon(Icons.photo_library_outlined),
+              title: const Text('앨범에서 선택'),
+              onTap: () => Navigator.pop(ctx, ImageSource.gallery)),
+        ]),
+      ),
+    );
+    if (src == null) return;
+    try {
+      final f = await ImagePicker().pickImage(source: src, maxWidth: 1600, imageQuality: 85);
+      if (f == null) return;
+      final b = await f.readAsBytes();
+      if (!mounted) return;
+      setState(() {
+        _bytes = b;
+        _name = f.name.contains('.') ? f.name : 'health-cert.jpg';
+        _photo = true;
+      });
+    } catch (_) {
+      if (mounted) showToast(context, '사진을 불러오지 못했어요');
+    }
+  }
+
+  Future<void> _submitRemote() async {
+    final store = AppScope.read(context);
+    final nav = Navigator.of(context);
+    setState(() => _busy = true);
+    try {
+      await store.uploadHealthCertRemote(
+          expiry: _expiry,
+          alertDays: _days.toList()..sort((a, b) => b - a),
+          photo: _bytes!,
+          filename: _name);
+      if (!mounted) return;
+      nav.pop();
+      showToast(context, '보건증을 등록했어요');
+    } on ApiException catch (e) {
+      if (mounted) showToast(context, e.message);
+    } catch (_) {
+      if (mounted) showToast(context, '서버와 통신하지 못했어요');
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
   void _submit() {
+    if (_busy) return;
     if (!_photo) return showToast(context, '보건증 사진을 올려 주세요');
+    if (AppScope.read(context).remote) return unawaited(_submitRemote());
     AppScope.read(context).uploadHealthCert(
         expiry: _expiry, alertDays: _days.toList()..sort((a, b) => b - a));
     Navigator.pop(context);
@@ -50,7 +114,9 @@ class _HealthCertRegisterScreenState extends State<HealthCertRegisterScreen> {
   }
 
   @override
-  Widget build(BuildContext context) => Scaffold(
+  Widget build(BuildContext context) {
+    final remote = AppScope.of(context).remote;
+    return Scaffold(
         appBar: const AppHeader('보건증 등록'),
         body: ListView(
           padding: const EdgeInsets.fromLTRB(20, 8, 20, 16),
@@ -64,7 +130,7 @@ class _HealthCertRegisterScreenState extends State<HealthCertRegisterScreen> {
               clipBehavior: Clip.antiAlias,
               child: InkWell(
                 // shortcut: 데모라 실제 카메라·앨범 대신 탭하면 사진이 선택된 것으로 처리.
-                onTap: () => setState(() => _photo = !_photo),
+                onTap: remote ? _choose : () => setState(() => _photo = !_photo),
                 child: SizedBox(
                   height: 180,
                   width: double.infinity,
@@ -74,10 +140,12 @@ class _HealthCertRegisterScreenState extends State<HealthCertRegisterScreen> {
                       Icon(_photo ? Icons.check_circle : Icons.add,
                           size: 40, color: AppColors.primary),
                       const SizedBox(height: 8),
-                      Text(_photo ? '보건증 사진 선택됨 (데모)' : '보건증 사진 올리기',
+                      Text(_photo ? (remote ? '보건증 사진 선택됨' : '보건증 사진 선택됨 (데모)') : '보건증 사진 올리기',
                           style: AppText.style(15, FontWeight.w500)),
                       const SizedBox(height: 8),
-                      Text(_photo ? '다시 탭하면 선택을 취소해요' : '카메라 촬영 또는 앨범에서 선택 · 데모는 탭',
+                      Text(remote
+                            ? (_photo ? '다시 탭하면 다른 사진을 골라요' : '카메라 촬영 또는 앨범에서 선택')
+                            : (_photo ? '다시 탭하면 선택을 취소해요' : '카메라 촬영 또는 앨범에서 선택 · 데모는 탭'),
                           style: AppText.style(12, FontWeight.w400, AppColors.textSecondary)),
                     ],
                   ),
@@ -107,6 +175,7 @@ class _HealthCertRegisterScreenState extends State<HealthCertRegisterScreen> {
             ),
           ],
         ),
-        bottomNavigationBar: BottomBar(child: AppButton('등록하기', onPressed: _submit)),
+        bottomNavigationBar: BottomBar(child: AppButton(_busy ? '올리는 중…' : '등록하기', onPressed: _busy ? null : _submit)),
       );
+  }
 }

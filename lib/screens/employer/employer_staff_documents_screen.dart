@@ -33,10 +33,22 @@ class EmployerStaffDocumentsScreen extends StatelessWidget {
                 const SizedBox(height: 12),
                 Container(
                   height: 110,
+                  width: double.infinity,
                   alignment: Alignment.center,
+                  clipBehavior: Clip.antiAlias,
                   decoration: BoxDecoration(color: AppColors.bg, borderRadius: BorderRadius.circular(14)),
-                  child: Text(p.certHasPhoto ? '보건증 사진 (등록됨 · 데모)' : '등록된 사진 없음',
-                      style: AppText.style(13, FontWeight.w400, AppColors.textTertiary)),
+                  child: store.remote && p.certHasPhoto
+                      ? Image.network(store.staffCertPhotoUrl(s),
+                          headers: store.api!.authHeaders,
+                          fit: BoxFit.cover,
+                          width: double.infinity,
+                          errorBuilder: (_, _, _) => Text('사진을 불러오지 못했어요',
+                              style: AppText.style(13, FontWeight.w400, AppColors.textTertiary)))
+                      : Text(
+                          p.certHasPhoto
+                              ? (store.remote ? '보건증 사진 등록됨' : '보건증 사진 (등록됨 · 데모)')
+                              : '등록된 사진 없음',
+                          style: AppText.style(13, FontWeight.w400, AppColors.textTertiary)),
                 ),
                 const SizedBox(height: 12),
                 KeyValueRow('만료일', p.certExpiry == null ? '-' : dotDate(parseYmd(p.certExpiry!))),

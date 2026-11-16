@@ -3,7 +3,9 @@ import 'dart:math';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
+import 'package:qr_flutter/qr_flutter.dart';
 
+import '../../data/api_client.dart';
 import '../../data/app_scope.dart';
 import '../../data/app_store.dart';
 import '../../data/format.dart';
@@ -32,6 +34,12 @@ class _WebPosQrScreenState extends State<WebPosQrScreen> {
   (String, String)? _checked;
   int _checkedAt = 0;
 
+  /// 서버 모드: 서버가 준 QR 문자열과 만료 시각, 갱신 실패 문구.
+  String? _token;
+  DateTime? _expiresAt;
+  String? _error;
+  bool _fetching = false;
+
   @override
   void initState() {
     super.initState();
@@ -40,8 +48,43 @@ class _WebPosQrScreenState extends State<WebPosQrScreen> {
         _tick++;
         if (_tick - _checkedAt >= 3) _checked = null;
       });
+      final store = AppScope.read(context);
+      if (!store.remote) return;
+      final exp = _expiresAt;
+      // 만료 3초 전에 미리 갱신. 실패했으면 5초마다 재시도.
+      if (exp == null ? _tick % 5 == 0 : DateTime.now().isAfter(exp.subtract(const Duration(seconds: 3)))) {
+        _refreshToken(store);
+      }
+      if (_tick % 10 == 0) store.reload().catchError((Object _) {});
+    });
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final store = AppScope.read(context);
+      if (store.remote) _refreshToken(store);
     });
   }
+
+  Future<void> _refreshToken(AppStore store) async {
+    if (_fetching) return;
+    _fetching = true;
+    try {
+      final j = await store.api!.get('/api/v1/stores/${store.store.id}/qr-token') as Map<String, dynamic>;
+      if (!mounted) return;
+      setState(() {
+        _token = j['token'] as String;
+        _expiresAt = DateTime.parse(j['expiresAt'] as String);
+        _error = null;
+      });
+    } on ApiException catch (e) {
+      if (mounted) setState(() => _error = e.message);
+    } catch (_) {
+      if (mounted) setState(() => _error = '서버와 통신하지 못했어요');
+    } finally {
+      _fetching = false;
+    }
+  }
+
+  /// 만료까지 남은 초 (서버 모드).
+  int get _remain => max(0, _expiresAt?.difference(DateTime.now()).inSeconds ?? 0);
 
   @override
   void dispose() {
@@ -97,11 +140,25 @@ class _WebPosQrScreenState extends State<WebPosQrScreen> {
             color: AppColors.surface, borderRadius: BorderRadius.circular(28)),
         child: Semantics(
           label: '출근 QR 코드',
-          child: CustomPaint(
-            key: const ValueKey('pos-qr'),
-            size: const Size.square(300),
-            painter: _QrPainter(_tick ~/ _qrSeconds),
-          ),
+          child: store.remote
+              ? (_token == null
+                  ? SizedBox(
+                      width: 300,
+                      child: Text(_error ?? 'QR 을 불러오는 중이에요',
+                          key: const ValueKey('pos-qr-error'),
+                          textAlign: TextAlign.center,
+                          style: AppText.style(15, FontWeight.w500)))
+                  : QrImageView(
+                      key: const ValueKey('pos-qr'),
+                      data: _token!,
+                      size: 300,
+                      backgroundColor: AppColors.surface,
+                    ))
+              : CustomPaint(
+                  key: const ValueKey('pos-qr'),
+                  size: const Size.square(300),
+                  painter: _QrPainter(_tick ~/ _qrSeconds),
+                ),
         ),
       ),
     );
@@ -148,7 +205,7 @@ class _WebPosQrScreenState extends State<WebPosQrScreen> {
                       alignment: WrapAlignment.center,
                       children: [
                         GestureDetector(
-                          onTap: checkedIn ? null : _scan,
+                          onTap: checkedIn || store.remote ? null : _scan,
                           child: Column(mainAxisSize: MainAxisSize.min, children: [
                             qr,
                             const SizedBox(height: 22),
@@ -164,7 +221,12 @@ class _WebPosQrScreenState extends State<WebPosQrScreen> {
                                     color: AppColors.primary, shape: BoxShape.circle),
                               ),
                               const SizedBox(width: 10),
-                              Text('${_qrSeconds - _tick % _qrSeconds}초 후 QR이 자동으로 바뀌어요',
+                              Text(
+                                  store.remote
+                                      ? (_error != null && _token != null
+                                          ? 'QR 을 새로 받지 못했어요. 다시 시도하고 있어요'
+                                          : '$_remain초 후 QR이 자동으로 바뀌어요')
+                                      : '${_qrSeconds - _tick % _qrSeconds}초 후 QR이 자동으로 바뀌어요',
                                   style: AppText.style(
                                       15, FontWeight.w400, AppColors.textTertiary)),
                             ]),

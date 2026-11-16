@@ -36,7 +36,7 @@ class EmployerSignatureRequestScreen extends StatelessWidget {
         (
           state: signed ? StepStatus.done : StepStatus.pending,
           title: 'PDF 보관',
-          subtitle: signed ? '보관됨 (데모)' : '서명 완료 후 자동 저장'
+          subtitle: signed ? (store.remote ? '보관됨' : '보관됨 (데모)') : '서명 완료 후 자동 저장'
         ),
       ],
       ctaLabel: '서류 목록으로',

@@ -108,6 +108,17 @@ void main() {
     expect(calls, isEmpty);
   });
 
+  test('대타: 지원 → 승인 경로', () async {
+    final (s, calls, _) = await _setup();
+    final open = s.state.subs.firstWhere((r) => r.status == SubStatus.open);
+    final peer = s.activeStaff.firstWhere((x) => x.id != open.requesterId).id;
+    s.applySubstitute(open.id, staffId: peer);
+    s.approveSubstitute(open.id);
+    await _settle();
+    final base = '/api/v1/stores/${open.storeId}/substitute-requests/${open.id}';
+    expect(calls, containsAllInOrder(['POST $base/apply', 'POST $base/approve']));
+  });
+
   test('서버 오류는 remoteError 에 메시지', () async {
     SharedPreferences.setMockInitialValues({'donbug.access': 't'});
     final prefs = await SharedPreferences.getInstance();
