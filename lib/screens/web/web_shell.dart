@@ -5,6 +5,7 @@ import '../../data/app_scope.dart';
 import '../../theme.dart';
 import '../../widgets/common.dart';
 import 'web_ai_assistant_screen.dart';
+import 'web_boot.dart';
 import 'web_common.dart';
 import 'web_dashboard_screen.dart';
 import 'web_documents_screen.dart';
@@ -121,6 +122,19 @@ class _WebShellState extends State<WebShell> {
                 ]),
               ),
               const SizedBox(height: 6),
+              if (AppScope.of(context).remote)
+                rail
+                    ? IconButton(
+                        tooltip: '로그아웃',
+                        onPressed: () => WebBoot.logout(context),
+                        icon: const Icon(Icons.logout, size: 22, color: AppColors.textTertiary),
+                      )
+                    : TextButton(
+                        onPressed: () => WebBoot.logout(context),
+                        child: Text('로그아웃',
+                            style: AppText.style(12, FontWeight.w500, AppColors.textTertiary)),
+                      )
+              else ...[
               rail
                   ? Column(children: [
                       IconButton(
@@ -142,6 +156,7 @@ class _WebShellState extends State<WebShell> {
                   child: Text('데모 데이터 초기화',
                       style: AppText.style(12, FontWeight.w500, AppColors.textTertiary)),
                 ),
+              ],
             ]),
           ),
         ),

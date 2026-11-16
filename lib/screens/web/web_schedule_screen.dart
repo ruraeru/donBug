@@ -195,6 +195,7 @@ class _WebScheduleScreenState extends State<WebScheduleScreen> {
       actions: [
         WebSegmented(
             labels: _views, selected: _view, onChanged: (i) => setState(() => _view = i)),
+        if (!store.remote) ...[
         WebButton('되돌리기',
             icon: Icons.undo_rounded,
             tooltip: '되돌리기',
@@ -205,6 +206,7 @@ class _WebScheduleScreenState extends State<WebScheduleScreen> {
             tooltip: '다시하기',
             style: WebButtonStyle.outline,
             onPressed: store.canRedo ? store.redo : null),
+        ],
         WebButton('근무표 만들기', style: WebButtonStyle.soft, onPressed: () => _create(month)),
         WebButton('자동 채우기',
             style: WebButtonStyle.outline,
