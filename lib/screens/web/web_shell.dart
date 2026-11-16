@@ -12,9 +12,11 @@ import 'web_documents_screen.dart';
 import 'web_notice_screen.dart';
 import 'web_payroll_screen.dart';
 import 'web_pos_qr_screen.dart';
-import 'web_schedule_screen.dart';
+import 'web_schedules_screen.dart';
+import 'web_settings_screen.dart';
 import 'web_staff_screen.dart';
 import 'web_substitute_screen.dart';
+import 'web_templates_screen.dart';
 import 'web_view_mode.dart';
 
 /// 웹 메뉴 번호 ([WebShell] 순서).
@@ -26,6 +28,9 @@ abstract final class WebMenu {
   static const payroll = 4;
   static const documents = 5;
   static const notice = 6;
+  static const ai = 7;
+  static const templates = 8;
+  static const settings = 9;
 }
 
 /// 사장님 웹 셸. 폭 1100 이상은 사이드바(240), 800–1100 은 아이콘 레일, 800 미만은 상단 바 + 서랍.
@@ -50,6 +55,8 @@ class _WebShellState extends State<WebShell> {
     ('서류·컴플라이언스', 'tab_docs'),
     ('공지', 'tab_notice'),
     ('AI 노무 도우미', 'alert_circle'),
+    ('템플릿', 'tab_docs'),
+    ('매장 설정', 'tab_labor'),
   ];
 
   final _scaffold = GlobalKey<ScaffoldState>();
@@ -67,12 +74,14 @@ class _WebShellState extends State<WebShell> {
 
   Widget _pageBody() => switch (_page) {
         0 => const WebDashboardScreen(),
-        1 => const WebScheduleScreen(),
+        1 => const WebSchedulesScreen(),
         2 => const WebStaffScreen(),
         3 => const WebSubstituteScreen(),
         4 => const WebPayrollScreen(),
         5 => const WebDocumentsScreen(),
         6 => const WebNoticeScreen(),
+        8 => const WebTemplatesScreen(),
+        9 => const WebSettingsScreen(),
         _ => const WebAiAssistantScreen(),
       };
 

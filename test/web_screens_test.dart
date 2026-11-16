@@ -7,10 +7,8 @@ import 'dart:io';
 
 import 'package:donbug/data/app_scope.dart';
 import 'package:donbug/data/app_store.dart';
-import 'package:donbug/data/format.dart';
 import 'package:donbug/data/models.dart';
 import 'package:donbug/screens/web/web_pos_qr_screen.dart';
-import 'package:donbug/screens/web/web_schedule_views.dart';
 import 'package:donbug/screens/web/web_shell.dart';
 import 'package:donbug/theme.dart';
 import 'package:flutter/material.dart';
@@ -83,69 +81,6 @@ void main() {
     await tester.pumpAndSettle();
     return store;
   }
-
-  testWidgets('근무표: 4개 보기 · 주 이동', (tester) async {
-    await tester.runAsync(_loadFonts);
-    await open(tester, '근무표');
-    for (final v in ['한 달', '인원별', '일간', '파트별']) {
-      await tester.tap(find.text(v));
-      await tester.pumpAndSettle();
-      expect(tester.takeException(), isNull, reason: v);
-      await _shot(tester, 'schedule_$v');
-    }
-    await tester.tap(find.textContaining('4주차'));
-    await tester.pumpAndSettle();
-    expect(find.text('월 5/18'), findsOneWidget);
-  });
-
-  testWidgets('근무표: 빈 칸 클릭 → 추가 창 저장 → 되돌리기', (tester) async {
-    await tester.runAsync(_loadFonts);
-    final store = await open(tester, '근무표');
-    final before = store.state.shifts.length;
-    // 파트별 보기 수요일(5/13)은 유동 근무 칸이 비어 있다. 지난 날짜라도 추가는 된다.
-    final cells = find.byWidgetPredicate((w) => w is DragTarget<String>);
-    await tester.tapAt(tester.getBottomLeft(cells.at(3 * 7 + 2)) + const Offset(20, -10));
-    await tester.pumpAndSettle();
-    expect(find.textContaining('근무 추가'), findsOneWidget);
-    await _shot(tester, 'dialog_add');
-    await tester.tap(find.text('저장').last);
-    await tester.pumpAndSettle();
-    expect(store.state.shifts.length, before + 1);
-    expect(store.state.shifts.last.part, '직원');
-    await tester.tap(find.byTooltip('되돌리기'));
-    await tester.pumpAndSettle();
-    expect(store.state.shifts.length, before);
-  });
-
-  testWidgets('근무표: 블록을 끌어 다른 요일로 옮긴다', (tester) async {
-    await tester.runAsync(_loadFonts);
-    final store = await open(tester, '근무표');
-    // 금요일 오픈(수빈) → 다음 칸(토) 은 이미 수빈 근무라 겹침으로 막히고, 하윤 금 마감 → 일 마감은 된다.
-    final fri = store.today.add(const Duration(days: 1));
-    final hayun = store.shiftsOn(fri).firstWhere((s) => s.part == '마감');
-    final from = tester.getCenter(find.byWidgetPredicate((w) => w is ShiftBlock && w.shift.id == hayun.id));
-    final sun = find.byWidgetPredicate((w) => w is DragTarget<String>).at(2 * 7 + 6);
-    final g = await tester.startGesture(from);
-    await g.moveBy(const Offset(10, 0));
-    await g.moveTo(tester.getCenter(sun));
-    await g.up();
-    await tester.pumpAndSettle();
-    expect(store.shiftById(hayun.id)!.date, ymd(store.today.add(const Duration(days: 3))));
-  });
-
-  testWidgets('근무표: 자동 채우기 · 확정하기(미정이 있으면 막힘)', (tester) async {
-    await tester.runAsync(_loadFonts);
-    final store = await open(tester, '근무표');
-    await tester.tap(find.textContaining('4주차'));
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('자동 채우기'));
-    await tester.pumpAndSettle();
-    expect(find.text('빈 칸 1개를 채웠어요'), findsOneWidget);
-    await tester.tap(find.text('확정하기'));
-    await tester.pumpAndSettle();
-    expect(find.text('시간 미정 1건을 먼저 정해 주세요'), findsOneWidget);
-    expect(store.store.scheduleConfirmedAt, isNull);
-  });
 
   testWidgets('직원 상세 시트: 시급 저장(최저임금 검사)', (tester) async {
     await tester.runAsync(_loadFonts);

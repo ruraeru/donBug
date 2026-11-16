@@ -3,10 +3,10 @@ import 'package:flutter/material.dart';
 import '../../data/app_scope.dart';
 import '../../data/app_store.dart';
 import '../../data/format.dart';
+import '../../data/holidays.dart';
 import '../../data/models.dart';
 import '../../theme.dart';
 import '../../widgets/common.dart';
-import '../employer/employer_parts.dart';
 import 'web_common.dart';
 import 'web_shift_dialog.dart';
 
@@ -20,11 +20,18 @@ Color dayColor(DateTime d, [Color normal = AppColors.textPrimary]) => switch (d.
 /// 유동 근무 칸인지(파트 템플릿에 없는 파트).
 bool isFlexShift(AppStore store, Shift s) => !store.store.parts.any((p) => p.name == s.part);
 
+/// 파트 색(톤): 오픈 · 미들 · 마감.
+(Color, Color) partColor(PartTemplate p) => switch (p.tone) {
+      PartTone.open => (AppColors.primary, AppColors.primarySoft),
+      PartTone.middle => (AppColors.info, AppColors.infoSoft),
+      PartTone.close => (AppColors.accent, AppColors.accentSoft),
+    };
+
 /// 블록 색: (막대, 배경).
 (Color, Color) blockColors(AppStore store, Shift s) {
   if (s.kind != ShiftKind.work) return (AppColors.textTertiary, AppColors.bg);
-  if (isFlexShift(store, s)) return (AppColors.purple, AppColors.purpleSoft);
-  return partColors(s.part);
+  final p = store.store.parts.where((p) => p.name == s.part).firstOrNull;
+  return p == null ? (AppColors.purple, AppColors.purpleSoft) : partColor(p);
 }
 
 String _hourText(int minutes) => hours(minutes).replaceAll('h', '');
@@ -277,7 +284,7 @@ class PartWeekView extends StatelessWidget {
       rows: [
         for (final p in store.store.parts)
           [
-            partLabel(partColors(p.name).$1, p.name, '${range(p.startMin, p.endMin)} · 필요 ${p.need}명'),
+            partLabel(partColor(p).$1, p.name, '${range(p.startMin, p.endMin)} · 필요 ${p.need}명'),
             for (final d in days)
               Builder(builder: (context) {
                 final list = store.scheduleOn(d).where((s) => s.part == p.name).toList();
@@ -467,7 +474,7 @@ class MonthView extends StatelessWidget {
             for (final p in store.store.parts)
               if (list.where((s) => s.part == p.name && s.kind == ShiftKind.work) case final ps
                   when ps.isNotEmpty)
-                line(partColors(p.name).$1, partColors(p.name).$2, p.name, ps.map(name).join(' ')),
+                line(partColor(p).$1, partColor(p).$2, p.name, ps.map(name).join(' ')),
             if (flex.isNotEmpty)
               line(AppColors.purple, AppColors.purpleSoft, '직원',
                   flex.map((s) => s.timeTbd ? '${name(s)} 미정' : '${name(s)} ${_short(s.startMin)}–${_short(s.endMin)}').join(' · ')),
@@ -510,14 +517,14 @@ class MonthView extends StatelessWidget {
   }
 }
 
-/// 일간 보기 (Figma 151:10046): 06–24시 타임라인. 영업 외 시간은 회색, 휴게는 가운데에 표시.
-/// shortcut: 블록 가장자리 끌어 시간 조정은 없다. 블록을 누르면 수정 창에서 바꾼다.
+/// 일간 보기 (Figma 151:10046 + 레퍼런스 DayView): 06시부터의 타임라인.
+/// 블록 몸통을 끌면 이동, 양 끝을 끌면 출퇴근 시간 조정(15분 스냅, 최소 60분, 휴게 = 법정 최소). 누르면 수정 창.
 class DayTimelineView extends StatelessWidget {
   const DayTimelineView({super.key, required this.day});
 
   final DateTime day;
 
-  static const _from = 360, _to = 1440; // 06:00–24:00
+  static const from = 360;
 
   @override
   Widget build(BuildContext context) {
@@ -525,9 +532,14 @@ class DayTimelineView extends StatelessWidget {
     final list = store.scheduleOn(day).where((s) => s.kind != ShiftKind.off).toList();
     final flex = list.where((s) => isFlexShift(store, s)).toList();
     final part = list.where((s) => !isFlexShift(store, s)).toList();
-    final parts = store.store.parts;
-    final open = parts.map((p) => p.startMin).reduce((a, b) => a < b ? a : b);
-    final close = parts.map((p) => p.endMin <= p.startMin ? p.endMin + 1440 : p.endMin).reduce((a, b) => a > b ? a : b);
+    final st = store.store;
+    final weekend = day.weekday >= 6 || isHoliday(day);
+    final open = weekend ? st.weekendOpenMin : st.openMin;
+    final close = weekend ? st.weekendCloseMin : st.closeMin;
+    // 24시까지, 익일 마감이거나 자정을 넘는 근무가 있으면 그 시각(정시 올림)까지.
+    final to = ((list.fold<int>(close > 1440 ? close : 1440, (m, s) => s.endAbs > m ? s.endAbs : m)) / 60)
+            .ceil() *
+        60;
 
     Widget axis() => Row(children: [
           const SizedBox(width: 200),
@@ -536,10 +548,10 @@ class DayTimelineView extends StatelessWidget {
               return SizedBox(
                 height: 18,
                 child: Stack(children: [
-                  for (var h = 6; h <= 24; h += 2)
+                  for (var h = from ~/ 60; h <= to ~/ 60; h += 2)
                     Positioned(
-                      left: (h * 60 - _from) / (_to - _from) * c.maxWidth - (h == 24 ? 14 : 0),
-                      child: Text(h.toString().padLeft(2, '0'),
+                      left: (h * 60 - from) / (to - from) * c.maxWidth - (h == to ~/ 60 ? 14 : 0),
+                      child: Text((h % 24).toString().padLeft(2, '0'),
                           style: AppText.style(11, FontWeight.w400, AppColors.textTertiary)),
                     ),
                 ]),
@@ -549,10 +561,9 @@ class DayTimelineView extends StatelessWidget {
         ]);
 
     Widget track(Shift s) {
-      final (bar, bg) = blockColors(store, s);
       final staff = store.staffById(s.staffId)!;
       final tag = staff.kind.flex ? staff.kind.label : s.part;
-      final (tagFg, tagBg) = staff.kind.flex ? (AppColors.purple, AppColors.purpleSoft) : partColors(s.part);
+      final (tagFg, tagBg) = blockColors(store, s);
       final label = s.timeTbd
           ? '시간 미정 · 추천 ${hm(s.startMin)}–${hm(s.endMin)}'
           : s.kind == ShiftKind.leave
@@ -581,10 +592,7 @@ class DayTimelineView extends StatelessWidget {
           ),
           Expanded(
             child: LayoutBuilder(builder: (context, c) {
-              double x(int m) => (m - _from).clamp(0, _to - _from) / (_to - _from) * c.maxWidth;
-              final left = x(s.startMin), right = x(s.endAbs);
-              final mid = (s.startMin + s.endAbs) / 2;
-              final bs = x((mid - s.breakMin / 2).round()), be = x((mid + s.breakMin / 2).round());
+              double x(int m) => (m - from).clamp(0, to - from) / (to - from) * c.maxWidth;
               return Container(
                 height: 44,
                 decoration: BoxDecoration(
@@ -595,60 +603,10 @@ class DayTimelineView extends StatelessWidget {
                 child: Stack(children: [
                   Positioned(left: 0, width: x(open), top: 0, bottom: 0, child: const ColoredBox(color: AppColors.bg)),
                   Positioned(left: x(close), right: 0, top: 0, bottom: 0, child: const ColoredBox(color: AppColors.bg)),
-                  for (var h = 7; h < 24; h++)
+                  for (var h = from ~/ 60 + 1; h < to ~/ 60; h++)
                     Positioned(
                         left: x(h * 60), top: 0, bottom: 0, child: Container(width: 1, color: AppColors.border.withValues(alpha: 0.6))),
-                  Positioned(
-                    left: left,
-                    width: (right - left).clamp(24, c.maxWidth),
-                    top: 6,
-                    bottom: 6,
-                    child: Material(
-                      color: Colors.transparent,
-                      child: InkWell(
-                        onTap: () => showShiftDialog(context, shift: s, date: day),
-                        child: CustomPaint(
-                          foregroundPainter: s.timeTbd ? const DashedBorderPainter(color: AppColors.danger, radius: 6) : null,
-                          child: Container(
-                            decoration: BoxDecoration(
-                              color: s.timeTbd ? AppColors.surface : bg,
-                              borderRadius: BorderRadius.circular(6),
-                              border: s.timeTbd ? null : Border.all(color: bar),
-                            ),
-                            child: Stack(children: [
-                              if (s.kind == ShiftKind.work && !s.timeTbd && s.breakMin > 0)
-                                Positioned(
-                                  left: bs - left,
-                                  width: be - bs,
-                                  top: 0,
-                                  bottom: 0,
-                                  child: Container(
-                                    color: bar.withValues(alpha: 0.18),
-                                    alignment: Alignment.center,
-                                    child: Text('휴게',
-                                        softWrap: false,
-                                        overflow: TextOverflow.clip,
-                                        style: AppText.style(10, FontWeight.w500, AppColors.textSecondary)),
-                                  ),
-                                ),
-                              Padding(
-                                padding: const EdgeInsets.symmetric(horizontal: 8),
-                                child: Align(
-                                  alignment: Alignment.centerLeft,
-                                  child: Text(
-                                    s.timeTbd ? '시간 미정' : s.kind == ShiftKind.leave ? '연차' : '${hm(s.startMin)}–${hm(s.endMin)}',
-                                    maxLines: 1,
-                                    overflow: TextOverflow.clip,
-                                    style: AppText.style(12, FontWeight.w500, s.timeTbd ? AppColors.danger : AppColors.textPrimary),
-                                  ),
-                                ),
-                              ),
-                            ]),
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
+                  TimelineBlock(shift: s, day: day, width: c.maxWidth, from: from, to: to),
                 ]),
               );
             }),
@@ -679,6 +637,181 @@ class DayTimelineView extends StatelessWidget {
             : SingleChildScrollView(
                 scrollDirection: Axis.horizontal, child: SizedBox(width: 760, child: content));
       }),
+    );
+  }
+}
+
+/// 타임라인 근무 블록 한 개. 끌기는 미리보기로만 보이다가 놓을 때 한 번 [AppStore.updateShift].
+class TimelineBlock extends StatefulWidget {
+  const TimelineBlock(
+      {super.key, required this.shift, required this.day, required this.width, required this.from, required this.to});
+
+  final Shift shift;
+  final DateTime day;
+
+  /// 트랙 폭(px)과 표시 범위(분).
+  final double width;
+  final int from, to;
+
+  @override
+  State<TimelineBlock> createState() => _TimelineBlockState();
+}
+
+enum _Drag { move, start, end }
+
+class _TimelineBlockState extends State<TimelineBlock> {
+  static const minSpan = 60;
+
+  /// 끄는 중인 (시작, 끝) 분. 끝은 자정 넘으면 1440+.
+  (int, int)? _preview;
+  double _dx = 0;
+
+  Shift get s => widget.shift;
+  bool get _editable => s.kind == ShiftKind.work && !s.timeTbd;
+
+  int _snap(double dx) => ((dx / widget.width * (widget.to - widget.from)) / 15).round() * 15;
+
+  (int, int) _calc(_Drag mode) {
+    final d = _snap(_dx);
+    final a = s.startMin, b = s.endAbs;
+    return switch (mode) {
+      _Drag.start => ((a + d).clamp(widget.from, b - minSpan), b),
+      _Drag.end => (a, (b + d).clamp(a + minSpan, widget.to)),
+      _Drag.move => () {
+          final dd = d.clamp(widget.from - a, widget.to - b);
+          return (a + dd, b + dd);
+        }(),
+    };
+  }
+
+  void _commit(_Drag mode) {
+    final p = _preview;
+    _dx = 0;
+    setState(() => _preview = null);
+    if (p == null || (p.$1 == s.startMin && p.$2 == s.endAbs)) return;
+    final store = AppScope.read(context);
+    final (a, b) = p;
+    final end = b > 1440 ? b - 1440 : b;
+    final draft = Shift(
+        id: s.id, storeId: s.storeId, staffId: s.staffId, date: s.date, startMin: a, endMin: end, part: s.part);
+    final other = store.overlappingShift(s.staffId, draft);
+    if (other != null) {
+      return showToast(context, '${shiftDay(other)} ${shiftTime(other)}에 이미 근무가 있어요');
+    }
+    // 파트 시간과 달라지면 파트 없는(유동) 근무.
+    final pt = store.store.parts.where((x) => x.name == s.part).firstOrNull;
+    final changedPart = pt != null && (pt.startMin != a || (pt.endMin <= pt.startMin ? pt.endMin + 1440 : pt.endMin) != b);
+    store.updateShift(s.id,
+        startMin: a,
+        endMin: end,
+        part: changedPart ? flexPart : null,
+        breakMin: mode == _Drag.move ? null : AppStore.defaultBreak(b - a));
+  }
+
+  Widget _handle(_Drag mode, {required bool left}) => Positioned(
+        left: left ? -4 : null,
+        right: left ? null : -4,
+        top: 0,
+        bottom: 0,
+        width: 10,
+        child: MouseRegion(
+          cursor: SystemMouseCursors.resizeLeftRight,
+          child: GestureDetector(
+            behavior: HitTestBehavior.translucent,
+            onHorizontalDragUpdate: (d) => setState(() {
+              _dx += d.delta.dx;
+              _preview = _calc(mode);
+            }),
+            onHorizontalDragEnd: (_) => _commit(mode),
+            onHorizontalDragCancel: () => setState(() {
+              _dx = 0;
+              _preview = null;
+            }),
+          ),
+        ),
+      );
+
+  @override
+  Widget build(BuildContext context) {
+    final store = AppScope.of(context);
+    final (bar, bg) = blockColors(store, s);
+    final (a, b) = _preview ?? (s.startMin, s.endAbs);
+    double x(int m) => (m - widget.from).clamp(0, widget.to - widget.from) / (widget.to - widget.from) * widget.width;
+    final left = x(a), right = x(b);
+    final brk = s.breakMin == 0 || !_editable ? 0 : (_preview == null ? s.breakMin : AppStore.defaultBreak(b - a));
+    final mid = (a + b) / 2;
+    final bs = x((mid - brk / 2).round()), be = x((mid + brk / 2).round());
+    final text = s.timeTbd
+        ? '시간 미정'
+        : s.kind == ShiftKind.leave
+            ? '연차'
+            : '${hm(a)}–${hm(b > 1440 ? b - 1440 : b)}';
+    return Positioned(
+      left: left,
+      width: (right - left).clamp(24, widget.width),
+      top: 6,
+      bottom: 6,
+      child: Stack(clipBehavior: Clip.none, children: [
+        Positioned.fill(
+          child: GestureDetector(
+            onTap: () => showShiftDialog(context, shift: s, date: widget.day),
+            onHorizontalDragUpdate: _editable
+                ? (d) => setState(() {
+                      _dx += d.delta.dx;
+                      _preview = _calc(_Drag.move);
+                    })
+                : null,
+            onHorizontalDragEnd: _editable ? (_) => _commit(_Drag.move) : null,
+            onHorizontalDragCancel: () => setState(() {
+              _dx = 0;
+              _preview = null;
+            }),
+            child: MouseRegion(
+              cursor: _editable ? SystemMouseCursors.grab : SystemMouseCursors.click,
+              child: CustomPaint(
+                foregroundPainter: s.timeTbd ? const DashedBorderPainter(color: AppColors.danger, radius: 6) : null,
+                child: Container(
+                  decoration: BoxDecoration(
+                    color: s.timeTbd ? AppColors.surface : bg,
+                    borderRadius: BorderRadius.circular(6),
+                    border: s.timeTbd ? null : Border.all(color: bar),
+                  ),
+                  clipBehavior: Clip.antiAlias,
+                  child: Stack(children: [
+                    if (brk > 0)
+                      Positioned(
+                        left: bs - left,
+                        width: be - bs,
+                        top: 0,
+                        bottom: 0,
+                        child: Container(
+                          color: bar.withValues(alpha: 0.18),
+                          alignment: Alignment.center,
+                          child: Text('휴게',
+                              softWrap: false,
+                              overflow: TextOverflow.clip,
+                              style: AppText.style(10, FontWeight.w500, AppColors.textSecondary)),
+                        ),
+                      ),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 8),
+                      child: Align(
+                        alignment: Alignment.centerLeft,
+                        child: Text(text,
+                            maxLines: 1,
+                            overflow: TextOverflow.clip,
+                            style: AppText.style(12, FontWeight.w500,
+                                s.timeTbd ? AppColors.danger : AppColors.textPrimary)),
+                      ),
+                    ),
+                  ]),
+                ),
+              ),
+            ),
+          ),
+        ),
+        if (_editable) ...[_handle(_Drag.start, left: true), _handle(_Drag.end, left: false)],
+      ]),
     );
   }
 }

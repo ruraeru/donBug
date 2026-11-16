@@ -44,6 +44,22 @@ enum ShiftKind {
   final String label;
 }
 
+/// 근무표 파트 색 계열.
+enum PartTone { open, middle, close }
+
+/// 사업장 규모 설정. auto 면 재직 인원으로 판단.
+enum SizeMode { auto, under5, over5 }
+
+enum ScheduleStatus { draft, confirmed }
+
+enum ScheduleSource { ai, template, manual }
+
+/// 주휴수당 최소화/허용.
+enum HolidayPolicy { minimize, allow }
+
+/// 공평 배분 / 인건비 절감.
+enum SchedulePriority { fairness, cost }
+
 /// LetterAvatar 색 조합 인덱스.
 enum Tone { primary, accent, info, danger }
 
@@ -89,19 +105,184 @@ class Person {
       );
 }
 
-class PartTemplate {
-  PartTemplate(this.name, this.startMin, this.endMin, this.need);
+/// 요일별 출퇴근 시각(분). 직원(매니저·정직원)의 고정 근무 시간.
+class WorkHours {
+  WorkHours(this.startMin, this.endMin);
 
-  String name;
   int startMin;
   int endMin;
+
+  Map<String, dynamic> toJson() => {'startMin': startMin, 'endMin': endMin};
+
+  factory WorkHours.fromJson(Map<String, dynamic> j) => WorkHours(j['startMin'], j['endMin']);
+}
+
+class PartTemplate {
+  /// [id] 는 서버 id 문자열. 새 파트는 ''.
+  PartTemplate(this.name, this.startMin, this.endMin, this.need,
+      {this.id = '', this.tone = PartTone.open, this.breakMin = 0});
+
+  String id;
+  String name;
+  PartTone tone;
+  int startMin;
+  int endMin;
+  int breakMin;
   int need;
 
-  Map<String, dynamic> toJson() =>
-      {'name': name, 'startMin': startMin, 'endMin': endMin, 'need': need};
+  PartTemplate copy() => PartTemplate(name, startMin, endMin, need, id: id, tone: tone, breakMin: breakMin);
 
-  factory PartTemplate.fromJson(Map<String, dynamic> j) =>
-      PartTemplate(j['name'], j['startMin'], j['endMin'], j['need']);
+  Map<String, dynamic> toJson() => {
+        'id': id,
+        'name': name,
+        'tone': tone.name,
+        'startMin': startMin,
+        'endMin': endMin,
+        'breakMin': breakMin,
+        'need': need,
+      };
+
+  factory PartTemplate.fromJson(Map<String, dynamic> j) => PartTemplate(
+        j['name'],
+        j['startMin'],
+        j['endMin'],
+        j['need'],
+        id: '${j['id'] ?? ''}',
+        tone: _enum(PartTone.values, j['tone'], PartTone.open),
+        breakMin: j['breakMin'] ?? 0,
+      );
+}
+
+/// 한 달 근무표 메타. 근무 자체는 [Shift] 날짜별 행.
+class MonthSchedule {
+  MonthSchedule({
+    required this.id,
+    required this.storeId,
+    required this.month,
+    this.status = ScheduleStatus.draft,
+    this.source = ScheduleSource.manual,
+    this.aiComment = '',
+    this.weeklyHolidayPay = HolidayPolicy.allow,
+    this.priority = SchedulePriority.fairness,
+    this.updatedAt = '',
+  });
+
+  final String id;
+  final String storeId;
+
+  /// 'yyyy-MM'
+  final String month;
+  ScheduleStatus status;
+  ScheduleSource source;
+  String aiComment;
+  HolidayPolicy weeklyHolidayPay;
+  SchedulePriority priority;
+  String updatedAt;
+
+  Map<String, dynamic> toJson() => {
+        'id': id,
+        'storeId': storeId,
+        'month': month,
+        'status': status.name,
+        'source': source.name,
+        'aiComment': aiComment,
+        'weeklyHolidayPay': weeklyHolidayPay.name,
+        'priority': priority.name,
+        'updatedAt': updatedAt,
+      };
+
+  factory MonthSchedule.fromJson(Map<String, dynamic> j) => MonthSchedule(
+        id: '${j['id']}',
+        storeId: '${j['storeId']}',
+        month: j['month'],
+        status: _enum(ScheduleStatus.values, j['status'], ScheduleStatus.draft),
+        source: _enum(ScheduleSource.values, j['source'], ScheduleSource.manual),
+        aiComment: j['aiComment'] ?? '',
+        weeklyHolidayPay: _enum(HolidayPolicy.values, j['weeklyHolidayPay'], HolidayPolicy.allow),
+        priority: _enum(SchedulePriority.values, j['priority'], SchedulePriority.fairness),
+        updatedAt: j['updatedAt'] ?? '',
+      );
+}
+
+/// 템플릿 안 근무 한 칸. [dayIndex] 0=월.
+class TemplateShift {
+  TemplateShift({
+    required this.dayIndex,
+    required this.staffId,
+    required this.startMin,
+    required this.endMin,
+    this.part = '',
+    this.breakMin = 0,
+    this.kind = ShiftKind.work,
+    this.timeTbd = false,
+  });
+
+  final int dayIndex;
+  final String staffId;
+  final int startMin;
+  final int endMin;
+  final String part;
+  final int breakMin;
+  final ShiftKind kind;
+  final bool timeTbd;
+
+  Map<String, dynamic> toJson() => {
+        'dayIndex': dayIndex,
+        'staffId': staffId,
+        'startMin': startMin,
+        'endMin': endMin,
+        'part': part,
+        'breakMin': breakMin,
+        'kind': kind.name,
+        'timeTbd': timeTbd,
+      };
+
+  factory TemplateShift.fromJson(Map<String, dynamic> j) => TemplateShift(
+        dayIndex: j['dayIndex'],
+        staffId: '${j['staffId']}',
+        startMin: j['startMin'],
+        endMin: j['endMin'],
+        part: j['part'] ?? '',
+        breakMin: j['breakMin'] ?? 0,
+        kind: _enum(ShiftKind.values, j['kind'], ShiftKind.work),
+        timeTbd: j['timeTbd'] ?? false,
+      );
+}
+
+/// 이름 있는 주간 템플릿.
+class ScheduleTemplate {
+  ScheduleTemplate({
+    required this.id,
+    required this.storeId,
+    required this.name,
+    required this.createdAt,
+    required this.shifts,
+  });
+
+  final String id;
+  final String storeId;
+  String name;
+  final String createdAt;
+  final List<TemplateShift> shifts;
+
+  Map<String, dynamic> toJson() => {
+        'id': id,
+        'storeId': storeId,
+        'name': name,
+        'createdAt': createdAt,
+        'shifts': [for (final s in shifts) s.toJson()],
+      };
+
+  factory ScheduleTemplate.fromJson(Map<String, dynamic> j) => ScheduleTemplate(
+        id: '${j['id']}',
+        storeId: '${j['storeId']}',
+        name: j['name'],
+        createdAt: j['createdAt'] ?? '',
+        shifts: [
+          for (final s in (j['shifts'] as List? ?? const []))
+            TemplateShift.fromJson((s as Map).cast<String, dynamic>())
+        ],
+      );
 }
 
 class Store {
@@ -118,6 +299,11 @@ class Store {
     required this.parts,
     Map<String, int>? monthlyTotals,
     this.scheduleConfirmedAt,
+    this.openMin = 480,
+    this.closeMin = 1320,
+    this.weekendOpenMin = 480,
+    this.weekendCloseMin = 1320,
+    this.sizeMode = SizeMode.auto,
   }) : monthlyTotals = monthlyTotals ?? {};
 
   final String id;
@@ -141,6 +327,12 @@ class Store {
   /// 근무표를 마지막으로 확정한 시각(ISO).
   String? scheduleConfirmedAt;
 
+  /// 영업시간(분). 마감이 1440 초과면 익일.
+  int openMin, closeMin, weekendOpenMin, weekendCloseMin;
+
+  /// 사업장 규모 설정. [isSmall] 은 실제 적용값.
+  SizeMode sizeMode;
+
   Map<String, dynamic> toJson() => {
         'id': id,
         'name': name,
@@ -154,6 +346,11 @@ class Store {
         'parts': [for (final p in parts) p.toJson()],
         'monthlyTotals': monthlyTotals,
         'scheduleConfirmedAt': scheduleConfirmedAt,
+        'openMin': openMin,
+        'closeMin': closeMin,
+        'weekendOpenMin': weekendOpenMin,
+        'weekendCloseMin': weekendCloseMin,
+        'sizeMode': sizeMode.name,
       };
 
   factory Store.fromJson(Map<String, dynamic> j) => Store(
@@ -166,9 +363,14 @@ class Store {
         noticeRequiredDefault: j['noticeRequiredDefault'],
         substitutePush: j['substitutePush'],
         defaultDeduction: _enum(Deduction.values, j['defaultDeduction'], Deduction.biz33),
-        parts: [for (final p in j['parts']) PartTemplate.fromJson(p)],
-        monthlyTotals: (j['monthlyTotals'] as Map).cast<String, int>(),
+        parts: [for (final p in j['parts']) PartTemplate.fromJson((p as Map).cast<String, dynamic>())],
+        monthlyTotals: ((j['monthlyTotals'] ?? const {}) as Map).cast<String, int>(),
         scheduleConfirmedAt: j['scheduleConfirmedAt'],
+        openMin: j['openMin'] ?? 480,
+        closeMin: j['closeMin'] ?? 1320,
+        weekendOpenMin: j['weekendOpenMin'] ?? 480,
+        weekendCloseMin: j['weekendCloseMin'] ?? 1320,
+        sizeMode: _enum(SizeMode.values, j['sizeMode'], SizeMode.auto),
       );
 }
 
@@ -235,7 +437,10 @@ class Staff {
     this.status = StaffStatus.active,
     this.requestedAt,
     this.contract,
-  });
+    List<List<String>>? fixedParts,
+    List<WorkHours?>? workHours,
+  })  : fixedParts = fixedParts ?? List.generate(7, (_) => <String>[]),
+        workHours = workHours ?? List.filled(7, null);
 
   final String id;
   final String storeId;
@@ -251,6 +456,12 @@ class Staff {
   StaffStatus status;
   String? requestedAt;
   Contract? contract;
+
+  /// 알바생 고정 근무 파트 이름 (월~일 7칸).
+  List<List<String>> fixedParts;
+
+  /// 직원(매니저·정직원) 요일별 출퇴근 (월~일 7칸, null=쉼).
+  List<WorkHours?> workHours;
 
   bool get active => status == StaffStatus.active;
 
@@ -269,6 +480,8 @@ class Staff {
         'status': status.name,
         'requestedAt': requestedAt,
         'contract': contract?.toJson(),
+        'fixedParts': fixedParts,
+        'workHours': [for (final w in workHours) w?.toJson()],
       };
 
   factory Staff.fromJson(Map<String, dynamic> j) => Staff(
@@ -286,7 +499,20 @@ class Staff {
         status: _enum(StaffStatus.values, j['status'], StaffStatus.active),
         requestedAt: j['requestedAt'],
         contract: j['contract'] == null ? null : Contract.fromJson(j['contract']),
+        fixedParts: _fixedParts(j['fixedParts']),
+        workHours: _workHours(j['workHours']),
       );
+}
+
+List<List<String>> _fixedParts(Object? v) {
+  final l = v is List ? v : const [];
+  return List.generate(7, (i) => i < l.length && l[i] is List ? [for (final x in l[i] as List) '$x'] : <String>[]);
+}
+
+List<WorkHours?> _workHours(Object? v) {
+  final l = v is List ? v : const [];
+  return List.generate(
+      7, (i) => i < l.length && l[i] is Map ? WorkHours.fromJson((l[i] as Map).cast<String, dynamic>()) : null);
 }
 
 class Shift {
@@ -625,9 +851,12 @@ class AppState {
     required this.notices,
     required this.notifications,
     this.nextId = 1,
-  });
+    List<MonthSchedule>? schedules,
+    List<ScheduleTemplate>? templates,
+  })  : schedules = schedules ?? [],
+        templates = templates ?? [];
 
-  static const version = 3;
+  static const version = 4;
 
   Session session;
   List<Person> persons;
@@ -638,6 +867,8 @@ class AppState {
   List<SubstituteRequest> subs;
   List<Notice> notices;
   List<AppNotification> notifications;
+  List<MonthSchedule> schedules;
+  List<ScheduleTemplate> templates;
   int nextId;
 
   Map<String, dynamic> toJson() => {
@@ -652,6 +883,8 @@ class AppState {
         'subs': [for (final x in subs) x.toJson()],
         'notices': [for (final x in notices) x.toJson()],
         'notifications': [for (final x in notifications) x.toJson()],
+        'schedules': [for (final x in schedules) x.toJson()],
+        'templates': [for (final x in templates) x.toJson()],
       };
 
   /// 버전이 다르면 null (호출하는 쪽에서 시드로 되돌린다).
@@ -670,6 +903,8 @@ class AppState {
       subs: list('subs', SubstituteRequest.fromJson),
       notices: list('notices', Notice.fromJson),
       notifications: list('notifications', AppNotification.fromJson),
+      schedules: j['schedules'] == null ? [] : list('schedules', MonthSchedule.fromJson),
+      templates: j['templates'] == null ? [] : list('templates', ScheduleTemplate.fromJson),
     );
   }
 }

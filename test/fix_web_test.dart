@@ -39,8 +39,11 @@ void main() {
   });
 
   testWidgets('일간 보기: 현재 월 밖 날짜 탭은 눌러도 월이 안 바뀐다', (tester) async {
-    await _pump(tester, const Size(1440, 900), const WebShell());
+    final store = await _pump(tester, const Size(1440, 900), const WebShell());
+    await store.createMonthSchedule('2026-05', prefillFixed: false);
     await tester.tap(find.text('근무표').first);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('5월'));
     await tester.pumpAndSettle();
     await tester.tap(find.text('일간'));
     await tester.pumpAndSettle();
@@ -52,8 +55,11 @@ void main() {
   });
 
   testWidgets('폭이 800 경계를 넘어도 근무표 보기 상태가 유지된다', (tester) async {
-    await _pump(tester, const Size(1440, 900), const WebShell());
+    final store = await _pump(tester, const Size(1440, 900), const WebShell());
+    await store.createMonthSchedule('2026-05', prefillFixed: false);
     await tester.tap(find.text('근무표').first);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('5월'));
     await tester.pumpAndSettle();
     await tester.tap(find.text('일간'));
     await tester.pumpAndSettle();
