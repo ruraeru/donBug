@@ -9,6 +9,7 @@ import 'package:donbug/data/app_scope.dart';
 import 'package:donbug/data/app_store.dart';
 import 'package:donbug/data/models.dart';
 import 'package:donbug/screens/web/web_pos_qr_screen.dart';
+import 'package:donbug/screens/web/web_schedule_screen.dart';
 import 'package:donbug/screens/web/web_shell.dart';
 import 'package:donbug/theme.dart';
 import 'package:flutter/material.dart';
@@ -81,6 +82,20 @@ void main() {
     await tester.pumpAndSettle();
     return store;
   }
+
+  testWidgets('대시보드: 오늘 타임라인 · 직원 근무 현황 · 일간 보기', (tester) async {
+    final store = await open(tester, '대시보드');
+    final today = store.scheduleOn(store.today).where((x) => x.kind == ShiftKind.work);
+    expect(today, isNotEmpty);
+    for (final x in today) {
+      expect(find.textContaining(store.nameOf(x.staffId)), findsWidgets);
+    }
+    expect(find.text('직원 근무 현황'), findsOneWidget);
+    expect(find.textContaining('/ 40h'), findsWidgets);
+    await tester.tap(find.text('일간 보기'));
+    await tester.pumpAndSettle();
+    expect(find.byType(WebScheduleScreen), findsOneWidget);
+  });
 
   testWidgets('직원 상세 시트: 시급 저장(최저임금 검사)', (tester) async {
     await tester.runAsync(_loadFonts);

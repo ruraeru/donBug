@@ -16,6 +16,9 @@ class WebSchedulesScreen extends StatefulWidget {
   /// 다른 화면(템플릿 적용 등)이 근무표 메뉴로 넘어가며 열 달('yyyy-MM'). 한 번 읽으면 비운다.
   static final ValueNotifier<String?> openRequest = ValueNotifier(null);
 
+  /// 같이 넘길 날짜: 있으면 편집기를 그날 일간 보기로 연다. 편집기가 읽으면 비운다.
+  static final ValueNotifier<DateTime?> openDay = ValueNotifier(null);
+
   @override
   State<WebSchedulesScreen> createState() => _WebSchedulesScreenState();
 }
