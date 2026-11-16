@@ -11,8 +11,10 @@ import 'web_common.dart';
 import 'web_documents_screen.dart';
 import 'web_notice_screen.dart';
 import 'web_shell.dart';
-import 'web_shift_dialog.dart';
 import 'web_staff_screen.dart';
+import 'web_today_strip.dart';
+import 'web_schedules_screen.dart';
+import 'web_schedule_screen.dart' show scheduleSummary;
 
 /// 보건증 주의 대상: 미등록 · 만료 · 30일 이내. 급한 순.
 List<(Staff, int?)> certAlerts(AppStore store) => [
@@ -100,10 +102,16 @@ class _WebDashboardScreenState extends State<WebDashboardScreen> {
         ]),
         WebSplit(
           breakpoint: 1000,
-          left: _WeekCard(
-            monday: mondayOf(t).add(Duration(days: 7 * _week)),
-            onWeek: (d) => setState(() => _week += d),
-          ),
+          left: Column(children: [
+            const _TodayCard(),
+            const SizedBox(height: 16),
+            const _MonthStats(),
+            const SizedBox(height: 16),
+            _StaffWeekCard(
+              monday: mondayOf(t).add(Duration(days: 7 * _week)),
+              onWeek: (d) => setState(() => _week += d),
+            ),
+          ]),
           right: Column(children: [
             _SubstituteCard(subs),
             const SizedBox(height: 16),
@@ -154,19 +162,97 @@ String _shortRange(Shift s) {
   return '${h(s.startMin)}–${h(s.endMin)}';
 }
 
-class _WeekCard extends StatelessWidget {
-  const _WeekCard({required this.monday, required this.onWeek});
+/// 근무표 편집기로 (이번 달, [day] 를 주면 그날 일간 보기).
+void _openEditor(BuildContext context, {DateTime? day}) {
+  final t = AppScope.read(context).today;
+  WebSchedulesScreen.openRequest.value = ym(t);
+  WebSchedulesScreen.openDay.value = day;
+  WebShell.open(context, WebMenu.schedule);
+}
 
-  final DateTime monday;
-  final ValueChanged<int> onWeek;
+/// 오늘 근무 타임라인 (레퍼런스 Dashboard 의 오늘 카드 + TodayStrip).
+class _TodayCard extends StatelessWidget {
+  const _TodayCard();
 
   @override
   Widget build(BuildContext context) {
     final store = AppScope.of(context);
+    final t = store.today;
+    final nowMin = store.now.hour * 60 + store.now.minute;
+    final shifts = store.scheduleOn(t).where((s) => s.kind == ShiftKind.work).toList();
+    final working = {
+      for (final s in shifts)
+        if (!s.timeTbd && s.startMin <= nowMin && nowMin < s.endMin) store.nameOf(s.staffId)
+    };
+    final ms = store.monthSchedule(ym(t));
+    final tbd = store.state.shifts
+        .where((s) => s.storeId == store.store.id && s.date.startsWith(ym(t)) && s.timeTbd)
+        .length;
+    final status = ms == null
+        ? '${t.month}월 근무표 없음'
+        : '${t.month}월 근무표 · ${ms.status == ScheduleStatus.confirmed ? '확정됨' : '작성 중'}${tbd > 0 ? ' · 미정 $tbd건' : ''}';
+    return AppCard(
+      padding: const EdgeInsets.fromLTRB(24, 20, 24, 24),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Expanded(
+            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Text('오늘 · ${weekday(t)} ${t.month}/${t.day}', style: AppText.style(17, FontWeight.w700)),
+              const SizedBox(height: 4),
+              Text(
+                  '${shifts.map((s) => s.staffId).toSet().length}명 근무 · 지금 '
+                  '${working.isEmpty ? '근무자 없음' : '${working.join('·')} 근무 중'}',
+                  style: AppText.style(12, FontWeight.w400, AppColors.textSecondary)),
+              const SizedBox(height: 2),
+              Text(status, style: AppText.style(12, FontWeight.w400, AppColors.textTertiary)),
+            ]),
+          ),
+          Wrap(spacing: 8, runSpacing: 8, children: [
+            WebButton('근무표 열기', style: WebButtonStyle.outline, height: 36, onPressed: () => _openEditor(context)),
+            WebButton('일간 보기', style: WebButtonStyle.soft, height: 36, onPressed: () => _openEditor(context, day: t)),
+          ]),
+        ]),
+        const SizedBox(height: 20),
+        TodayStrip(shifts: shifts, nowMin: nowMin),
+      ]),
+    );
+  }
+}
+
+/// 이번 달 근무표 통계 (레퍼런스 StatStrip). 예상 인건비는 위 KPI 에 있다.
+class _MonthStats extends StatelessWidget {
+  const _MonthStats();
+
+  @override
+  Widget build(BuildContext context) {
+    final store = AppScope.of(context);
+    final t = store.today;
+    final sum = scheduleSummary(store, DateTime(t.year, t.month));
+    final flex = store.activeStaff.where((s) => s.kind.flex).length;
+    return WebRow(children: [
+      _Kpi('이번 달 총 근무시간', hours(sum.workMin), '직원 $flex명 · 알바생 ${store.activeStaff.length - flex}명',
+          onTap: () => _openEditor(context)),
+      _Kpi('주휴수당 대상', '${sum.holidayCount}명', '알바생 주 15시간 이상', onTap: () => _openEditor(context)),
+      _Kpi('주휴수당 합계', wonText(sum.holidayPay), '이번 달 근무표 기준', onTap: () => _openEditor(context)),
+    ]);
+  }
+}
+
+/// 직원(유동 근무) 주간 근무 현황 (레퍼런스 Dashboard 의 직원 근무 현황).
+class _StaffWeekCard extends StatelessWidget {
+  const _StaffWeekCard({required this.monday, required this.onWeek});
+
+  final DateTime monday;
+  final ValueChanged<int> onWeek;
+
+  static const _weekMin = 40 * 60;
+
+  @override
+  Widget build(BuildContext context) {
+    final store = AppScope.of(context);
+    final staff = store.activeStaff.where((s) => s.kind.flex).toList();
+    if (staff.isEmpty) return const SizedBox.shrink();
     final days = [for (var i = 0; i < 7; i++) monday.add(Duration(days: i))];
-    final sunday = days.last;
-    final weekEmpty =
-        store.activeStaff.isNotEmpty && days.every((d) => store.scheduleOn(d).isEmpty);
     Widget arrow(String g, int d) => InkWell(
           onTap: () => onWeek(d),
           borderRadius: BorderRadius.circular(8),
@@ -176,118 +262,134 @@ class _WeekCard extends StatelessWidget {
           ),
         );
     return AppCard(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(children: [
-            Expanded(child: Text('이번 주 근무표', style: AppText.style(17, FontWeight.w500))),
+      padding: EdgeInsets.zero,
+      child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(24, 16, 16, 16),
+          child: Row(children: [
+            Expanded(child: Text('직원 근무 현황', style: AppText.style(17, FontWeight.w700))),
             arrow('‹', -1),
-            const SizedBox(width: 4),
-            Text('${monday.month}/${monday.day} – ${sunday.month}/${sunday.day}',
-                style: AppText.style(13, FontWeight.w500)),
-            const SizedBox(width: 4),
+            Text('${md(days.first)}–${md(days.last)}', style: AppText.style(13, FontWeight.w500)),
             arrow('›', 1),
           ]),
-          const SizedBox(height: 12),
-          SizedBox(
-            height: 30,
-            child: Row(children: [
-              const SizedBox(width: 84),
-              for (final d in days)
-                Expanded(
-                  child: Center(
-                    child: d == store.today
-                        ? Pill('${weekday(d)} ${d.day}',
-                            color: AppColors.onPrimary, background: AppColors.primary)
-                        : Text('${weekday(d)} ${d.day}',
-                            style: AppText.style(12, FontWeight.w500, AppColors.textTertiary)),
-                  ),
+        ),
+        const Divider(height: 1, color: AppColors.border),
+        for (var i = 0; i < staff.length; i++) ...[
+          if (i > 0) const Divider(height: 1, color: AppColors.border),
+          _row(store, staff[i], days),
+        ],
+      ]),
+    );
+  }
+
+  Widget _row(AppStore store, Staff st, List<DateTime> days) {
+    var work = 0, tbd = 0, leave = 0;
+    final cells = <Widget>[];
+    for (final d in days) {
+      final list = store.scheduleOfStaff(st.id).where((s) => s.date == ymd(d)).toList();
+      final w = list.where((s) => s.kind == ShiftKind.work).firstOrNull;
+      final isLeave = list.any((s) => s.kind == ShiftKind.leave);
+      for (final s in list) {
+        if (s.kind == ShiftKind.leave) {
+          leave += s.scheduledMinutes;
+        } else if (s.kind == ShiftKind.work) {
+          s.timeTbd ? tbd += s.scheduledMinutes : work += s.scheduledMinutes;
+        }
+      }
+      final (text, fg, bg, dashed) = w != null
+          ? (w.timeTbd ? '미정' : _shortRange(w), AppColors.primary, w.timeTbd ? AppColors.surface : AppColors.primarySoft, w.timeTbd)
+          : isLeave
+              ? ('연차', AppColors.textSecondary, AppColors.bg, false)
+              : ('휴무', AppColors.textTertiary, AppColors.surface, false);
+      final cell = Container(
+        padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 2),
+        decoration: BoxDecoration(
+          color: bg,
+          borderRadius: BorderRadius.circular(8),
+          border: w == null && !isLeave ? Border.all(color: AppColors.border) : null,
+        ),
+        child: Column(children: [
+          Text(weekday(d), style: AppText.style(11, FontWeight.w400, fg)),
+          const SizedBox(height: 2),
+          FittedBox(fit: BoxFit.scaleDown, child: Text(text, style: AppText.style(12, FontWeight.w500, fg))),
+        ]),
+      );
+      cells.add(Expanded(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 3),
+          child: dashed
+              ? CustomPaint(foregroundPainter: const DashedBorderPainter(color: AppColors.primary), child: cell)
+              : cell,
+        ),
+      ));
+    }
+    double seg(int m) => (m / _weekMin).clamp(0.0, 1.0);
+    final caption = [
+      '확정 ${hours(work)}',
+      if (tbd > 0) '미정 ${hours(tbd)}',
+      if (leave > 0) '연차 ${hours(leave)}',
+    ].join(' · ');
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+      child: LayoutBuilder(builder: (context, c) {
+        final who = Row(children: [
+          MemberAvatar(st, size: 36),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Row(children: [
+                Flexible(
+                  child: Text(store.personOf(st).name,
+                      overflow: TextOverflow.ellipsis, style: AppText.style(14, FontWeight.w500)),
                 ),
+                const SizedBox(width: 6),
+                WebTag(st.kind.label, fontSize: 11),
+              ]),
+              const SizedBox(height: 2),
+              Text(caption, style: AppText.style(12, FontWeight.w400, AppColors.textSecondary)),
             ]),
           ),
-          if (store.activeStaff.isEmpty) const EmptyNote('재직 중인 직원이 없어요'),
-          if (weekEmpty) const EmptyNote('이번 주 근무표가 비어 있어요'),
-          for (final s in weekEmpty ? const <Staff>[] : store.activeStaff) ...[
-            const SizedBox(height: 12),
-            ConstrainedBox(
-              constraints: const BoxConstraints(minHeight: 48),
-              child: Row(children: [
-                SizedBox(
-                    width: 84,
-                    child: Text(store.personOf(s).name,
-                        style: AppText.style(14, FontWeight.w500))),
-                for (final d in days)
-                  Expanded(child: _cell(context, store, s, d)),
-              ]),
+        ]);
+        final total = Column(crossAxisAlignment: CrossAxisAlignment.end, children: [
+          Text.rich(TextSpan(children: [
+            TextSpan(text: hours(work + tbd + leave), style: AppText.style(20, FontWeight.w500)),
+            TextSpan(text: ' / 40h', style: AppText.style(12, FontWeight.w400, AppColors.textSecondary)),
+          ])),
+          const SizedBox(height: 6),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(3),
+            child: SizedBox(
+              width: 110,
+              height: 6,
+              child: ColoredBox(
+                color: AppColors.bg,
+                child: Row(children: [
+                  Container(width: 110 * seg(work), color: AppColors.primary),
+                  Container(width: 110 * seg(tbd), color: AppColors.primarySoft),
+                  Container(width: 110 * seg(leave), color: AppColors.textTertiary),
+                ]),
+              ),
             ),
-          ],
-          const SizedBox(height: 18),
-          const Wrap(spacing: 14, children: [
-            _Legend(AppColors.primarySoft, '근무'),
-            _Legend(AppColors.accentSoft, '대타 모집·승인 대기'),
-          ]),
-        ],
-      ),
+          ),
+        ]);
+        final week = Row(children: cells);
+        if (c.maxWidth < 760) {
+          return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+            Row(children: [Expanded(child: who), total]),
+            const SizedBox(height: 12),
+            week,
+          ]);
+        }
+        return Row(children: [
+          SizedBox(width: 220, child: who),
+          const SizedBox(width: 16),
+          Expanded(child: week),
+          const SizedBox(width: 16),
+          SizedBox(width: 120, child: total),
+        ]);
+      }),
     );
   }
-
-  Widget _cell(BuildContext context, AppStore store, Staff staff, DateTime day) {
-    final shift = store
-        .shiftsOn(day)
-        .where((x) => x.staffId == staff.id)
-        .firstOrNull;
-    if (shift == null) return const SizedBox();
-    final sub = store.pendingSubFor(shift.id) != null;
-    return Center(
-      child: InkWell(
-        onTap: () => showShiftDialog(context, shift: shift, date: day),
-        borderRadius: BorderRadius.circular(10),
-        child: LayoutBuilder(builder: (context, c) {
-          // 칸이 좁으면 줄을 바꿔 글자 크기를 지킨다.
-          final narrow = c.maxWidth < 76;
-          final range = _shortRange(shift);
-          final label = narrow
-              ? '${range.replaceFirst('–', '–\n')}${sub ? '\n대타' : ''}'
-              : '$range${sub ? ' 대타' : ''}';
-          final pad = c.maxWidth < 96 ? const EdgeInsets.symmetric(horizontal: 4, vertical: 4) : null;
-          return sub
-              ? WebTag(label,
-                  maxLines: 3,
-                  padding: pad ?? const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                  color: AppColors.accent,
-                  background: AppColors.accentSoft)
-              : day == store.today
-                  ? WebTag(label,
-                      maxLines: 3,
-                      padding: pad ?? const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                      color: AppColors.onPrimary,
-                      background: AppColors.primary)
-                  : WebTag(label,
-                      maxLines: 3,
-                      padding: pad ?? const EdgeInsets.symmetric(horizontal: 10, vertical: 6));
-        }),
-      ),
-    );
-  }
-}
-
-class _Legend extends StatelessWidget {
-  const _Legend(this.color, this.label);
-
-  final Color color;
-  final String label;
-
-  @override
-  Widget build(BuildContext context) => Row(mainAxisSize: MainAxisSize.min, children: [
-        Container(
-          width: 12,
-          height: 12,
-          decoration:
-              BoxDecoration(color: color, borderRadius: BorderRadius.circular(4)),
-        ),
-        const SizedBox(width: 6),
-        Text(label, style: AppText.style(12, FontWeight.w400, AppColors.textSecondary)),
-      ]);
 }
 
 class _SubstituteCard extends StatelessWidget {

@@ -15,7 +15,7 @@ import '../../widgets/common.dart';
 import 'web_common.dart';
 import 'web_download.dart';
 import 'web_schedule_views.dart';
-import 'web_schedules_screen.dart' show parseMonth;
+import 'web_schedules_screen.dart' show parseMonth, WebSchedulesScreen;
 
 /// 월 근무표 합계(옆 패널): 총 근무시간 · 예상 인건비 · 주휴수당 대상(알바생) · 주휴수당 합계.
 class ScheduleSummary {
@@ -80,6 +80,12 @@ class _WebScheduleScreenState extends State<WebScheduleScreen> {
     final today = _store.today;
     _month = widget.month == null ? DateTime(today.year, today.month) : parseMonth(widget.month!);
     _day = _month.year == today.year && _month.month == today.month ? today : _month;
+    final open = WebSchedulesScreen.openDay.value;
+    WebSchedulesScreen.openDay.value = null;
+    if (open != null && open.year == _month.year && open.month == _month.month) {
+      _view = 3;
+      _day = open;
+    }
     // 빌드 중 notify 를 피해 다음 마이크로태스크에서 초안 모드 켬.
     Future.microtask(() => _store.setScheduleDraft(true));
   }
