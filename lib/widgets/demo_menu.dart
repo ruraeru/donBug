@@ -34,7 +34,9 @@ class DemoMenu extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final role = AppScope.of(context).role;
+    final store = AppScope.of(context);
+    if (store.remote) return const SizedBox.shrink();
+    final role = store.role;
     final other = role == Role.employee ? Role.employer : Role.employee;
     const chevron = Icon(Icons.chevron_right_rounded, color: AppColors.textTertiary);
     return Column(

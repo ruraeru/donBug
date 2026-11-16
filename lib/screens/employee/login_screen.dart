@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 
+import '../../data/app_scope.dart';
 import '../../theme.dart';
+import '../mobile_boot.dart';
 import 'kakao_consent_screen.dart';
 
 
@@ -41,10 +43,12 @@ class LoginScreen extends StatelessWidget {
                 child: Column(
                   children: [
                     KakaoButton('카카오로 시작하기',
-                        onPressed: () => Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                                builder: (_) => const KakaoConsentScreen()))),
+                        onPressed: () => AppScope.read(context).remote
+                            ? kakaoAppLogin(context)
+                            : Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                    builder: (_) => const KakaoConsentScreen()))),
                     const SizedBox(height: 12),
                     Text('로그인 후 사장님 / 알바생 역할을 선택해요',
                         style: AppText.style(

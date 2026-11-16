@@ -25,11 +25,12 @@ class _StoreCreateScreenState extends State<StoreCreateScreen> {
   void initState() {
     super.initState();
     final store = AppScope.read(context);
-    final st = store.storeById(store.session.ownerStoreId)!;
-    _name = TextEditingController(text: st.name);
-    _address = TextEditingController(text: st.address);
-    _size = st.isSmall ? 0 : 1;
-    _deduction = st.defaultDeduction.index;
+    // 서버 모드 첫 매장은 없으니 빈 칸으로 시작.
+    final st = store.storeById(store.session.ownerStoreId);
+    _name = TextEditingController(text: st?.name);
+    _address = TextEditingController(text: st?.address);
+    _size = (st?.isSmall ?? true) ? 0 : 1;
+    _deduction = (st?.defaultDeduction ?? Deduction.biz33).index;
   }
 
   @override
@@ -39,11 +40,35 @@ class _StoreCreateScreenState extends State<StoreCreateScreen> {
     super.dispose();
   }
 
-  void _submit() {
+  bool _busy = false;
+
+  Future<void> _submit() async {
     if (_name.text.trim().isEmpty || _address.text.trim().isEmpty) {
       return showToast(context, '상호명과 주소를 입력해 주세요');
     }
-    AppScope.read(context).createStore(
+    final store = AppScope.read(context);
+    if (store.remote) {
+      if (_busy) return;
+      _busy = true;
+      try {
+        await store.createStoreRemote(
+          name: _name.text.trim(),
+          address: _address.text.trim(),
+          isSmall: _size == 0,
+          deduction: Deduction.values[_deduction],
+        );
+      } catch (e) {
+        if (mounted) showToast(context, '$e');
+        return;
+      } finally {
+        _busy = false;
+      }
+      if (!mounted) return;
+      store.login(Role.employer);
+      Navigator.push(context, MaterialPageRoute(builder: (_) => const StoreCodeScreen()));
+      return;
+    }
+    store.createStore(
       name: _name.text.trim(),
       address: _address.text.trim(),
       isSmall: _size == 0,

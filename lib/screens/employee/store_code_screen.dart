@@ -30,9 +30,27 @@ class _StoreCodeScreenState extends State<StoreCodeScreen> {
     super.dispose();
   }
 
-  void _submit() {
+  bool _busy = false;
+
+  Future<void> _submit() async {
     final store = AppScope.read(context);
-    final (result, st) = store.requestJoin(_code.text);
+    final JoinResult result;
+    final Store? st;
+    if (store.remote) {
+      if (_busy) return;
+      _busy = true;
+      try {
+        (result, st) = await store.requestJoinRemote(_code.text);
+      } catch (e) {
+        if (mounted) showToast(context, '$e');
+        return;
+      } finally {
+        _busy = false;
+      }
+      if (!mounted) return;
+    } else {
+      (result, st) = store.requestJoin(_code.text);
+    }
     switch (result) {
       case JoinResult.notFound:
         showToast(context, '매장 코드를 찾을 수 없어요');
@@ -57,16 +75,19 @@ class _StoreCodeScreenState extends State<StoreCodeScreen> {
             const SizedBox(height: 16),
             _CodeBoxes(controller: _code, focus: _focus, onSubmit: _submit),
             const SizedBox(height: 16),
-            AppButton(
-              'QR 코드로 입력하기 (데모)',
-              variant: AppButtonVariant.outline,
-              // shortcut: 카메라 대신 데모 매장 코드를 채운다.
-              onPressed: () => setState(() =>
-                  _code.text = 'BAKE5TQ1'),
-            ),
-            const SizedBox(height: 16),
-            const NoteBox(
-              '매장 코드는 사장님 앱의 [매장 설정]에서 확인할 수 있어요. 여러 매장에서 일하면 코드를 추가로 입력하세요.\n데모 매장 코드: CAFE-8K2D(가입됨) · BAKE-5TQ1',
+            if (!AppScope.of(context).remote) ...[
+              AppButton(
+                'QR 코드로 입력하기 (데모)',
+                variant: AppButtonVariant.outline,
+                // shortcut: 카메라 대신 데모 매장 코드를 채운다.
+                onPressed: () => setState(() =>
+                    _code.text = 'BAKE5TQ1'),
+              ),
+              const SizedBox(height: 16),
+            ],
+            NoteBox(
+              '매장 코드는 사장님 앱의 [매장 설정]에서 확인할 수 있어요. 여러 매장에서 일하면 코드를 추가로 입력하세요.'
+              '${AppScope.of(context).remote ? '' : '\n데모 매장 코드: CAFE-8K2D(가입됨) · BAKE-5TQ1'}',
               color: AppColors.textSecondary,
               background: AppColors.surface,
             ),
