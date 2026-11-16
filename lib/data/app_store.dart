@@ -94,13 +94,34 @@ class AppStore extends ChangeNotifier {
   /// 서버 요청 실패 메시지. 화면(main)이 듣고 토스트로 보여 준다.
   final ValueNotifier<String?> remoteError = ValueNotifier(null);
 
+  bool _versionWarned = false;
+  int _reloadSeq = 0;
+
+  /// 지금 매장 상태를 다시 읽는다 (당겨서 새로고침·변경 신호·주기 확인).
+  /// [quiet] 면 통신 실패는 알리지 않는다. 앱 버전이 서버와 다르면 한 번 알린다.
+  Future<void> refreshNow({bool quiet = false}) async {
+    if (!remote || !api!.hasToken || !session.loggedIn) return;
+    try {
+      await reload(storeId: session.storeId);
+    } on StateError {
+      if (_versionWarned) return;
+      _versionWarned = true;
+      remoteError.value = '앱이 최신 버전이 아니에요. 앱을 업데이트해 주세요';
+    } catch (_) {
+      if (!quiet) remoteError.value = '새 정보를 가져오지 못했어요';
+    }
+  }
+
   /// 서버 상태로 덮는다. [storeId] 를 주면 그 매장을 지금 보는 매장으로.
   Future<void> reload({String? storeId}) async {
     final a = api;
     // 웹 근무표 초안에 저장 안 한 편집이 있으면 서버 상태로 덮지 않는다.
     if (a == null || scheduleDirty) return;
+    final seq = ++_reloadSeq;
     final q = storeId == null || storeId.isEmpty ? '' : '?storeId=$storeId';
     final j = await a.get('/api/v1/me/state$q') as Map<String, dynamic>;
+    // 늦게 온 응답: 기다리는 사이 초안 편집이 생겼거나 더 나중에 시작한 reload 가 있으면 버린다.
+    if (seq != _reloadSeq || scheduleDirty) return;
     final s = AppState.fromJson(j);
     if (s == null) throw StateError('서버 상태 버전이 앱과 달라요 (v=${j['v']})');
     state = s;
