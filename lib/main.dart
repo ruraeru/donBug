@@ -11,6 +11,7 @@ import 'widgets/common.dart';
 import 'screens/employee/employee_shell.dart';
 import 'screens/employee/login_screen.dart';
 import 'screens/employer/employer_shell.dart';
+import 'screens/mobile_boot.dart';
 import 'screens/web/web_boot.dart';
 import 'screens/web/web_shell.dart';
 import 'theme.dart';
@@ -33,6 +34,7 @@ Future<void> main() async {
 }
 
 final messengerKey = GlobalKey<ScaffoldMessengerState>();
+final navigatorKey = GlobalKey<NavigatorState>();
 
 class MyApp extends StatefulWidget {
   const MyApp({super.key, required this.store});
@@ -48,6 +50,11 @@ class _MyAppState extends State<MyApp> {
   void initState() {
     super.initState();
     widget.store.remoteError.addListener(_showError);
+    // 앱 서버 모드: 토큰 갱신이 실패하면 로그인 화면으로. (웹은 WebBoot 가 처리)
+    if (!kIsWeb && useApi) {
+      widget.store.api!.onUnauthorized = () => navigatorKey.currentState?.pushAndRemoveUntil(
+          MaterialPageRoute(builder: (_) => const LoginScreen()), (_) => false);
+    }
   }
 
   @override
@@ -71,6 +78,7 @@ class _MyAppState extends State<MyApp> {
       title: '돈벌래',
       debugShowCheckedModeBanner: false,
       scaffoldMessengerKey: messengerKey,
+      navigatorKey: navigatorKey,
       theme: appTheme,
       home: _home(),
     ),
@@ -80,6 +88,7 @@ class _MyAppState extends State<MyApp> {
     if (kIsWeb && useApi) return WebBoot(store: widget.store);
     // shortcut: 데모 웹은 로그인 없이 사장님 대시보드로 바로 진입.
     if (kIsWeb) return const WebShell();
+    if (useApi) return const MobileBoot();
     final s = widget.store.session;
     if (!s.loggedIn) return const LoginScreen();
     return s.role == Role.employee

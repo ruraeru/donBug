@@ -17,8 +17,17 @@ class JoinPendingScreen extends StatelessWidget {
   void _approved(BuildContext context) => Navigator.pushReplacement(
       context, MaterialPageRoute(builder: (_) => JoinApprovedScreen(storeId: storeId)));
 
-  void _refresh(BuildContext context) {
+  Future<void> _refresh(BuildContext context) async {
     final store = AppScope.read(context);
+    if (store.remote) {
+      try {
+        await store.reload(storeId: storeId);
+      } catch (e) {
+        if (context.mounted) showToast(context, '$e');
+        return;
+      }
+      if (!context.mounted) return;
+    }
     final m = store.state.staff
         .where((s) => s.personId == store.session.employeeId && s.storeId == storeId)
         .lastOrNull;
@@ -86,14 +95,15 @@ class JoinPendingScreen extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 16),
-          const NoteBox('데모: 사장님이 승인하면 새로고침으로 확인할 수 있어요. 아래 데모 버튼으로 바로 승인할 수도 있어요.',
+          if (!store.remote)
+            const NoteBox('데모: 사장님이 승인하면 새로고침으로 확인할 수 있어요. 아래 데모 버튼으로 바로 승인할 수도 있어요.',
               color: AppColors.textSecondary, background: AppColors.surface),
         ],
       ),
       bottomNavigationBar: BottomBar(
         children: [
           AppButton('새로고침', onPressed: () => _refresh(context)),
-          if (m != null && m.status == StaffStatus.pending)
+          if (m != null && m.status == StaffStatus.pending && !store.remote)
             AppButton(
               '사장님이 승인한 것으로 (데모)',
               variant: AppButtonVariant.soft,

@@ -1,13 +1,16 @@
 import 'dart:convert';
 
+import 'package:flutter/foundation.dart';
+
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 
 /// 서버 연동 모드. `--dart-define=USE_API=true` 로 빌드하면 켜진다.
 const bool useApi = bool.fromEnvironment('USE_API');
 
-/// API 주소. 비우면 페이지와 같은 origin (배포: Caddy 가 /api 를 백엔드로 넘김).
+/// API 주소. 비우면 웹은 페이지와 같은 origin (배포: Caddy 가 /api 를 백엔드로 넘김), 앱은 운영 서버.
 const String apiBase = String.fromEnvironment('API_BASE');
+const String _appDefaultBase = 'https://donbug.ruraeru.xyz';
 
 /// 서버 에러 응답 `{code, message, details}`.
 class ApiException implements Exception {
@@ -25,7 +28,7 @@ class ApiException implements Exception {
 /// 401 이면 refresh 토큰으로 한 번 갱신하고 다시 보낸다. 갱신도 실패하면 토큰을 지우고 [onUnauthorized].
 class ApiClient {
   ApiClient({required this.prefs, String? baseUrl, http.Client? client})
-      : baseUrl = baseUrl ?? (apiBase.isNotEmpty ? apiBase : Uri.base.origin),
+      : baseUrl = baseUrl ?? (apiBase.isNotEmpty ? apiBase : kIsWeb ? Uri.base.origin : _appDefaultBase),
         _http = client ?? http.Client();
 
   static const _accessKey = 'donbug.access';
@@ -55,15 +58,19 @@ class ApiClient {
   /// 웹 카카오 로그인 시작 주소 (브라우저를 이 주소로 보낸다).
   String get kakaoLoginUrl => '$baseUrl/api/auth/kakao/login';
 
+  /// 앱 카카오 로그인 시작 주소. 콜백이 `donbug://auth?access=..&refresh=..` 로 돌아온다.
+  String get kakaoAppLoginUrl => '$baseUrl/api/auth/kakao/login?app=true';
+
   /// 서버 refresh 토큰 폐기 후 로컬 토큰 삭제.
   Future<void> logout() async {
     final r = _refresh;
+    // 먼저 지운다: 서버 응답을 기다리는 사이 새로 로그인한 토큰을 지우지 않게.
+    await clearTokens();
     if (r != null) {
       try {
         await _send('POST', '/api/auth/logout', {'refreshToken': r}, auth: false);
       } catch (_) {}
     }
-    await clearTokens();
   }
 
   Future<dynamic> get(String path) => _call('GET', path);
