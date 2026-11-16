@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -45,13 +47,33 @@ class MyApp extends StatefulWidget {
   State<MyApp> createState() => _MyAppState();
 }
 
-class _MyAppState extends State<MyApp> {
+class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
+  Timer? _poll;
+
+  // 서버 모드: 다른 사람이 한 일(대타 요청·지원, 가입 신청 등)이 보이도록 주기적으로, 앱으로 돌아올 때 다시 읽는다.
+  Future<void> _refresh() async {
+    final st = widget.store;
+    if (!st.remote || !st.api!.hasToken || !st.session.loggedIn) return;
+    try {
+      await st.reload(storeId: st.session.storeId);
+    } catch (_) {}
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) _refresh();
+  }
+
   @override
   void initState() {
     super.initState();
+    if (widget.store.remote) {
+      WidgetsBinding.instance.addObserver(this);
+      _poll = Timer.periodic(const Duration(seconds: 20), (_) => _refresh());
+    }
     widget.store.remoteError.addListener(_showError);
     // 앱 서버 모드: 토큰 갱신이 실패하면 로그인 화면으로. (웹은 WebBoot 가 처리)
-    if (!kIsWeb && useApi) {
+    if (!kIsWeb && widget.store.remote) {
       widget.store.api!.onUnauthorized = () => navigatorKey.currentState?.pushAndRemoveUntil(
           MaterialPageRoute(builder: (_) => const LoginScreen()), (_) => false);
     }
@@ -59,6 +81,8 @@ class _MyAppState extends State<MyApp> {
 
   @override
   void dispose() {
+    _poll?.cancel();
+    WidgetsBinding.instance.removeObserver(this);
     widget.store.remoteError.removeListener(_showError);
     super.dispose();
   }
@@ -85,10 +109,10 @@ class _MyAppState extends State<MyApp> {
   );
 
   Widget _home() {
-    if (kIsWeb && useApi) return WebBoot(store: widget.store);
+    if (kIsWeb && widget.store.remote) return WebBoot(store: widget.store);
     // shortcut: 데모 웹은 로그인 없이 사장님 대시보드로 바로 진입.
     if (kIsWeb) return const WebShell();
-    if (useApi) return const MobileBoot();
+    if (widget.store.remote) return const MobileBoot();
     final s = widget.store.session;
     if (!s.loggedIn) return const LoginScreen();
     return s.role == Role.employee

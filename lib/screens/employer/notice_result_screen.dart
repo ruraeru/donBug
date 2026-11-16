@@ -127,7 +127,7 @@ class _RemindCard extends StatelessWidget {
           children: [
             KeyValueRow('발송 대상', '$count명'),
             const SizedBox(height: 16),
-            const KeyValueRow('발송 방식', '앱 알림 (데모: 알림 센터)'),
+            KeyValueRow('발송 방식', AppScope.of(context).remote ? '앱 알림' : '앱 알림 (데모: 알림 센터)'),
           ],
         ),
       );

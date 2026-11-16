@@ -1,11 +1,15 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
+import '../../data/api_client.dart';
 import '../../data/app_scope.dart';
 import '../../data/format.dart';
 import '../../data/models.dart';
 import '../../data/payroll.dart';
 import '../../theme.dart';
 import '../../widgets/common.dart';
+import '../../widgets/signature_input.dart';
 import 'employer_parts.dart';
 import 'employer_signature_request_screen.dart';
 
@@ -27,6 +31,8 @@ class _EmployerContractWriteScreenState extends State<EmployerContractWriteScree
   final _hours = TextEditingController();
   final _days = TextEditingController();
   final _duty = TextEditingController();
+  final _sig = SignatureInput.newController();
+  bool _busy = false;
 
   @override
   void initState() {
@@ -45,6 +51,7 @@ class _EmployerContractWriteScreenState extends State<EmployerContractWriteScree
     for (final c in [_wage, _hours, _days, _duty]) {
       c.dispose();
     }
+    _sig.dispose();
     super.dispose();
   }
 
@@ -85,7 +92,26 @@ class _EmployerContractWriteScreenState extends State<EmployerContractWriteScree
     if (d != null) setState(() => start ? _start = d : _end = d);
   }
 
+  Future<void> _sendRemote(Contract c) async {
+    final png = await SignatureInput.png(_sig);
+    if (!mounted) return;
+    if (png == null) return showToast(context, '서명해 주세요');
+    final store = AppScope.read(context);
+    setState(() => _busy = true);
+    try {
+      await store.createContractRemote(_staffId!, c, png);
+      if (mounted) _done();
+    } on ApiException catch (e) {
+      if (mounted) showToast(context, e.message);
+    } catch (_) {
+      if (mounted) showToast(context, '서버와 통신하지 못했어요');
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
   void _submit() {
+    if (_busy) return;
     if (_staffId == null) return showToast(context, '직원을 골라 주세요');
     if (_missing.isNotEmpty) return showToast(context, '${_missing.join(', ')}을(를) 입력해 주세요');
     final wage = wonDigits(_wage.text)!;
@@ -93,17 +119,20 @@ class _EmployerContractWriteScreenState extends State<EmployerContractWriteScree
       return showToast(context, '시급은 2026 최저임금 ${wonText(minimumWage2026)} 이상이어야 해요');
     }
     if (!_end.isAfter(_start)) return showToast(context, '계약 종료일이 시작일보다 뒤여야 해요');
-    AppScope.read(context).createContract(
-      _staffId!,
-      Contract(
-        start: ymd(_start),
-        end: ymd(_end),
-        wage: wage,
-        weeklyHours: int.parse(_hours.text),
-        workDays: _days.text.trim(),
-        duty: _duty.text.trim(),
-      ),
+    final c = Contract(
+      start: ymd(_start),
+      end: ymd(_end),
+      wage: wage,
+      weeklyHours: int.parse(_hours.text),
+      workDays: _days.text.trim(),
+      duty: _duty.text.trim(),
     );
+    if (AppScope.read(context).remote) return unawaited(_sendRemote(c));
+    AppScope.read(context).createContract(_staffId!, c);
+    _done();
+  }
+
+  void _done() {
     Navigator.pushReplacement(
       context,
       MaterialPageRoute(builder: (_) => EmployerSignatureRequestScreen(staffId: _staffId!)),
@@ -207,9 +236,16 @@ class _EmployerContractWriteScreenState extends State<EmployerContractWriteScree
               ],
             ),
           ),
+          if (store.remote) ...[
+            const SizedBox(height: 16),
+            Text('사장님 서명', style: AppText.style(14, FontWeight.w500, AppColors.textSecondary)),
+            const SizedBox(height: 8),
+            SignatureInput(controller: _sig),
+          ],
         ],
       ),
-      bottomNavigationBar: BottomBar.button('서명 요청 보내기', onPressed: _submit),
+      bottomNavigationBar:
+          BottomBar.button(_busy ? '보내는 중…' : '서명 요청 보내기', onPressed: _busy ? null : _submit),
     );
   }
 }

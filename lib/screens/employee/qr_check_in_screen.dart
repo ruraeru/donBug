@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:mobile_scanner/mobile_scanner.dart';
 
+import '../../data/api_client.dart';
 import '../../data/app_scope.dart';
 import '../../data/format.dart';
 import '../../theme.dart';
@@ -33,22 +35,54 @@ const _qr = [
   '#######.#####..#.####',
 ];
 
-/// A6 QR 출근 인증. 데모: 스캔 영역을 탭하면 인증 성공으로 출근 기록을 만든다.
-class QrCheckInScreen extends StatelessWidget {
+/// A6 QR 출근 인증. 서버 모드는 카메라로 POS 의 QR 을 스캔하고, 데모는 스캔 영역을 탭하면 인증된다.
+class QrCheckInScreen extends StatefulWidget {
   const QrCheckInScreen({super.key, required this.shiftId});
 
   final String shiftId;
 
-  // 출근 기록을 만들고 출근 완료 화면으로 교체.
+  @override
+  State<QrCheckInScreen> createState() => _QrCheckInScreenState();
+}
+
+class _QrCheckInScreenState extends State<QrCheckInScreen> {
+  String get shiftId => widget.shiftId;
+
+  /// 서버 응답을 기다리는 중이면 true (중복 스캔 방지).
+  bool _busy = false;
+
+  void _done(String attendanceId) => Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (_) => ClockInDoneScreen(attendanceId: attendanceId)),
+      );
+
+  // 데모: 출근 기록을 만들고 출근 완료 화면으로 교체.
   void _scanned(BuildContext context) {
     final store = AppScope.read(context);
     final block = store.clockInBlock(store.shiftById(shiftId)!);
     if (block != null) return showToast(context, block);
-    final a = store.clockIn(shiftId);
-    Navigator.pushReplacement(
-      context,
-      MaterialPageRoute(builder: (_) => ClockInDoneScreen(attendanceId: a.id)),
-    );
+    _done(store.clockIn(shiftId).id);
+  }
+
+  // 서버: 스캔한 문자열을 서버에 보내 검증. 성공일 때만 완료 화면.
+  Future<void> _detected(BarcodeCapture capture) async {
+    final token = capture.barcodes.map((b) => b.rawValue).whereType<String>().firstOrNull;
+    if (token == null || _busy) return;
+    final store = AppScope.read(context);
+    final block = store.clockInBlock(store.shiftById(shiftId)!);
+    if (block != null) return showToast(context, block);
+    _busy = true;
+    try {
+      final a = await store.clockInRemote(shiftId, token);
+      if (mounted) _done(a.id);
+    } on ApiException catch (e) {
+      if (mounted) showToast(context, e.code == 'INVALID_QR' ? '유효하지 않은 QR 이에요. POS 화면의 QR 을 다시 스캔해 주세요' : e.message);
+    } catch (_) {
+      if (mounted) showToast(context, '서버와 통신하지 못했어요');
+    }
+    // 같은 토스트가 연달아 뜨지 않게 잠시 쉰 뒤 다시 스캔 가능.
+    await Future<void>.delayed(const Duration(seconds: 2));
+    _busy = false;
   }
 
   @override
@@ -77,7 +111,10 @@ class QrCheckInScreen extends StatelessWidget {
                           style: AppText.style(
                               17, FontWeight.w500, AppColors.onPrimary)),
                     ),
-                    TextButton(
+                    if (store.remote)
+                      const SizedBox(width: 64)
+                    else
+                      TextButton(
                       onPressed: () => showConfirmDialog(context,
                           title: '데모 안내',
                           message: '실제 앱은 카메라로 매장 POS 의 QR 을 스캔해요. 데모에서는 사각형을 탭하면 인증돼요.',
@@ -107,13 +144,39 @@ class QrCheckInScreen extends StatelessWidget {
                                 13, FontWeight.w500, AppColors.onPrimary)),
                       ),
                       const SizedBox(height: 20),
-                      GestureDetector(
-                        key: const ValueKey('qr-scan'),
-                        onTap: () => _scanned(context),
-                        child: const _ScanBox(),
-                      ),
+                      if (store.remote)
+                        Container(
+                          key: const ValueKey('qr-camera'),
+                          width: 260,
+                          height: 260,
+                          clipBehavior: Clip.antiAlias,
+                          decoration: BoxDecoration(
+                            border: Border.all(color: AppColors.primary, width: 4),
+                            borderRadius: BorderRadius.circular(28),
+                          ),
+                          child: MobileScanner(
+                            onDetect: _detected,
+                            errorBuilder: (context, e) => Center(
+                              child: Padding(
+                                padding: const EdgeInsets.all(16),
+                                child: Text('카메라를 쓸 수 없어요. 설정에서 카메라 권한을 허용해 주세요',
+                                    textAlign: TextAlign.center,
+                                    style: AppText.style(13, FontWeight.w500, AppColors.onPrimary)),
+                              ),
+                            ),
+                          ),
+                        )
+                      else
+                        GestureDetector(
+                          key: const ValueKey('qr-scan'),
+                          onTap: () => _scanned(context),
+                          child: const _ScanBox(),
+                        ),
                       const SizedBox(height: 20),
-                      Text('POS 화면의 QR 코드를\n사각형 안에 맞춰주세요\n(데모: 사각형을 탭하세요)',
+                      Text(
+                          store.remote
+                              ? 'POS 화면의 QR 코드를\n사각형 안에 맞춰주세요'
+                              : 'POS 화면의 QR 코드를\n사각형 안에 맞춰주세요\n(데모: 사각형을 탭하세요)',
                           textAlign: TextAlign.center,
                           style: AppText.style(
                               16, FontWeight.w500, AppColors.onPrimary)),
@@ -126,6 +189,7 @@ class QrCheckInScreen extends StatelessWidget {
                   ),
                 ),
               ),
+              if (!store.remote)
               Padding(
                 padding: const EdgeInsets.fromLTRB(20, 0, 20, 32),
                 child: Container(

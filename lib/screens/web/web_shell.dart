@@ -122,7 +122,15 @@ class _WebShellState extends State<WebShell> {
                 ]),
               ),
               const SizedBox(height: 6),
-              if (AppScope.of(context).remote)
+              if (AppScope.of(context).remote) ...[
+                rail
+                    ? IconButton(
+                        tooltip: '매장 POS 모드 열기',
+                        onPressed: _openPos,
+                        icon: const AppIcon('scan', color: AppColors.textPrimary),
+                      )
+                    : WebButton('매장 POS 모드 열기',
+                        style: WebButtonStyle.dark, height: 46, expand: true, onPressed: _openPos),
                 rail
                     ? IconButton(
                         tooltip: '로그아웃',
@@ -133,8 +141,8 @@ class _WebShellState extends State<WebShell> {
                         onPressed: () => WebBoot.logout(context),
                         child: Text('로그아웃',
                             style: AppText.style(12, FontWeight.w500, AppColors.textTertiary)),
-                      )
-              else ...[
+                      ),
+              ] else ...[
               rail
                   ? Column(children: [
                       IconButton(

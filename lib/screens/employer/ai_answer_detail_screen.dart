@@ -5,10 +5,52 @@ import '../../widgets/common.dart';
 
 /// AI 답변 상세.
 class AiAnswerDetailScreen extends StatelessWidget {
-  const AiAnswerDetailScreen({super.key});
+  const AiAnswerDetailScreen({super.key, this.question, this.answer});
+
+  /// 서버 모드에서 받은 질문·답. 없으면(데모) 고정 예시를 보여 준다.
+  final String? question;
+  final String? answer;
 
   @override
-  Widget build(BuildContext context) => Scaffold(
+  Widget build(BuildContext context) =>
+      answer == null ? _demo() : _real(question ?? '', answer!);
+
+  Widget _real(String q, String a) => Scaffold(
+        appBar: const AppHeader('AI 노무 도우미'),
+        body: ListView(
+          padding: const EdgeInsets.fromLTRB(20, 8, 20, 16),
+          children: [
+            Align(
+              alignment: Alignment.centerRight,
+              child: Container(
+                constraints: const BoxConstraints(maxWidth: 290),
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                decoration: BoxDecoration(
+                  color: AppColors.primary,
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                child: Text(q,
+                    style: AppText.style(14, FontWeight.w400, AppColors.onPrimary)
+                        .copyWith(height: 1.5)),
+              ),
+            ),
+            const SizedBox(height: 12),
+            AppCard(
+              radius: 16,
+              child: SelectableText(a,
+                  style: AppText.style(14, FontWeight.w400).copyWith(height: 22 / 14)),
+            ),
+            const SizedBox(height: 12),
+            AppCard(
+              child: Text('AI 답변은 참고용이며 법률 자문이 아니에요. 구체적인 상황은 노무사 확인을 권장해요.',
+                  style: AppText.style(12, FontWeight.w400, AppColors.textSecondary)
+                      .copyWith(height: 1.5)),
+            ),
+          ],
+        ),
+      );
+
+  Widget _demo() => Scaffold(
         appBar: const AppHeader('AI 노무 도우미'),
         body: ListView(
           padding: const EdgeInsets.fromLTRB(20, 8, 20, 16),

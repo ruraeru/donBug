@@ -1,29 +1,93 @@
 import 'package:flutter/material.dart';
 
+import '../../data/ai_api.dart';
+import '../../data/app_scope.dart';
 import '../../theme.dart';
 import '../../widgets/common.dart';
 import 'ai_answer_detail_screen.dart';
 
 /// B6 AI 노무 도우미 (채팅).
-class AiLaborAssistantScreen extends StatelessWidget {
+class AiLaborAssistantScreen extends StatefulWidget {
   const AiLaborAssistantScreen({super.key});
 
   @override
+  State<AiLaborAssistantScreen> createState() => _AiLaborAssistantScreenState();
+}
+
+class _Msg {
+  _Msg(this.question);
+
+  final String question;
+  String? answer;
+}
+
+class _AiLaborAssistantScreenState extends State<AiLaborAssistantScreen> {
+  final _input = TextEditingController();
+  final _scroll = ScrollController();
+  final _msgs = <_Msg>[];
+  bool _loading = false;
+
+  @override
+  void dispose() {
+    _input.dispose();
+    _scroll.dispose();
+    super.dispose();
+  }
+
+  Future<void> _send([String? preset]) async {
+    final q = (preset ?? _input.text).trim();
+    if (q.isEmpty || _loading) return;
+    final store = AppScope.read(context);
+    final msg = _Msg(q);
+    setState(() {
+      _msgs.add(msg);
+      _loading = true;
+    });
+    _input.clear();
+    _toEnd();
+    try {
+      final r = await askLaborQuestion(store.api!, store.session.storeId, q);
+      msg.answer = r.answer;
+    } catch (e) {
+      if (mounted) showToast(context, aiErrorText(e));
+      _msgs.remove(msg);
+      if (_input.text.isEmpty) _input.text = q;
+    }
+    if (!mounted) return;
+    setState(() => _loading = false);
+    _toEnd();
+  }
+
+  void _toEnd() => WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (_scroll.hasClients) {
+          _scroll.animateTo(_scroll.position.maxScrollExtent + 200,
+              duration: const Duration(milliseconds: 200), curve: Curves.easeOut);
+        }
+      });
+
+  @override
   Widget build(BuildContext context) {
-    void openDetail() => Navigator.push(context,
-        MaterialPageRoute(builder: (_) => const AiAnswerDetailScreen()));
+    final remote = AppScope.read(context).remote;
+    void openDetail([_Msg? m]) => Navigator.push(
+        context,
+        MaterialPageRoute(
+            builder: (_) => m == null
+                ? const AiAnswerDetailScreen()
+                : AiAnswerDetailScreen(question: m.question, answer: m.answer)));
     final secondary =
         AppText.style(13, FontWeight.w400, AppColors.textSecondary)
             .copyWith(height: 1.5);
 
     return Scaffold(
-      appBar: const AppHeader('AI 노무 도우미', actions: [
-        Text('Gemini', style: TextStyle(fontSize: 13, color: AppColors.textSecondary)),
-        SizedBox(width: 16),
+      appBar: AppHeader('AI 노무 도우미', actions: [
+        Text(remote ? 'Claude' : 'Gemini',
+            style: const TextStyle(fontSize: 13, color: AppColors.textSecondary)),
+        const SizedBox(width: 16),
       ]),
       body: ListView(
+        controller: _scroll,
         padding: const EdgeInsets.fromLTRB(20, 8, 20, 12),
-        children: [
+        children: remote ? _serverChat(openDetail) : [
           const NoteBox('추후 개발 예정인 기능이에요. 아래 화면은 예시예요.',
               color: AppColors.accent, background: AppColors.accentSoft),
           const SizedBox(height: 16),
@@ -129,6 +193,12 @@ class AiLaborAssistantScreen extends StatelessWidget {
                   children: [
                     Expanded(
                       child: TextField(
+                        controller: _input,
+                        enabled: !remote || !_loading,
+                        textInputAction: TextInputAction.send,
+                        onSubmitted: remote ? (_) => _send() : null,
+                        maxLength: remote ? 1000 : null,
+                        buildCounter: (_, {required currentLength, required isFocused, maxLength}) => null,
                         style: AppText.style(14),
                         decoration: InputDecoration(
                           isDense: true,
@@ -145,7 +215,7 @@ class AiLaborAssistantScreen extends StatelessWidget {
                       shape: const CircleBorder(),
                       child: InkWell(
                         customBorder: const CircleBorder(),
-                        onTap: () {},
+                        onTap: remote ? _send : () {},
                         child: SizedBox(
                           width: 36,
                           height: 36,
@@ -165,6 +235,49 @@ class AiLaborAssistantScreen extends StatelessWidget {
       ),
     );
   }
+
+  /// 서버 모드 대화: 질문(오른쪽) → 로딩 → 답(왼쪽, 누르면 상세).
+  List<Widget> _serverChat(void Function([_Msg?]) openDetail) => [
+        _Bubble(
+          ai: true,
+          child: Text('노동법이나 매장 관리, 궁금한 걸 편하게 물어보세요.', style: AppText.style(14)),
+        ),
+        for (final m in _msgs) ...[
+          const SizedBox(height: 16),
+          _Bubble(
+            ai: false,
+            child: Text(m.question,
+                style: AppText.style(14, FontWeight.w500, AppColors.onPrimary)),
+          ),
+          const SizedBox(height: 16),
+          if (m.answer != null)
+            _Bubble(
+              ai: true,
+              onTap: () => openDetail(m),
+              child: Text(m.answer!, style: AppText.style(14).copyWith(height: 1.5)),
+            )
+          else
+            _Bubble(
+              ai: true,
+              child: Text('답변을 만들고 있어요...',
+                  style: AppText.style(14, FontWeight.w400, AppColors.textTertiary)),
+            ),
+        ],
+        if (_msgs.isEmpty) ...[
+          const SizedBox(height: 16),
+          Text('이런 것도 물어보세요',
+              style: AppText.style(12, FontWeight.w500, AppColors.textTertiary)),
+          const SizedBox(height: 12),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              for (final q in const ['주휴수당은 꼭 줘야 하나요?', '4대보험 가입 기준은?', '근로계약서 안 쓰면?'])
+                _Suggestion(q, onTap: () => _send(q)),
+            ],
+          ),
+        ],
+      ];
 }
 
 /// AI(왼쪽·흰색) / 사용자(오른쪽·primary) 말풍선. 최대 폭 310.

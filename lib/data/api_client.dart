@@ -5,8 +5,8 @@ import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 
-/// 서버 연동 모드. `--dart-define=USE_API=true` 로 빌드하면 켜진다.
-const bool useApi = bool.fromEnvironment('USE_API');
+/// 서버 연동 모드가 기본. `--dart-define=DEMO=true` 로 빌드하면 기기 안 데모 데이터로 돈다.
+const bool useApi = !bool.fromEnvironment('DEMO');
 
 /// API 주소. 비우면 웹은 페이지와 같은 origin (배포: Caddy 가 /api 를 백엔드로 넘김), 앱은 운영 서버.
 const String apiBase = String.fromEnvironment('API_BASE');
@@ -78,6 +78,36 @@ class ApiClient {
   Future<dynamic> put(String path, [Object? body]) => _call('PUT', path, body);
   Future<dynamic> patch(String path, [Object? body]) => _call('PATCH', path, body);
   Future<dynamic> delete(String path) => _call('DELETE', path);
+
+  /// Image.network 처럼 직접 요청할 때 붙이는 인증 헤더.
+  Map<String, String> get authHeaders => {if (_access != null) 'Authorization': 'Bearer $_access'};
+
+  /// multipart 업로드 (파일 1개 + 문자열 필드). 401 이면 토큰 갱신 후 한 번 더.
+  Future<dynamic> multipart(String method, String path,
+      {Map<String, String> fields = const {},
+      required String fileField,
+      required List<int> bytes,
+      required String filename}) async {
+    Future<http.Response> send() {
+      final req = http.MultipartRequest(method, Uri.parse('$baseUrl$path'))
+        ..headers['Accept'] = 'application/json'
+        ..fields.addAll(fields)
+        ..files.add(http.MultipartFile.fromBytes(fileField, bytes, filename: filename));
+      final token = _access;
+      if (token != null) req.headers['Authorization'] = 'Bearer $token';
+      return _http.send(req).then(http.Response.fromStream);
+    }
+
+    var res = await send();
+    if (res.statusCode == 401 && await _tryRefresh()) res = await send();
+    if (res.statusCode == 401) {
+      await clearTokens();
+      onUnauthorized?.call();
+    }
+    if (res.statusCode >= 400) throw _error(res);
+    if (res.body.isEmpty) return null;
+    return jsonDecode(utf8.decode(res.bodyBytes));
+  }
 
   Future<dynamic> _call(String method, String path, [Object? body]) async {
     var res = await _send(method, path, body);

@@ -584,8 +584,15 @@ class AppStore extends ChangeNotifier {
     );
     state.attendance.add(a);
     _commit();
-    _remote((api) => api.post('${_sp(s.storeId)}/shifts/$shiftId/clock-in'));
     return a;
+  }
+
+  /// 서버 모드 출근: POS 에서 스캔한 [qrToken] 을 보내고 reload. 실패하면 ApiException. 출근 기록을 돌려준다.
+  Future<Attendance> clockInRemote(String shiftId, String qrToken) async {
+    final s = shiftById(shiftId)!;
+    await api!.post('${_sp(s.storeId)}/shifts/$shiftId/clock-in', {'qrToken': qrToken});
+    await reload(storeId: s.storeId);
+    return attendanceFor(shiftId)!;
   }
 
   Attendance? clockOut() {
@@ -1419,6 +1426,55 @@ class AppStore extends ChangeNotifier {
     }
     _commit();
   }
+
+  /// 서버 모드 보건증 등록. 사진(multipart)이 올라간 뒤 다시 읽는다. 실패하면 던진다.
+  Future<void> uploadHealthCertRemote(
+      {required DateTime expiry,
+      required List<int> alertDays,
+      required List<int> photo,
+      required String filename}) async {
+    await api!.multipart('PUT', '/api/v1/me/health-cert',
+        fields: {'expiry': ymd(expiry), 'alertDays': alertDays.join(',')},
+        fileField: 'photo',
+        bytes: photo,
+        filename: filename);
+    await reload(storeId: session.storeId);
+  }
+
+  /// 서명 PNG 를 올리고 서버 id(signatureUrl)를 돌려준다.
+  Future<String> uploadSignatureRemote(List<int> png) async {
+    final j = await api!.multipart('POST', '/api/v1/me/signatures',
+        fileField: 'image', bytes: png, filename: 'signature.png') as Map<String, dynamic>;
+    return j['signatureUrl'] as String;
+  }
+
+  /// 서버 모드 계약 서명 (알바생). 서명 이미지를 올린 뒤 서명한다. 실패하면 던진다.
+  Future<void> signContractRemote(List<int> png) async {
+    final s = myStaff!;
+    final url = await uploadSignatureRemote(png);
+    await api!.post('${_sp(s.storeId)}/staff/${s.id}/contract/sign', {'signatureUrl': url});
+    await reload(storeId: session.storeId);
+  }
+
+  /// 서버 모드 계약서 작성 (사장님). 서명 이미지를 올린 뒤 보낸다. 실패하면 던진다.
+  Future<void> createContractRemote(String staffId, Contract c, List<int> png) async {
+    final s = staffById(staffId)!;
+    final url = await uploadSignatureRemote(png);
+    await api!.put('${_sp(s.storeId)}/staff/$staffId/contract', {
+      'start': c.start,
+      'end': c.end,
+      'wage': c.wage,
+      'weeklyHours': c.weeklyHours,
+      'workDays': c.workDays,
+      'duty': c.duty,
+      'ownerSignatureUrl': url,
+    });
+    await reload(storeId: session.storeId);
+  }
+
+  /// 직원 보건증 사진 주소 (사장님). Image.network 에 `api.authHeaders` 를 같이 넘긴다.
+  String staffCertPhotoUrl(Staff s) =>
+      '${api!.baseUrl}${_sp(s.storeId)}/staff/${s.id}/health-cert/photo';
 
   void requestCertRenewal(String staffId) {
     final s = staffById(staffId)!;

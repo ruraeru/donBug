@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:qr_flutter/qr_flutter.dart';
+import 'package:share_plus/share_plus.dart';
 
 import '../../data/app_scope.dart';
 import '../../theme.dart';
@@ -47,9 +49,7 @@ class StoreCodeScreen extends StatelessWidget {
                         color: AppColors.bg,
                         borderRadius: BorderRadius.circular(16),
                       ),
-                      child: Text('QR',
-                          style: AppText.style(
-                              28, FontWeight.w500, AppColors.textTertiary)),
+                      child: QrImageView(data: code, size: 120, padding: EdgeInsets.zero),
                     ),
                     const SizedBox(height: 12),
                     SmallButton(
@@ -82,10 +82,14 @@ class StoreCodeScreen extends StatelessWidget {
             borderRadius: BorderRadius.circular(14),
             clipBehavior: Clip.antiAlias,
             child: InkWell(
-              // shortcut: 카카오톡 공유 대신 공유 문구를 복사(데모).
               onTap: () {
-                Clipboard.setData(ClipboardData(
-                    text: '[돈벌래] ${st.name} 매장 코드: $code\n앱에서 매장 가입 > 코드 입력'));
+                final text = '[돈벌래] ${st.name} 매장 코드: $code\n앱에서 매장 가입 > 코드 입력';
+                if (AppScope.read(context).remote) {
+                  SharePlus.instance.share(ShareParams(text: text));
+                  return;
+                }
+                // 데모: 공유 시트 대신 문구를 복사한다.
+                Clipboard.setData(ClipboardData(text: text));
                 showToast(context, '공유 문구를 복사했어요 (데모)');
               },
               child: Container(
