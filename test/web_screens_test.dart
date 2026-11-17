@@ -104,11 +104,16 @@ void main() {
     await tester.pumpAndSettle();
     await _shot(tester, 'sheet_staff');
     final field = find.byType(TextField).last;
+    // 직원 시트가 길어 시급 칸이 화면 밖일 수 있다.
+    await tester.ensureVisible(field);
+    await tester.pumpAndSettle();
     await tester.enterText(field, '9000');
+    await tester.pumpAndSettle();
     await tester.tap(find.text('저장'));
     await tester.pump();
     expect(find.textContaining('최저임금'), findsWidgets);
     await tester.enterText(field, '11000');
+    await tester.pumpAndSettle();
     await tester.tap(find.text('저장'));
     await tester.pumpAndSettle();
     expect(store.activeStaff[1].wage, 11000);
