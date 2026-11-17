@@ -31,6 +31,7 @@ void main() {
           return http.Response.bytes(body, 200);
         }));
     final s = AppStore(buildSeed(_now), now: () => _now, api: api)..login(Role.employee);
+    await s.reload(); // 서버 상태를 한 번 읽은 뒤부터 session 매장 id 를 보낸다
     s.session.employeeStoreId = 'st-moa';
     calls.clear();
     await s.reload();
@@ -41,7 +42,7 @@ void main() {
     expect(calls, ['http://x/api/v1/me/state?storeId=gone', 'http://x/api/v1/me/state']);
   });
 
-  test('로그인 직후 시드 매장 id(st-cafe)로 400 이 와도 매장 지정 없이 다시 읽는다', () async {
+  test('로그인 직후 첫 reload 는 시드 매장 id(st-cafe)를 보내지 않는다', () async {
     SharedPreferences.setMockInitialValues({'donbug.access': 'a', 'donbug.refresh': 'r'});
     final prefs = await SharedPreferences.getInstance();
     final calls = <String>[];
@@ -58,6 +59,11 @@ void main() {
         }));
     final s = AppStore(buildSeed(_now), now: () => _now, api: api);
     await s.reload();
-    expect(calls, ['http://x/api/v1/me/state?storeId=st-cafe', 'http://x/api/v1/me/state']);
+    expect(calls, ['http://x/api/v1/me/state']);
+    // 명시한 매장은 첫 reload 에도 보낸다(매장 만들기·가입 직후).
+    final s2 = AppStore(buildSeed(_now), now: () => _now, api: api);
+    calls.clear();
+    await s2.reload(storeId: '7');
+    expect(calls, ['http://x/api/v1/me/state?storeId=7', 'http://x/api/v1/me/state']);
   });
 }

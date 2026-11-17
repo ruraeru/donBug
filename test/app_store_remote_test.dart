@@ -48,7 +48,8 @@ void main() {
     await _settle();
     expect(calls.first, 'PATCH /api/v1/stores/${staff.storeId}/staff/${staff.id}');
     expect(bodies.first, {'wage': 12000, 'deduction': 'insurance'});
-    expect(calls.last, 'GET /api/v1/me/state?storeId=${staff.storeId}');
+    // 서버 상태를 아직 안 읽은 시드라 매장 id 없이 읽는다.
+    expect(calls.last, 'GET /api/v1/me/state');
   });
 
   test('addShift → POST /shifts, 로컬 임시 id 는 reload 로 사라짐', () async {
