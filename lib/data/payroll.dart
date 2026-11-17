@@ -1,10 +1,13 @@
 /// 급여 계산 (순수 함수). 노무 규칙을 단순화한 프로토타입용 근사치다.
 ///
-/// - 기본급 = 실근무 분 × 시급 / 60
-/// - 주휴수당: 그 주(월–일) 대타 제외 근무가 15시간 이상이면 min(주시간, 40) / 40 × 8 × 시급.
-///   주의 일요일이 속한 달에 지급한다.
+/// - 시급은 근무 날짜 기준 이력(`wageOn`). 기본급 = Σ 근무 분 × 그 날 시급 / 60
+/// - 주휴수당(주 단위, 월–일): 소정시간(계약서 주 소정시간, 없으면 그 주 본인 예정 근무+연차) ≥ 15시간
+///   AND 개근(끝난 본인 근무 모두 출근 기록 있음, 연차는 출근) AND 계속근로(퇴사일이 그 주 일요일 이상)일 때
+///   min(소정, 40h) / 40 × 8 × 일요일 시급. 일요일이 속한 달에 지급한다. 주 정보는 [WeekBasis] 로 받는다
+///   (안 주면 entries 의 대타 제외 근무 분으로 근사).
 /// - 가산수당(5인 이상 + 직원 설정): 야간(22–06)과 하루 8시간 초과분에 0.5배 추가. 휴일가산은 0.
 ///   연차(leave)는 가산 제외. 야간 분은 실근로 분(휴게 제외)을 넘지 않게 자른다(휴게 시각 모름). BE PayrollCalculator 와 같은 규칙.
+///   주 40시간 초과분(실근로 주합 − 40h)이 그 주 일별 8h 초과 합보다 크면 그 차이도 0.5배 추가(중복 없음, 일요일 시급).
 /// - 공제: 3.3%(원 단위 내림) · 4대보험(근사 요율) · 없음.
 library;
 
@@ -97,6 +100,14 @@ int deductionOf(int gross, Deduction d) => switch (d) {
       Deduction.none => 0,
     };
 
+/// 한 주의 주휴 판단 근거. [standardMinutes] 소정 분, [eligible] 개근·계속근로 충족 여부.
+class WeekBasis {
+  const WeekBasis(this.standardMinutes, this.eligible);
+
+  final int standardMinutes;
+  final bool eligible;
+}
+
 int payFor(int minutes, int wage) => (minutes * wage / 60).round();
 
 /// 주휴수당 (한 주의 대타 제외 근무 분 기준).
@@ -107,47 +118,73 @@ int weeklyHolidayPay(int weekMinutes, int wage) {
 }
 
 /// [entries] 는 그 달 앞뒤 주까지 포함해도 된다(주휴 계산에 필요).
+/// [weekBasis] 는 월요일 키 → 주휴 근거. 없으면 entries 로 근사.
 Payslip computePayslip({
   required List<WorkEntry> entries,
   required int year,
   required int month,
-  required int wage,
+  required int Function(DateTime day) wageOn,
   required Deduction deduction,
   bool weeklyHolidayAuto = true,
   bool premiumApplies = false,
   int missingClockOut = 0,
+  Map<DateTime, WeekBasis>? weekBasis,
 }) {
   bool inMonth(DateTime d) => d.year == year && d.month == month;
+  DateTime sundayOf(DateTime monday) => monday.add(const Duration(days: 6));
   final monthEntries = entries.where((e) => inMonth(e.day)).toList()
     ..sort((a, b) => a.start.compareTo(b.start));
 
   final minutes = monthEntries.fold(0, (s, e) => s + e.minutes);
-  final base = payFor(minutes, wage);
+  final base = monthEntries.fold(0, (s, e) => s + payFor(e.minutes, wageOn(e.day)));
 
   var holiday = 0;
   if (weeklyHolidayAuto) {
-    final weeks = <DateTime, int>{};
-    for (final e in entries.where((e) => !e.isSubstitute)) {
-      final w = mondayOf(e.day);
-      weeks[w] = (weeks[w] ?? 0) + e.minutes;
-    }
-    weeks.forEach((monday, m) {
-      if (inMonth(monday.add(const Duration(days: 6)))) {
-        holiday += weeklyHolidayPay(m, wage);
+    final weeks = weekBasis;
+    if (weeks == null) {
+      final m = <DateTime, int>{};
+      for (final e in entries.where((e) => !e.isSubstitute)) {
+        final w = mondayOf(e.day);
+        m[w] = (m[w] ?? 0) + e.minutes;
       }
-    });
+      m.forEach((monday, mins) {
+        if (inMonth(sundayOf(monday))) holiday += weeklyHolidayPay(mins, wageOn(sundayOf(monday)));
+      });
+    } else {
+      weeks.forEach((monday, b) {
+        final sun = sundayOf(monday);
+        if (inMonth(sun) && b.eligible) holiday += weeklyHolidayPay(b.standardMinutes, wageOn(sun));
+      });
+    }
   }
 
   var premium = 0;
   if (premiumApplies) {
     final perDay = <DateTime, int>{};
     for (final e in monthEntries.where((e) => !e.leave)) {
-      premium += payFor(min(e.nightMinutes, e.minutes), wage) ~/ 2;
+      premium += payFor(min(e.nightMinutes, e.minutes), wageOn(e.day)) ~/ 2;
       perDay[e.day] = (perDay[e.day] ?? 0) + e.minutes;
     }
-    for (final m in perDay.values) {
-      if (m > 480) premium += payFor(m - 480, wage) ~/ 2;
+    for (final d in perDay.entries) {
+      if (d.value > 480) premium += payFor(d.value - 480, wageOn(d.key)) ~/ 2;
     }
+    // 주 40h 초과 중 일별 8h 초과와 겹치지 않는 부분.
+    final weekMin = <DateTime, int>{}, weekDailyOver = <DateTime, int>{};
+    final days = <DateTime, int>{};
+    for (final e in entries.where((e) => !e.leave)) {
+      days[e.day] = (days[e.day] ?? 0) + e.minutes;
+    }
+    days.forEach((d, m) {
+      final w = mondayOf(d);
+      weekMin[w] = (weekMin[w] ?? 0) + m;
+      weekDailyOver[w] = (weekDailyOver[w] ?? 0) + max(0, m - 480);
+    });
+    weekMin.forEach((monday, m) {
+      final sun = sundayOf(monday);
+      if (!inMonth(sun)) return;
+      final extra = m - 2400 - weekDailyOver[monday]!;
+      if (extra > 0) premium += payFor(extra, wageOn(sun)) ~/ 2;
+    });
   }
 
   final gross = base + holiday + premium;

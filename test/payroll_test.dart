@@ -1,7 +1,10 @@
 import 'package:flutter_test/flutter_test.dart';
 
+import 'package:donbug/data/app_store.dart';
+import 'package:donbug/data/format.dart';
 import 'package:donbug/data/models.dart';
 import 'package:donbug/data/payroll.dart';
+import 'package:donbug/data/seed.dart';
 
 WorkEntry entry(DateTime start, int hours, {int breakMin = 0, bool sub = false}) =>
     WorkEntry(
@@ -29,7 +32,7 @@ void main() {
       ],
       year: 2026,
       month: 5,
-      wage: 10320,
+      wageOn: (_) => 10320,
       deduction: Deduction.none,
     );
     expect(p.minutes, 18 * 60);
@@ -49,7 +52,7 @@ void main() {
           entries: [night],
           year: 2026,
           month: 5,
-          wage: 10000,
+          wageOn: (_) => 10000,
           deduction: Deduction.none,
           premiumApplies: premium,
         );
@@ -69,9 +72,9 @@ void main() {
       for (var d = 0; d < 5; d++) entry(DateTime(2026, 4, 27 + d, 10), 4),
     ];
     final april = computePayslip(
-        entries: entries, year: 2026, month: 4, wage: 10000, deduction: Deduction.none);
+        entries: entries, year: 2026, month: 4, wageOn: (_) => 10000, deduction: Deduction.none);
     final may = computePayslip(
-        entries: entries, year: 2026, month: 5, wage: 10000, deduction: Deduction.none);
+        entries: entries, year: 2026, month: 5, wageOn: (_) => 10000, deduction: Deduction.none);
     expect(april.weeklyHoliday, 0);
     expect(may.weeklyHoliday, 40000); // 20h → 20/40 × 8 × 10,000
   });
@@ -94,11 +97,164 @@ void main() {
       entries: [leave, work],
       year: 2026,
       month: 5,
-      wage: 10000,
+      wageOn: (_) => 10000,
       deduction: Deduction.none,
       premiumApplies: true,
     );
     // 근무 4h-휴게 1h = 180분 → 야간 min(240,180)=180분 × 10,000 × 0.5
     expect(p.premium, 15000);
+  });
+
+  group('주휴 조건 (AppStore.payslip)', () {
+    // 2026-06-01(월)~06-07(일) 주. 기준 시각은 6/20 이라 그 주는 이미 지났다.
+    late AppStore store;
+    late Staff st;
+    var now = DateTime(2026, 6, 20, 12);
+    var n = 0;
+
+    // [days] 일(월=0) 각각 [hours] 시간 근무. [attend] 면 출근 기록도 만든다.
+    void work(List<int> days, int hours, {bool attend = true, int week = 1}) {
+      for (final d in days) {
+        final id = 'T${n++}';
+        store.state.shifts.add(Shift(
+          id: id,
+          storeId: st.storeId,
+          staffId: st.id,
+          date: ymd(DateTime(2026, 6, week + d)),
+          startMin: 600,
+          endMin: 600 + hours * 60,
+          part: '미들',
+        ));
+        if (attend) {
+          final day = DateTime(2026, 6, week + d, 10);
+          store.state.attendance.add(Attendance(
+              id: 'A$id',
+              storeId: st.storeId,
+              shiftId: id,
+              staffId: st.id,
+              // 지각 30분
+              clockIn: day.add(const Duration(minutes: 30)).toIso8601String(),
+              clockOut: day.add(Duration(hours: hours)).toIso8601String()));
+        }
+      }
+    }
+
+    setUp(() {
+      now = DateTime(2026, 6, 20, 12);
+      store = AppStore(buildSeed(now), now: () => now);
+      st = store.myStaff!;
+      final mine = store.state.shifts.where((x) => x.staffId == st.id).map((x) => x.id).toSet();
+      store.state.shifts.removeWhere((x) => mine.contains(x.id));
+      store.state.attendance.removeWhere((a) => mine.contains(a.shiftId));
+      st
+        ..wage = 10000
+        ..wages = []
+        ..contract = null
+        ..leftAt = null
+        ..weeklyHolidayAuto = true;
+    });
+
+    int holiday({bool projected = false}) =>
+        store.payslip(st.id, 2026, 6, projected: projected).weeklyHoliday;
+
+    test('개근이고 지각만 했으면 지급', () {
+      work([0, 1, 2, 3, 4], 4); // 20h
+      expect(holiday(), 40000); // 20/40 × 8 × 10,000
+    });
+
+    test('결근한 주는 0', () {
+      work([0, 1, 2, 3], 5); // 20h 출근
+      work([4], 5, attend: false); // 금요일 결근
+      expect(holiday(), 0);
+    });
+
+    test('토요일(일요일 전) 퇴사면 0, 일요일이면 지급', () {
+      work([0, 1, 2, 3, 4], 4);
+      st.leftAt = '2026-06-06';
+      expect(holiday(), 0);
+      st.leftAt = '2026-06-07';
+      expect(holiday(), 40000);
+    });
+
+    test('계약서 주 소정시간이 우선: 14h 면 0, 20h 면 20/40×8×시급', () {
+      work([0, 1, 2, 3, 4], 5); // 실제는 25h
+      Contract c(int h) => Contract(
+          start: '2026-01-01', end: '2026-12-31', wage: 10000, weeklyHours: h, workDays: '월~금');
+      st.contract = c(14);
+      expect(holiday(), 0);
+      st.contract = c(20);
+      expect(holiday(), 40000);
+    });
+
+    test('확정 급여는 진행 중인 주 미지급, 예상 급여는 지급', () {
+      work([0, 1, 2, 3, 4], 4, week: 15); // 6/15~6/19 근무, 일요일 6/21 은 아직
+      expect(holiday(), 0);
+      expect(holiday(projected: true), 40000);
+    });
+
+    test('아직 끝나지 않은 근무는 예상 급여에서 출근할 것으로 본다', () {
+      work([0, 1, 2], 4, week: 15);
+      work([3, 4], 4, attend: false, week: 15); // 6/18·6/19 — 이미 끝난 미출근 → 결근
+      expect(holiday(projected: true), 0);
+      now = DateTime(2026, 6, 15, 9); // 월요일 아침: 아직 아무것도 안 끝남
+      expect(holiday(projected: true), 40000);
+    });
+
+    test('시급 이력: 7/1 부터 새 시급', () {
+      st.wages = [const WageStep('2026-07-01', 12000)];
+      st.wage = 12000;
+      expect(st.wageOn(DateTime(2026, 6, 30)), 12000); // 첫 항목 이전은 wage
+      st.wages = [const WageStep('2000-01-01', 10000), const WageStep('2026-07-01', 12000)];
+      expect(st.wageOn(DateTime(2026, 6, 30)), 10000);
+      expect(st.wageOn(DateTime(2026, 7, 1)), 12000);
+      final e = [
+        entry(DateTime(2026, 6, 30, 10), 5),
+        entry(DateTime(2026, 7, 1, 10), 5),
+      ];
+      final jun = computePayslip(
+          entries: e, year: 2026, month: 6, wageOn: st.wageOn, deduction: Deduction.none);
+      final jul = computePayslip(
+          entries: e, year: 2026, month: 7, wageOn: st.wageOn, deduction: Deduction.none);
+      expect(jun.base, 50000);
+      expect(jul.base, 60000);
+    });
+
+    test('updateStaff 로 시급을 바꾸면 이력이 쌓인다', () {
+      store.updateStaff(st.id, wage: 11000);
+      expect(st.wages.map((w) => w.wage), [10000, 11000]);
+      expect(st.wageOn(DateTime(2026, 6, 19)), 10000);
+      expect(st.wageOn(DateTime(2026, 6, 20)), 11000);
+    });
+  });
+
+  group('주 40시간 연장', () {
+    Payslip calc(List<WorkEntry> e) => computePayslip(
+        entries: e,
+        year: 2026,
+        month: 6,
+        wageOn: (_) => 10000,
+        deduction: Deduction.none,
+        weeklyHolidayAuto: false,
+        premiumApplies: true);
+
+    test('하루 7h × 6일(42h): 2h × 0.5', () {
+      final p = calc([for (var d = 0; d < 6; d++) entry(DateTime(2026, 6, 1 + d, 9), 7)]);
+      expect(p.premium, 10000); // 120분 × 10,000 × 0.5
+    });
+
+    test('하루 10h × 5일: 일 초과 10h 와 주 초과 10h 는 중복 없이 10h', () {
+      final p = calc([for (var d = 0; d < 5; d++) entry(DateTime(2026, 6, 1 + d, 9), 10)]);
+      expect(p.premium, 50000); // 600분 × 10,000 × 0.5
+    });
+
+    test('5인 미만이면 없음', () {
+      final p = computePayslip(
+          entries: [for (var d = 0; d < 6; d++) entry(DateTime(2026, 6, 1 + d, 9), 7)],
+          year: 2026,
+          month: 6,
+          wageOn: (_) => 10000,
+          deduction: Deduction.none);
+      expect(p.premium, 0);
+    });
   });
 }

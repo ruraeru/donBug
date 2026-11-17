@@ -7,6 +7,8 @@ library;
 
 import 'package:flutter/foundation.dart' show debugPrint;
 
+import 'format.dart' show ymd;
+
 enum Role { employee, employer }
 
 enum Deduction {
@@ -422,6 +424,18 @@ class Contract {
       );
 }
 
+/// 시급 이력 한 건: [from] 날짜부터 [wage].
+class WageStep {
+  const WageStep(this.from, this.wage);
+
+  final String from;
+  final int wage;
+
+  Map<String, dynamic> toJson() => {'from': from, 'wage': wage};
+
+  factory WageStep.fromJson(Map<String, dynamic> j) => WageStep(j['from'], j['wage']);
+}
+
 /// 매장 소속 직원. 가입 신청은 status=pending 인 Staff.
 class Staff {
   Staff({
@@ -439,9 +453,12 @@ class Staff {
     this.status = StaffStatus.active,
     this.requestedAt,
     this.contract,
+    this.leftAt,
+    List<WageStep>? wages,
     List<List<String>>? fixedParts,
     List<WorkHours?>? workHours,
-  })  : fixedParts = fixedParts ?? List.generate(7, (_) => <String>[]),
+  })  : wages = wages ?? [],
+        fixedParts = fixedParts ?? List.generate(7, (_) => <String>[]),
         workHours = workHours ?? List.filled(7, null);
 
   final String id;
@@ -458,6 +475,21 @@ class Staff {
   StaffStatus status;
   String? requestedAt;
   Contract? contract;
+
+  /// 퇴사일 'yyyy-MM-dd' (재직 중이면 null).
+  String? leftAt;
+
+  /// 시급 이력(from 오름차순). 비어 있으면 [wage] 하나.
+  List<WageStep> wages;
+
+  /// [day] 의 시급: from ≤ day 인 가장 늦은 항목(같은 날이면 뒤쪽), 없으면 [wage].
+  int wageOn(DateTime day) {
+    final k = ymd(day);
+    for (var i = wages.length - 1; i >= 0; i--) {
+      if (wages[i].from.compareTo(k) <= 0) return wages[i].wage;
+    }
+    return wage;
+  }
 
   /// 알바생 고정 근무 파트 이름 (월~일 7칸).
   List<List<String>> fixedParts;
@@ -482,6 +514,8 @@ class Staff {
         'status': status.name,
         'requestedAt': requestedAt,
         'contract': contract?.toJson(),
+        'leftAt': leftAt,
+        'wages': [for (final w in wages) w.toJson()],
         'fixedParts': fixedParts,
         'workHours': [for (final w in workHours) w?.toJson()],
       };
@@ -501,6 +535,10 @@ class Staff {
         status: _enum(StaffStatus.values, j['status'], StaffStatus.active),
         requestedAt: j['requestedAt'],
         contract: j['contract'] == null ? null : Contract.fromJson(j['contract']),
+        leftAt: j['leftAt'],
+        wages: [
+          for (final w in (j['wages'] as List? ?? const [])) WageStep.fromJson((w as Map).cast<String, dynamic>())
+        ],
         fixedParts: _fixedParts(j['fixedParts']),
         workHours: _workHours(j['workHours']),
       );

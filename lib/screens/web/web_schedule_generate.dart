@@ -12,9 +12,9 @@ import '../../theme.dart';
 import '../../widgets/common.dart';
 import 'web_common.dart';
 
-/// 근무표를 만들 수 있는 달: 이번 달·다음 달. /me/state 가 다음 달 말까지만 주므로 그 뒤 달은 만들면 안 보이고,
+/// 근무표를 만들 수 있는 달: 이번 달 + 3개월(4개). /me/state 가 3개월 뒤 말까지만 주므로 그 뒤 달은 만들면 안 보이고,
 /// 빈 편집기를 저장하면 서버 근무가 지워진다(BE 도 MONTH_TOO_FAR 로 막는다).
-List<DateTime> scheduleMonths(DateTime today) => [for (var i = 0; i < 2; i++) DateTime(today.year, today.month + i)];
+List<DateTime> scheduleMonths(DateTime today) => [for (var i = 0; i < 4; i++) DateTime(today.year, today.month + i)];
 
 String monthLabel(DateTime m) => '${m.year}년 ${m.month}월';
 
