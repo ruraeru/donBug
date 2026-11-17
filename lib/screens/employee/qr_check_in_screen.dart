@@ -158,12 +158,15 @@ class _QrCheckInScreenState extends State<QrCheckInScreen> {
                           key: const ValueKey('qr-camera'),
                           width: 260,
                           height: 260,
-                          clipBehavior: Clip.antiAlias,
+                          // 카메라 화면이 테두리를 덮지 않게 테두리 안쪽(4px)에서 따로 잘라 넣는다.
+                          padding: const EdgeInsets.all(4),
                           decoration: BoxDecoration(
                             border: Border.all(color: AppColors.primary, width: 4),
                             borderRadius: BorderRadius.circular(28),
                           ),
-                          child: MobileScanner(
+                          child: ClipRRect(
+                            borderRadius: BorderRadius.circular(24),
+                            child: MobileScanner(
                             onDetect: _detected,
                             errorBuilder: (context, e) => Center(
                               child: Padding(
@@ -173,6 +176,7 @@ class _QrCheckInScreenState extends State<QrCheckInScreen> {
                                     style: AppText.style(13, FontWeight.w500, AppColors.onPrimary)),
                               ),
                             ),
+                          ),
                           ),
                         )
                       else
