@@ -465,9 +465,18 @@ class AppStore extends ChangeNotifier {
     final to = mondayOf(DateTime(year, month + 1, 0)).add(const Duration(days: 7));
     final entries = <WorkEntry>[];
     var missing = 0;
+    // 주(월요일 키)별 주휴 근거: 예정 소정 분, 끝난 근무 결근 여부.
+    final stdMin = <DateTime, int>{}, absent = <DateTime, bool>{};
     for (final s in scheduleOfStaff(staffId)) {
       final day = parseYmd(s.date);
       if (day.isBefore(from) || !day.isBefore(to)) continue;
+      final monday = mondayOf(day);
+      if (s.kind == ShiftKind.leave) {
+        stdMin[monday] = (stdMin[monday] ?? 0) + s.scheduledMinutes;
+      } else if (s.isWork && !s.isSubstitute) {
+        stdMin[monday] = (stdMin[monday] ?? 0) + s.scheduledMinutes;
+        if (shiftEnd(s).isBefore(now) && attendanceFor(s.id) == null) absent[monday] = true;
+      }
       if (s.kind == ShiftKind.leave) {
         // 연차는 소정 시간만큼 유급. 지난 연차는 확정, 앞으로의 연차는 예상에만.
         final past = shiftEnd(s).isBefore(now);
@@ -500,11 +509,24 @@ class AppStore extends ChangeNotifier {
       }
     }
     final st = storeById(staff.storeId)!;
+    final weekBasis = <DateTime, WeekBasis>{};
+    for (var monday = from; monday.isBefore(to); monday = monday.add(const Duration(days: 7))) {
+      final sunday = monday.add(const Duration(days: 6));
+      // 계약서 소정시간이 우선이지만, 그 주에 예정 근무가 하나도 없으면 주휴 없음.
+      final std = staff.contract != null && stdMin.containsKey(monday)
+          ? staff.contract!.weeklyHours * 60
+          : (stdMin[monday] ?? 0);
+      final stays = staff.leftAt == null || !parseYmd(staff.leftAt!).isBefore(sunday);
+      final over = !monday.add(const Duration(days: 7)).isAfter(now);
+      weekBasis[monday] = WeekBasis(
+          std, std >= 15 * 60 && absent[monday] != true && stays && (projected || over));
+    }
     return computePayslip(
       entries: entries,
       year: year,
       month: month,
-      wage: staff.wage,
+      wageOn: staff.wageOn,
+      weekBasis: weekBasis,
       deduction: staff.deduction,
       weeklyHolidayAuto: staff.weeklyHolidayAuto,
       premiumApplies: !st.isSmall && staff.premium,
@@ -1571,6 +1593,10 @@ class AppStore extends ChangeNotifier {
     if (kind != null) s.kind = kind;
     if (fixedParts != null) s.fixedParts = [for (final l in fixedParts) [...l]];
     if (workHours != null) s.workHours = [...workHours];
+    if (wage != null && wage != s.wage) {
+      if (s.wages.isEmpty) s.wages.add(WageStep('2000-01-01', s.wage));
+      s.wages.add(WageStep(ymd(today), wage));
+    }
     if (wage != null) s.wage = wage;
     if (deduction != null) s.deduction = deduction;
     if (weeklyHolidayAuto != null) s.weeklyHolidayAuto = weeklyHolidayAuto;
@@ -1802,6 +1828,9 @@ class AppStore extends ChangeNotifier {
       ..ownerSignedAt = _iso(now)
       ..employeeSignedAt = null;
     s.contract = c;
+    if (s.wages.isEmpty) s.wages.add(WageStep('2000-01-01', s.wage));
+    s.wages.add(WageStep(c.start, c.wage));
+    s.wage = c.wage;
     _notifyStaff(staffId, 'contract', '근로계약서 서명 요청', body: '내 서류에서 확인하고 서명해 주세요');
     _commit();
     _remote((api) => api.put('${_sp(s.storeId)}/staff/$staffId/contract', {
