@@ -40,4 +40,24 @@ void main() {
     await s.reload();
     expect(calls, ['http://x/api/v1/me/state?storeId=gone', 'http://x/api/v1/me/state']);
   });
+
+  test('로그인 직후 시드 매장 id(st-cafe)로 400 이 와도 매장 지정 없이 다시 읽는다', () async {
+    SharedPreferences.setMockInitialValues({'donbug.access': 'a', 'donbug.refresh': 'r'});
+    final prefs = await SharedPreferences.getInstance();
+    final calls = <String>[];
+    final body = utf8.encode(jsonEncode(buildSeed(_now).toJson()));
+    final api = ApiClient(
+        prefs: prefs,
+        baseUrl: 'http://x',
+        client: MockClient((req) async {
+          calls.add(req.url.toString());
+          if (req.url.queryParameters.containsKey('storeId')) {
+            return http.Response('{"code":"bad_request","message":"bad storeId"}', 400);
+          }
+          return http.Response.bytes(body, 200);
+        }));
+    final s = AppStore(buildSeed(_now), now: () => _now, api: api);
+    await s.reload();
+    expect(calls, ['http://x/api/v1/me/state?storeId=st-cafe', 'http://x/api/v1/me/state']);
+  });
 }

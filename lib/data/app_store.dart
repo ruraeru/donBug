@@ -125,8 +125,9 @@ class AppStore extends ChangeNotifier {
       j = await a.get('/api/v1/me/state${sid.isEmpty ? '' : '?storeId=$sid'}')
           as Map<String, dynamic>;
     } on ApiException catch (e) {
-      // 403: 내보내졌거나 거절돼 더는 못 보는 매장. 매장 지정 없이 다시 읽어 서버가 정한 매장으로.
-      if (e.status != 403 || sid.isEmpty) rethrow;
+      // 4xx: 내보내졌거나 거절된 매장(403), 없는 매장(404), 로그인 직후 데모 시드 id 'st-cafe'(400).
+      // 매장 지정 없이 다시 읽어 서버가 정한 매장으로.
+      if (sid.isEmpty || e.status < 400 || e.status >= 500) rethrow;
       j = await a.get('/api/v1/me/state') as Map<String, dynamic>;
     }
     // 늦게 온 응답: 기다리는 사이 초안 편집이 생겼거나 더 나중에 시작한 reload 가 있으면 버린다.
