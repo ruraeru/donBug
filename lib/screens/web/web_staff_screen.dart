@@ -319,15 +319,16 @@ class _StaffSheetState extends State<_StaffSheet> {
               ),
             ]),
           ),
-          webField(
-              '기본 파트',
-              WebSelect<String>(
-                value: store.store.parts.any((x) => x.name == s.part)
-                    ? s.part
-                    : store.store.parts.first.name,
-                items: [for (final x in store.store.parts) (x.name, x.name)],
-                onChanged: (v) => store.updateStaff(s.id, part: v),
-              )),
+          if (store.store.parts.isNotEmpty)
+            webField(
+                '기본 파트',
+                WebSelect<String>(
+                  value: store.store.parts.any((x) => x.name == s.part)
+                      ? s.part
+                      : store.store.parts.first.name,
+                  items: [for (final x in store.store.parts) (x.name, x.name)],
+                  onChanged: (v) => store.updateStaff(s.id, part: v),
+                )),
         ],
         FixedWorkEditor(key: ValueKey('fixed${s.id}${s.kind.flex}'), staffId: s.id),
         webField(

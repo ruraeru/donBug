@@ -223,6 +223,13 @@ Future<void> showContractDialog(BuildContext context, {String? staffId}) {
           workDays: days.text.trim(),
           duty: duty.text.trim(),
         );
+        if (who.contract?.signed == true) {
+          final ok = await showConfirmDialog(ctx,
+              title: '계약서를 다시 보낼까요?',
+              message: '이미 서명 완료된 계약서가 있어요. 새로 보내면 직원이 다시 서명해야 해요.',
+              confirmLabel: '다시 보내기');
+          if (!ok) return;
+        }
         if (store.remote) {
           final png = await SignatureInput.png(sig);
           if (png == null) return set(() => error = '서명해 주세요');

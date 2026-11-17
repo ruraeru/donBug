@@ -59,7 +59,9 @@ class _QrCheckInScreenState extends State<QrCheckInScreen> {
   // 데모: 출근 기록을 만들고 출근 완료 화면으로 교체.
   void _scanned(BuildContext context) {
     final store = AppScope.read(context);
-    final block = store.clockInBlock(store.shiftById(shiftId)!);
+    final shift = store.shiftById(shiftId);
+    if (shift == null) return;
+    final block = store.clockInBlock(shift);
     if (block != null) return showToast(context, block);
     _done(store.clockIn(shiftId).id);
   }
@@ -69,10 +71,17 @@ class _QrCheckInScreenState extends State<QrCheckInScreen> {
     final token = capture.barcodes.map((b) => b.rawValue).whereType<String>().firstOrNull;
     if (token == null || _busy) return;
     final store = AppScope.read(context);
-    final block = store.clockInBlock(store.shiftById(shiftId)!);
-    if (block != null) return showToast(context, block);
+    final shift = store.shiftById(shiftId);
+    if (shift == null) return;
     _busy = true;
+    final block = store.clockInBlock(shift);
     try {
+      if (block != null) {
+        showToast(context, block);
+        await Future<void>.delayed(const Duration(seconds: 2));
+        _busy = false;
+        return;
+      }
       final a = await store.clockInRemote(shiftId, token);
       if (mounted) _done(a.id);
     } on ApiException catch (e) {
@@ -149,12 +158,15 @@ class _QrCheckInScreenState extends State<QrCheckInScreen> {
                           key: const ValueKey('qr-camera'),
                           width: 260,
                           height: 260,
-                          clipBehavior: Clip.antiAlias,
+                          // 카메라 화면이 테두리를 덮지 않게 테두리 안쪽(4px)에서 따로 잘라 넣는다.
+                          padding: const EdgeInsets.all(4),
                           decoration: BoxDecoration(
                             border: Border.all(color: AppColors.primary, width: 4),
                             borderRadius: BorderRadius.circular(28),
                           ),
-                          child: MobileScanner(
+                          child: ClipRRect(
+                            borderRadius: BorderRadius.circular(24),
+                            child: MobileScanner(
                             onDetect: _detected,
                             errorBuilder: (context, e) => Center(
                               child: Padding(
@@ -164,6 +176,7 @@ class _QrCheckInScreenState extends State<QrCheckInScreen> {
                                     style: AppText.style(13, FontWeight.w500, AppColors.onPrimary)),
                               ),
                             ),
+                          ),
                           ),
                         )
                       else

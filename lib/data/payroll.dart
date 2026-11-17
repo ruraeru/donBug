@@ -4,6 +4,7 @@
 /// - 주휴수당: 그 주(월–일) 대타 제외 근무가 15시간 이상이면 min(주시간, 40) / 40 × 8 × 시급.
 ///   주의 일요일이 속한 달에 지급한다.
 /// - 가산수당(5인 이상 + 직원 설정): 야간(22–06)과 하루 8시간 초과분에 0.5배 추가. 휴일가산은 0.
+///   연차(leave)는 가산 제외. 야간 분은 실근로 분(휴게 제외)을 넘지 않게 자른다(휴게 시각 모름). BE PayrollCalculator 와 같은 규칙.
 /// - 공제: 3.3%(원 단위 내림) · 4대보험(근사 요율) · 없음.
 library;
 
@@ -26,6 +27,7 @@ class WorkEntry {
     this.breakMin = 0,
     this.isSubstitute = false,
     this.planned = false,
+    this.leave = false,
   });
 
   final DateTime start;
@@ -36,11 +38,14 @@ class WorkEntry {
   /// 아직 일하지 않은 예정 근무(예상 급여 계산용).
   final bool planned;
 
+  /// 연차(유급 소정 시간). 가산수당 대상 아님.
+  final bool leave;
+
   DateTime get day => dayOf(start);
 
   int get minutes {
     final span = end.difference(start).inMinutes;
-    return max(0, span > breakMin ? span - breakMin : span);
+    return max(0, span - breakMin);
   }
 
   /// 22:00–06:00 과 겹치는 분.
@@ -67,6 +72,7 @@ class Payslip {
     required this.premium,
     required this.deduction,
     required this.entries,
+    this.missingClockOut = 0,
   });
 
   final int minutes;
@@ -77,6 +83,9 @@ class Payslip {
 
   /// 그 달에 속한 근무(날짜순).
   final List<WorkEntry> entries;
+
+  /// 이 달 지난 근무 중 출근만 있고 퇴근 기록이 없어 0원으로 빠진 건수.
+  final int missingClockOut;
 
   int get gross => base + weeklyHoliday + premium;
   int get net => gross - deduction;
@@ -106,6 +115,7 @@ Payslip computePayslip({
   required Deduction deduction,
   bool weeklyHolidayAuto = true,
   bool premiumApplies = false,
+  int missingClockOut = 0,
 }) {
   bool inMonth(DateTime d) => d.year == year && d.month == month;
   final monthEntries = entries.where((e) => inMonth(e.day)).toList()
@@ -131,8 +141,8 @@ Payslip computePayslip({
   var premium = 0;
   if (premiumApplies) {
     final perDay = <DateTime, int>{};
-    for (final e in monthEntries) {
-      premium += payFor(e.nightMinutes, wage) ~/ 2;
+    for (final e in monthEntries.where((e) => !e.leave)) {
+      premium += payFor(min(e.nightMinutes, e.minutes), wage) ~/ 2;
       perDay[e.day] = (perDay[e.day] ?? 0) + e.minutes;
     }
     for (final m in perDay.values) {
@@ -148,5 +158,6 @@ Payslip computePayslip({
     premium: premium,
     deduction: deductionOf(gross, deduction),
     entries: monthEntries,
+    missingClockOut: missingClockOut,
   );
 }

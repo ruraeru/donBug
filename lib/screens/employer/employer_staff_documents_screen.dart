@@ -38,7 +38,7 @@ class EmployerStaffDocumentsScreen extends StatelessWidget {
                   clipBehavior: Clip.antiAlias,
                   decoration: BoxDecoration(color: AppColors.bg, borderRadius: BorderRadius.circular(14)),
                   child: store.remote && p.certHasPhoto
-                      ? Image.network(store.staffCertPhotoUrl(s),
+                      ? Image.network('${store.staffCertPhotoUrl(s)}?v=${p.certExpiry}-${p.certAlertDays.join(',')}',
                           headers: store.api!.authHeaders,
                           fit: BoxFit.cover,
                           width: double.infinity,

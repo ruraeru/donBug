@@ -33,16 +33,30 @@ class _EmployerNoticeScreenState extends State<EmployerNoticeScreen> {
     super.dispose();
   }
 
-  void _publish(AppStore store) {
+  bool _sending = false;
+
+  Future<void> _publish(AppStore store) async {
+    if (_sending) return;
     if (_title.text.trim().isEmpty || _body.text.trim().isEmpty) {
       return showToast(context, '제목과 내용을 입력해 주세요');
     }
-    final n = AppScope.read(context).publishNotice(
-      title: _title.text.trim(),
-      body: _body.text.trim(),
-      required: _required ?? store.store.noticeRequiredDefault,
-      category: _categories[_category],
-    );
+    setState(() => _sending = true);
+    final Notice n;
+    try {
+      n = await AppScope.read(context).publishNoticeRemote(
+        title: _title.text.trim(),
+        body: _body.text.trim(),
+        required: _required ?? store.store.noticeRequiredDefault,
+        category: _categories[_category],
+      );
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _sending = false);
+      showToast(context, remoteErrorText(e));
+      return;
+    }
+    if (!mounted) return;
+    setState(() => _sending = false);
     _title.clear();
     _body.clear();
     setState(() => _required = null);

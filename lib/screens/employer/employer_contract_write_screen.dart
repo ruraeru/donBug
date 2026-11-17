@@ -110,7 +110,7 @@ class _EmployerContractWriteScreenState extends State<EmployerContractWriteScree
     }
   }
 
-  void _submit() {
+  Future<void> _submit() async {
     if (_busy) return;
     if (_staffId == null) return showToast(context, '직원을 골라 주세요');
     if (_missing.isNotEmpty) return showToast(context, '${_missing.join(', ')}을(를) 입력해 주세요');
@@ -127,6 +127,13 @@ class _EmployerContractWriteScreenState extends State<EmployerContractWriteScree
       workDays: _days.text.trim(),
       duty: _duty.text.trim(),
     );
+    if (AppScope.read(context).staffById(_staffId)?.contract?.signed == true) {
+      final ok = await showConfirmDialog(context,
+          title: '계약서를 다시 보낼까요?',
+          message: '이미 서명 완료된 계약서가 있어요. 새로 보내면 직원이 다시 서명해야 해요.',
+          confirmLabel: '다시 보내기');
+      if (!ok || !mounted) return;
+    }
     if (AppScope.read(context).remote) return unawaited(_sendRemote(c));
     AppScope.read(context).createContract(_staffId!, c);
     _done();

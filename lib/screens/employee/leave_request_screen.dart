@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../data/app_scope.dart';
 import '../../data/format.dart';
+import '../../data/app_store.dart';
 import '../../data/models.dart';
 import '../../theme.dart';
 import '../../widgets/common.dart';
@@ -34,12 +35,24 @@ class _LeaveRequestScreenState extends State<LeaveRequestScreen> {
     super.dispose();
   }
 
-  void _submit(List<Shift> candidates) {
+  bool _sending = false;
+
+  Future<void> _submit(List<Shift> candidates) async {
+    if (_sending) return;
     final store = AppScope.read(context);
     final id = _shiftId ?? candidates.firstOrNull?.id;
     if (id == null) return showToast(context, '신청할 근무가 없어요');
     if (_reason.text.trim().isEmpty) return showToast(context, '사유를 입력해 주세요');
-    final r = store.requestSubstitute(id, reason: _reason.text.trim(), notifyPeers: _notify);
+    setState(() => _sending = true);
+    final SubstituteRequest r;
+    try {
+      r = await store.requestSubstituteRemote(id, reason: _reason.text.trim(), notifyPeers: _notify);
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _sending = false);
+      return showToast(context, remoteErrorText(e));
+    }
+    if (!mounted) return;
     Navigator.pushReplacement(
       context,
       MaterialPageRoute(
