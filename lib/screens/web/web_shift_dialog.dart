@@ -220,7 +220,7 @@ Future<void> showShiftDialog(BuildContext context,
           ],
           if (kind == ShiftKind.leave) ...[
             const SizedBox(height: 10),
-            Text('연차는 유급 8시간으로 계산돼요. 이날 근무는 삭제돼요.',
+            Text('연차는 입력한 근무 시각만큼(휴게 제외) 유급으로 계산돼요. 이날 근무는 삭제돼요.',
                 style: AppText.style(12, FontWeight.w400, AppColors.textSecondary)),
           ],
           if (kind == ShiftKind.off) ...[

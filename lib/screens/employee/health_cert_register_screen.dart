@@ -106,6 +106,7 @@ class _HealthCertRegisterScreenState extends State<HealthCertRegisterScreen> {
   void _submit() {
     if (_busy) return;
     if (!_photo) return showToast(context, '보건증 사진을 올려 주세요');
+    if (_days.isEmpty) return showToast(context, '알림 시점을 하나 이상 골라 주세요');
     if (AppScope.read(context).remote) return unawaited(_submitRemote());
     AppScope.read(context).uploadHealthCert(
         expiry: _expiry, alertDays: _days.toList()..sort((a, b) => b - a));

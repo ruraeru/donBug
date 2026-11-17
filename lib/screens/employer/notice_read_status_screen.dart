@@ -84,7 +84,7 @@ class NoticeReadStatusScreen extends StatelessWidget {
         ],
       ),
       bottomNavigationBar: BottomBar(children: [
-        if (unread.isEmpty)
+        if (unread.isEmpty || !n.required)
           AppButton('닫기', variant: AppButtonVariant.outline, onPressed: () => Navigator.pop(context))
         else
           AppButton(

@@ -14,6 +14,7 @@ import '../../theme.dart';
 import '../../widgets/common.dart';
 import 'web_common.dart';
 import 'web_download.dart';
+import 'web_url.dart';
 import 'web_schedule_views.dart';
 import 'web_schedules_screen.dart' show parseMonth, WebSchedulesScreen;
 
@@ -24,7 +25,7 @@ class ScheduleSummary {
   final int workMin, cost, holidayCount, holidayPay;
 }
 
-/// [month] 에 속한 근무로 계산. 연차는 소정 시간만큼 유급, 시간 미정·휴무는 0. 주휴수당은 알바생만, 그 주(월~일) 근무 합으로.
+/// 근무시간·기본급은 [month] 날짜 분만. 주휴수당은 급여 계산처럼 일요일이 [month] 에 속한 주만, 주 전체(앞뒤 달 포함, 상태에 있는 근무 기준) 분으로.
 ScheduleSummary scheduleSummary(AppStore store, DateTime month) {
   final key = ym(month);
   var workMin = 0, cost = 0, holidayPay = 0;
@@ -32,16 +33,20 @@ ScheduleSummary scheduleSummary(AppStore store, DateTime month) {
   for (final st in store.activeStaff) {
     final weeks = <DateTime, int>{};
     for (final s in store.scheduleOfStaff(st.id)) {
-      if (!s.date.startsWith(key) || s.timeTbd || s.kind == ShiftKind.off) continue;
+      if (s.timeTbd || s.kind == ShiftKind.off) continue;
       final m = s.scheduledMinutes;
-      workMin += m;
-      cost += (m * st.wage / 60).round();
+      if (s.date.startsWith(key)) {
+        workMin += m;
+        cost += (m * st.wage / 60).round();
+      }
       final mon = mondayOf(parseYmd(s.date));
       weeks[mon] = (weeks[mon] ?? 0) + m;
     }
     if (st.kind.flex) continue;
-    for (final m in weeks.values) {
-      final pay = weeklyHolidayPay(m, st.wage);
+    for (final e in weeks.entries) {
+      final sun = e.key.add(const Duration(days: 6));
+      if (sun.year != month.year || sun.month != month.month) continue;
+      final pay = weeklyHolidayPay(e.value, st.wage);
       if (pay > 0) {
         holidayStaff.add(st.id);
         holidayPay += pay;
@@ -93,6 +98,7 @@ class _WebScheduleScreenState extends State<WebScheduleScreen> {
   @override
   void dispose() {
     final store = _store;
+    setLeaveWarning(false);
     // 다른 메뉴로 나가면 저장하지 않은 변경은 버린다(나가기 전 확인은 버튼 쪽에서).
     Future.microtask(() {
       if (store.scheduleDirty) store.discardScheduleDraft();
@@ -234,6 +240,7 @@ class _WebScheduleScreenState extends State<WebScheduleScreen> {
     final monday = mondayOf(day);
     final tbd = store.tbdCount(month.year, month.month);
     final dirty = store.scheduleDirty;
+    setLeaveWarning(dirty);
     final hasPrev = store.monthSchedule(ym(DateTime(month.year, month.month - 1))) != null;
     final hasNext = store.monthSchedule(ym(DateTime(month.year, month.month + 1))) != null;
 
@@ -316,8 +323,8 @@ class _WebScheduleScreenState extends State<WebScheduleScreen> {
                 _day = d;
                 _view = 3;
               })),
-      1 => PartWeekView(monday: monday),
-      2 => PeopleWeekView(monday: monday),
+      1 => PartWeekView(monday: monday, month: month),
+      2 => PeopleWeekView(monday: monday, month: month),
       _ => DayTimelineView(day: day),
     };
 
@@ -419,7 +426,8 @@ class _WebScheduleScreenState extends State<WebScheduleScreen> {
                 tooltip: tbd > 0 ? tbdTip : null,
                 onPressed: tbd > 0 || confirmed || _busy ? null : _confirm),
           ],
-          children: [const SizedBox(height: 16), body],
+          // 저장 요청 중 편집은 응답 뒤 reload 로 덮여 사라지므로 막는다.
+          children: [const SizedBox(height: 16), IgnorePointer(ignoring: _busy, child: body)],
         ),
       ),
     );

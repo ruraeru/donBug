@@ -59,7 +59,9 @@ class _QrCheckInScreenState extends State<QrCheckInScreen> {
   // 데모: 출근 기록을 만들고 출근 완료 화면으로 교체.
   void _scanned(BuildContext context) {
     final store = AppScope.read(context);
-    final block = store.clockInBlock(store.shiftById(shiftId)!);
+    final shift = store.shiftById(shiftId);
+    if (shift == null) return;
+    final block = store.clockInBlock(shift);
     if (block != null) return showToast(context, block);
     _done(store.clockIn(shiftId).id);
   }
@@ -69,10 +71,17 @@ class _QrCheckInScreenState extends State<QrCheckInScreen> {
     final token = capture.barcodes.map((b) => b.rawValue).whereType<String>().firstOrNull;
     if (token == null || _busy) return;
     final store = AppScope.read(context);
-    final block = store.clockInBlock(store.shiftById(shiftId)!);
-    if (block != null) return showToast(context, block);
+    final shift = store.shiftById(shiftId);
+    if (shift == null) return;
     _busy = true;
+    final block = store.clockInBlock(shift);
     try {
+      if (block != null) {
+        showToast(context, block);
+        await Future<void>.delayed(const Duration(seconds: 2));
+        _busy = false;
+        return;
+      }
       final a = await store.clockInRemote(shiftId, token);
       if (mounted) _done(a.id);
     } on ApiException catch (e) {

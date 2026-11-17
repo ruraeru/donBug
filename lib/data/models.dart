@@ -5,6 +5,8 @@
 /// - 시각(출근·생성 시각)만 ISO 문자열.
 library;
 
+import 'package:flutter/foundation.dart' show debugPrint;
+
 enum Role { employee, employer }
 
 enum Deduction {
@@ -580,7 +582,7 @@ class Shift {
         endMin: j['endMin'],
         part: j['part'],
         breakMin: j['breakMin'],
-        isSubstitute: j['isSubstitute'],
+        isSubstitute: j['isSubstitute'] ?? false,
         originalStaffId: j['originalStaffId'],
         kind: _enum(ShiftKind.values, j['kind'], ShiftKind.work),
         timeTbd: j['timeTbd'] ?? false,
@@ -890,8 +892,18 @@ class AppState {
   /// 버전이 다르면 null (호출하는 쪽에서 시드로 되돌린다).
   static AppState? fromJson(Map<String, dynamic> j) {
     if (j['v'] != version) return null;
-    List<T> list<T>(String k, T Function(Map<String, dynamic>) f) =>
-        [for (final x in j[k] as List) f((x as Map).cast<String, dynamic>())];
+    // 깨진 행 하나가 상태 전체를 막지 않게 그 행만 버린다.
+    List<T> list<T>(String k, T Function(Map<String, dynamic>) f) {
+      final out = <T>[];
+      for (final x in (j[k] as List?) ?? const []) {
+        try {
+          out.add(f((x as Map).cast<String, dynamic>()));
+        } catch (e) {
+          debugPrint('AppState.$k 행 파싱 실패: $e');
+        }
+      }
+      return out;
+    }
     return AppState(
       nextId: j['nextId'],
       session: Session.fromJson((j['session'] as Map).cast<String, dynamic>()),

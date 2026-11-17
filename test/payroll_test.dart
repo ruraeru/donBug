@@ -54,7 +54,7 @@ void main() {
           premiumApplies: premium,
         );
     expect(calc(false).premium, 0);
-    expect(calc(true).premium, 40000); // 8h × 10,000 × 0.5
+    expect(calc(true).premium, 35000); // 야간 min(480, 실근로 420)분 × 10,000 × 0.5
   });
 
   test('3.3% 공제는 원 단위 내림', () {
@@ -74,5 +74,31 @@ void main() {
         entries: entries, year: 2026, month: 5, wage: 10000, deduction: Deduction.none);
     expect(april.weeklyHoliday, 0);
     expect(may.weeklyHoliday, 40000); // 20h → 20/40 × 8 × 10,000
+  });
+
+  test('근무가 휴게보다 짧으면 0분', () {
+    final e = WorkEntry(
+        start: DateTime(2026, 5, 11, 14), end: DateTime(2026, 5, 11, 14, 20), breakMin: 30);
+    expect(e.minutes, 0);
+  });
+
+  test('연차는 가산수당 제외, 야간 분은 실근로 분 이하', () {
+    final leave = WorkEntry(
+        start: DateTime(2026, 5, 12, 18),
+        end: DateTime(2026, 5, 13, 3),
+        breakMin: 60,
+        leave: true);
+    final work = WorkEntry(
+        start: DateTime(2026, 5, 11, 22), end: DateTime(2026, 5, 12, 2), breakMin: 60);
+    final p = computePayslip(
+      entries: [leave, work],
+      year: 2026,
+      month: 5,
+      wage: 10000,
+      deduction: Deduction.none,
+      premiumApplies: true,
+    );
+    // 근무 4h-휴게 1h = 180분 → 야간 min(240,180)=180분 × 10,000 × 0.5
+    expect(p.premium, 15000);
   });
 }

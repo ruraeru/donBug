@@ -32,7 +32,11 @@ class _EmployeeSalaryScreenState extends State<EmployeeSalaryScreen> {
             padding: const EdgeInsets.fromLTRB(20, 12, 12, 12),
             child: Row(children: [
               Expanded(child: Text('급여', style: AppText.style(24, FontWeight.w500))),
-              MonthNav(month: month, max: store.today, onChanged: (m) => setState(() => _month = m)),
+              MonthNav(
+                  month: month,
+                  max: store.today,
+                  min: DateTime(store.today.year, store.today.month - 1),
+                  onChanged: (m) => setState(() => _month = m)),
             ]),
           ),
           Expanded(

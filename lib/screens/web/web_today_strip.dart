@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 
 import '../../data/app_scope.dart';
@@ -122,7 +124,7 @@ class TodayStrip extends StatelessWidget {
 
   Widget _bar(String name, Shift s, Color tone, double w, int row) {
     final left = _x(s.startMin, w);
-    final right = _x(s.endMin, w);
+    final right = _x(s.endAbs, w); // 야간 근무는 24시에서 자른다(_x 가 clamp)
     final label = Row(mainAxisSize: MainAxisSize.min, children: [
       Text(name, style: AppText.style(12, FontWeight.w500, tone)),
       const SizedBox(width: 6),
@@ -142,7 +144,7 @@ class TodayStrip extends StatelessWidget {
     );
     return Positioned(
       left: left,
-      width: (right - left).clamp(24, w - left),
+      width: math.max(24.0, math.min(right - left, w - left)),
       top: row * (_row + 4),
       child: Tooltip(
         message: '$name ${hm(s.startMin)}–${hm(s.endMin)}',
