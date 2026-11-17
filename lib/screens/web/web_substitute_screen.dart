@@ -81,7 +81,13 @@ class _RequestCard extends StatelessWidget {
       confirmLabel: '승인',
     );
     if (!ok || !context.mounted) return;
-    store.approveSubstitute(r.id);
+    try {
+      await store.approveSubstituteRemote(r.id);
+    } catch (e) {
+      if (context.mounted) showToast(context, remoteErrorText(e));
+      return;
+    }
+    if (!context.mounted) return;
     showToast(context, '대타를 승인했어요');
   }
 

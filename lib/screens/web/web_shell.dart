@@ -65,7 +65,15 @@ class _WebShellState extends State<WebShell> {
   final _contentKey = GlobalKey();
   int _page = 0;
 
-  void _select(int i) {
+  Future<void> _select(int i) async {
+    if (i != _page && AppScope.read(context).scheduleDirty) {
+      final ok = await showConfirmDialog(context,
+          title: '저장하지 않은 변경 사항이 있어요',
+          message: '이동하면 저장하지 않은 근무표 변경 사항이 사라져요.',
+          confirmLabel: '이동',
+          confirmVariant: AppButtonVariant.danger);
+      if (!ok || !mounted) return;
+    }
     if (_scaffold.currentState?.isDrawerOpen ?? false) Navigator.pop(context);
     setState(() => _page = i);
   }

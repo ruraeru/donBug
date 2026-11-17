@@ -933,7 +933,7 @@ class PeriodNav extends StatelessWidget {
 
 /// '‹ 5월 ›' 월 이동.
 class MonthNav extends StatelessWidget {
-  const MonthNav({super.key, required this.month, required this.onChanged, this.max});
+  const MonthNav({super.key, required this.month, required this.onChanged, this.max, this.min});
 
   final DateTime month;
   final ValueChanged<DateTime> onChanged;
@@ -941,15 +941,19 @@ class MonthNav extends StatelessWidget {
   /// 이 달 이후로는 못 간다.
   final DateTime? max;
 
+  /// 이 달 이전으로는 못 간다(서버가 내려주는 근무 기록 범위).
+  final DateTime? min;
+
   @override
   Widget build(BuildContext context) {
+    final canPrev = min == null || DateTime(month.year, month.month).isAfter(DateTime(min!.year, min!.month));
     final canNext = max == null || DateTime(month.year, month.month + 1).isBefore(
         DateTime(max!.year, max!.month + 1));
     return PeriodNav(
       label: '${month.month}월',
       prevTip: '이전 달',
       nextTip: '다음 달',
-      onPrev: () => onChanged(DateTime(month.year, month.month - 1)),
+      onPrev: canPrev ? () => onChanged(DateTime(month.year, month.month - 1)) : null,
       onNext: canNext ? () => onChanged(DateTime(month.year, month.month + 1)) : null,
     );
   }

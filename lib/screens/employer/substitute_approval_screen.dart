@@ -31,8 +31,14 @@ class SubstituteApprovalScreen extends StatelessWidget {
     showToastOn(messenger, '대타 요청을 거절했어요');
   }
 
-  void _approve(BuildContext context, SubstituteRequest r) {
-    AppScope.read(context).approveSubstitute(r.id);
+  Future<void> _approve(BuildContext context, SubstituteRequest r) async {
+    try {
+      await AppScope.read(context).approveSubstituteRemote(r.id);
+    } catch (e) {
+      if (context.mounted) showToast(context, remoteErrorText(e));
+      return;
+    }
+    if (!context.mounted) return;
     Navigator.pushReplacement(
         context, MaterialPageRoute(builder: (_) => SubstituteDoneScreen(requestId: r.id)));
   }

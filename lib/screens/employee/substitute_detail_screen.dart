@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../data/app_scope.dart';
 import '../../data/format.dart';
+import '../../data/app_store.dart';
 import '../../data/models.dart';
 import '../../data/payroll.dart';
 import '../../theme.dart';
@@ -43,8 +44,14 @@ class SubstituteDetailScreen extends StatelessWidget {
     } else {
       button = AppButton(
         '지원하기',
-        onPressed: () {
-          AppScope.read(context).applySubstitute(r.id);
+        onPressed: () async {
+          try {
+            await AppScope.read(context).applySubstituteRemote(r.id);
+          } catch (e) {
+            if (context.mounted) showToast(context, remoteErrorText(e));
+            return;
+          }
+          if (!context.mounted) return;
           Navigator.pushReplacement(
             context,
             MaterialPageRoute(

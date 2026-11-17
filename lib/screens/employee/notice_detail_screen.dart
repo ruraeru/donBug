@@ -33,8 +33,6 @@ class _NoticeDetailScreenState extends State<NoticeDetailScreen> {
     final n = store.noticeById(widget.noticeId);
     if (n == null) return const MissingScreen(title: '공지');
     final read = store.isNoticeReadByMe(n);
-    final active = store.activeStaff.length;
-    final readCount = active - store.unreadStaffOf(n).length;
     return Scaffold(
       appBar: const AppHeader('공지'),
       body: ListView(
@@ -58,19 +56,6 @@ class _NoticeDetailScreenState extends State<NoticeDetailScreen> {
                 const Divider(height: 1, color: AppColors.border),
                 const SizedBox(height: 12),
                 Text(n.body, style: AppText.style(15).copyWith(height: 1.6)),
-              ],
-            ),
-          ),
-          const SizedBox(height: 16),
-          AppCard(
-            child: Row(
-              children: [
-                Expanded(
-                  child: Text('확인 현황',
-                      style: AppText.style(14, FontWeight.w500, AppColors.textSecondary)),
-                ),
-                Text('$readCount / $active명',
-                    style: AppText.style(14, FontWeight.w500, AppColors.textSecondary)),
               ],
             ),
           ),

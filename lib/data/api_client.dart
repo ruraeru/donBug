@@ -98,8 +98,9 @@ class ApiClient {
       return _http.send(req).then(http.Response.fromStream);
     }
 
+    final used = _access;
     var res = await send();
-    if (res.statusCode == 401 && await _tryRefresh()) res = await send();
+    if (res.statusCode == 401 && await _refreshed(used)) res = await send();
     if (res.statusCode == 401) {
       await clearTokens();
       onUnauthorized?.call();
@@ -110,8 +111,15 @@ class ApiClient {
   }
 
   Future<dynamic> _call(String method, String path, [Object? body]) async {
+    // 로그인·갱신 호출의 401 은 세션 만료가 아니라 자격 증명 오류다. 토큰을 지우거나 화면을 돌리지 않고 에러만 던진다.
+    if (path.startsWith('/api/auth/')) {
+      final r = await _send(method, path, body, auth: false);
+      if (r.statusCode >= 400) throw _error(r);
+      return r.body.isEmpty ? null : jsonDecode(utf8.decode(r.bodyBytes));
+    }
+    final used = _access;
     var res = await _send(method, path, body);
-    if (res.statusCode == 401 && await _tryRefresh()) {
+    if (res.statusCode == 401 && await _refreshed(used)) {
       res = await _send(method, path, body);
     }
     if (res.statusCode == 401) {
@@ -135,11 +143,22 @@ class ApiClient {
     return _http.send(req).then(http.Response.fromStream);
   }
 
+  Future<bool>? _refreshing;
+
+  /// 401 을 받은 뒤 토큰을 새로 받아 재시도해도 되는지. [used] 는 실패한 요청이 쓴 access 토큰.
+  /// 그 사이 다른 호출이 이미 갱신했으면 다시 갱신하지 않는다(refresh 토큰은 1회용).
+  Future<bool> _refreshed(String? used) async {
+    if (_access != null && _access != used) return true;
+    return _refreshing ??= _tryRefresh().whenComplete(() => _refreshing = null);
+  }
+
+  /// true = 새 토큰 저장됨, false = refresh 토큰이 없거나 서버가 거절(401/400). 그 밖의 실패(5xx·네트워크)는 던져서 토큰을 지키지 않는다.
   Future<bool> _tryRefresh() async {
     final r = _refresh;
     if (r == null) return false;
     final res = await _send('POST', '/api/auth/refresh', {'refreshToken': r}, auth: false);
-    if (res.statusCode != 200) return false;
+    if (res.statusCode == 401 || res.statusCode == 400) return false;
+    if (res.statusCode != 200) throw _error(res);
     final j = jsonDecode(utf8.decode(res.bodyBytes)) as Map<String, dynamic>;
     await setTokens(j['accessToken'] as String, j['refreshToken'] as String);
     return true;
