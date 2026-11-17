@@ -972,6 +972,7 @@ class PayBreakdown extends StatelessWidget {
     const regular = FontWeight.w500;
     const gap = SizedBox(height: 14);
     final estimate = staff.deduction == Deduction.insurance ? ' · 예상' : '';
+    final wages = {for (final e in slip.entries) staff.wageOn(e.day)};
     Widget head(String t) => Padding(
           padding: const EdgeInsets.only(bottom: 14),
           child: Text(t, style: AppText.style(15, FontWeight.w500)),
@@ -984,7 +985,11 @@ class PayBreakdown extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               head('지급 내역'),
-              KeyValueRow('기본급 (${hours(slip.minutes)} × ${wonText(staff.wage)})', won(slip.base),
+              KeyValueRow(
+                  wages.length > 1
+                      ? '기본급 (${hours(slip.minutes)})'
+                      : '기본급 (${hours(slip.minutes)} × ${wonText(wages.isEmpty ? staff.wage : wages.first)})',
+                  won(slip.base),
                   valueWeight: regular),
               gap,
               KeyValueRow('주휴수당', won(slip.weeklyHoliday), valueWeight: regular),
