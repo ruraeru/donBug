@@ -37,7 +37,7 @@ ScheduleSummary scheduleSummary(AppStore store, DateTime month) {
       final m = s.scheduledMinutes;
       if (s.date.startsWith(key)) {
         workMin += m;
-        cost += (m * st.wage / 60).round();
+        cost += (m * st.wageOn(parseYmd(s.date)) / 60).round();
       }
       final mon = mondayOf(parseYmd(s.date));
       weeks[mon] = (weeks[mon] ?? 0) + m;
@@ -46,7 +46,7 @@ ScheduleSummary scheduleSummary(AppStore store, DateTime month) {
     for (final e in weeks.entries) {
       final sun = e.key.add(const Duration(days: 6));
       if (sun.year != month.year || sun.month != month.month) continue;
-      final pay = weeklyHolidayPay(e.value, st.wage);
+      final pay = weeklyHolidayPay(e.value, st.wageOn(sun));
       if (pay > 0) {
         holidayStaff.add(st.id);
         holidayPay += pay;
