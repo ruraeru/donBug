@@ -295,7 +295,7 @@ class _GenerateDialogState extends State<_GenerateDialog> {
       ]);
     } else {
       body = Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-        Text('조건을 고르면 AI가 직원 근무를 정하고 알바생은 고른 파트에 배치해요. 구성원 이름은 빼고 번호로만 전달해요.',
+        Text('알바생은 고정 파트, 직원은 고정 근무시간대로 넣고, 빈 시간은 고정 시간이 없는 직원으로 채워요. AI는 결과를 설명만 해서 AI 서버가 느려도 근무표는 만들어져요.',
             style: AppText.style(13, FontWeight.w400, AppColors.textSecondary)),
         const SizedBox(height: 18),
         _section(
@@ -316,12 +316,12 @@ class _GenerateDialogState extends State<_GenerateDialog> {
                   active: holiday == HolidayPolicy.minimize,
                   onTap: () => setState(() => holiday = HolidayPolicy.minimize),
                   title: '최소화',
-                  desc: '알바생을 가능하면 주 15시간 미만으로 배치'),
+                  desc: '주 15시간 근처 알바생과 줄일 시간·아낄 금액을 알려줘요'),
               WebChoice(
                   active: holiday == HolidayPolicy.allow,
                   onTap: () => setState(() => holiday = HolidayPolicy.allow),
                   title: '허용',
-                  desc: '주휴수당은 피하지 않고 계산만'),
+                  desc: '주휴수당을 그대로 두고 금액만 계산해요'),
             ])),
         const SizedBox(height: 18),
         _section(
@@ -331,12 +331,12 @@ class _GenerateDialogState extends State<_GenerateDialog> {
                   active: priority == SchedulePriority.fairness,
                   onTap: () => setState(() => priority = SchedulePriority.fairness),
                   title: '공평 배분',
-                  desc: '알바생 간 근무시간 차이를 줄임'),
+                  desc: '빈 시간을 이번 주 근무가 적은 직원부터 채워요'),
               WebChoice(
                   active: priority == SchedulePriority.cost,
                   onTap: () => setState(() => priority = SchedulePriority.cost),
                   title: '인건비 절감',
-                  desc: '필요 인원만큼만 최소 배치'),
+                  desc: '빈 시간을 시급이 낮은 직원부터 채워요'),
             ])),
         if (error != null) _error('생성 실패: $error'),
         if (flex + part == 0) _error('직원·알바생을 먼저 등록하세요.'),
@@ -355,7 +355,7 @@ class _GenerateDialogState extends State<_GenerateDialog> {
             padding: const EdgeInsets.fromLTRB(20, 16, 8, 14),
             child: Row(children: [
               Expanded(
-                  child: Text(running ? 'AI가 근무표를 만들고 있어요' : 'AI 근무표 생성',
+                  child: Text(running ? '근무표를 만드는 중이에요' : 'AI 근무표 생성',
                       style: AppText.style(18, FontWeight.w500))),
               if (!running)
                 IconButton(
