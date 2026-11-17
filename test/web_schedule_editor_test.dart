@@ -157,4 +157,27 @@ void main() {
     expect(store.monthSchedule('2026-05'), isNull);
     expect(find.text('근무표가 없어요'), findsOneWidget);
   });
+
+  test('초안: 되돌려 처음 상태가 되면 dirty 해제', () {
+    final store = AppStore.seeded(now: _now)..switchRole(Role.employer);
+    final staff = store.activeStaff.first;
+    store.setScheduleDraft(true);
+    store.addShift(date: DateTime(2026, 5, 20), startMin: 600, endMin: 900, part: '직원', staffIds: [staff.id]);
+    expect(store.scheduleDirty, isTrue);
+    store.undo();
+    expect(store.scheduleDirty, isFalse);
+  });
+
+  test('scheduleSummary: 주휴수당은 일요일이 속한 달에, 주 전체 근무로 계산', () {
+    final store = AppStore.seeded(now: _now)..switchRole(Role.employer);
+    final st = store.activeStaff.firstWhere((x) => !x.kind.flex);
+    // 2026-04-27(월)~05-03(일): 월~금 8h. 4월 분이 32h 라도 일요일(5/3)이 5월이라 5월에 지급.
+    store.state.shifts.removeWhere((x) => !store.staffById(x.staffId)!.kind.flex);
+    for (final d in [27, 28, 29, 30]) {
+      store.addShift(date: DateTime(2026, 4, d), startMin: 540, endMin: 1080, part: st.part, staffIds: [st.id], breakMin: 60);
+    }
+    store.addShift(date: DateTime(2026, 5, 1), startMin: 540, endMin: 1080, part: st.part, staffIds: [st.id], breakMin: 60);
+    expect(scheduleSummary(store, DateTime(2026, 4)).holidayPay, 0);
+    expect(scheduleSummary(store, DateTime(2026, 5)).holidayPay, greaterThan(0));
+  });
 }

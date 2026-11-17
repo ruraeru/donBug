@@ -182,7 +182,7 @@ class _TodayCard extends StatelessWidget {
     final shifts = store.scheduleOn(t).where((s) => s.kind == ShiftKind.work).toList();
     final working = {
       for (final s in shifts)
-        if (!s.timeTbd && s.startMin <= nowMin && nowMin < s.endMin) store.nameOf(s.staffId)
+        if (!s.timeTbd && s.startMin <= nowMin && nowMin < (s.endAbs < 1440 ? s.endAbs : 1440)) store.nameOf(s.staffId)
     };
     final ms = store.monthSchedule(ym(t));
     final tbd = store.state.shifts

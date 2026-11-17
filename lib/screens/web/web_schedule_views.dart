@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 
 import '../../data/app_scope.dart';
@@ -115,6 +117,8 @@ class ShiftBlock extends StatelessWidget {
 
 String _short(int m) => m % 60 == 0 ? '${(m ~/ 60) % 24}' : hm(m);
 
+bool _otherMonth(DateTime d, DateTime month) => d.year != month.year || d.month != month.month;
+
 /// 칸: 비어 있는 곳을 누르면 추가, 블록을 놓으면 이동.
 class _Cell extends StatelessWidget {
   const _Cell({
@@ -123,9 +127,12 @@ class _Cell extends StatelessWidget {
     required this.onDrop,
     required this.children,
     this.highlight = false,
+    this.locked = false,
   });
 
   final DateTime day;
+  /// 편집 중인 달이 아닌 칸(주 보기가 걸친 앞뒤 달). 저장 대상이 아니라 막는다.
+  final bool locked;
   final VoidCallback? onAdd;
   final ValueChanged<String> onDrop;
   final List<Widget> children;
@@ -133,9 +140,10 @@ class _Cell extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => DragTarget<String>(
+        onWillAcceptWithDetails: (_) => !locked,
         onAcceptWithDetails: (e) => onDrop(e.data),
         builder: (context, hover, _) => InkWell(
-          onTap: onAdd,
+          onTap: locked ? null : onAdd,
           child: Container(
             constraints: const BoxConstraints(minHeight: 64),
             padding: const EdgeInsets.all(6),
@@ -144,11 +152,17 @@ class _Cell extends StatelessWidget {
                 : highlight
                     ? AppColors.dangerSoft.withValues(alpha: 0.5)
                     : null,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                for (final (i, c) in children.indexed) ...[if (i > 0) const SizedBox(height: 6), c],
-              ],
+            child: IgnorePointer(
+              ignoring: locked,
+              child: Opacity(
+                opacity: locked ? 0.4 : 1,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    for (final (i, c) in children.indexed) ...[if (i > 0) const SizedBox(height: 6), c],
+                  ],
+                ),
+              ),
             ),
           ),
         ),
@@ -257,9 +271,11 @@ void _drop(BuildContext context, String shiftId, DateTime day,
 
 /// 파트별 보기 (Figma 151:9517): 파트 행 + 유동 근무 행 × 요일.
 class PartWeekView extends StatelessWidget {
-  const PartWeekView({super.key, required this.monday});
+  const PartWeekView({super.key, required this.monday, required this.month});
 
   final DateTime monday;
+  /// 편집 중인 달. 다른 달 칸은 막는다.
+  final DateTime month;
 
   @override
   Widget build(BuildContext context) {
@@ -292,6 +308,7 @@ class PartWeekView extends StatelessWidget {
                 final short = working < p.need && !d.isBefore(store.today);
                 return _Cell(
                   day: d,
+                  locked: _otherMonth(d, month),
                   highlight: short,
                   onAdd: () => showShiftDialog(context, date: d, part: p.name),
                   onDrop: (id) => _drop(context, id, d, part: isFlexShift(store, store.shiftById(id)!) ? null : p),
@@ -309,6 +326,7 @@ class PartWeekView extends StatelessWidget {
           for (final d in days)
             _Cell(
               day: d,
+              locked: _otherMonth(d, month),
               onAdd: () => showShiftDialog(context, date: d, part: flexPart),
               onDrop: (id) => _drop(context, id, d),
               children: [
@@ -323,9 +341,11 @@ class PartWeekView extends StatelessWidget {
 
 /// 인원별 보기 (Figma 151:9748): 직원 · 유동 근무 / 알바생 · 파트 근무 그룹 × 요일.
 class PeopleWeekView extends StatelessWidget {
-  const PeopleWeekView({super.key, required this.monday});
+  const PeopleWeekView({super.key, required this.monday, required this.month});
 
   final DateTime monday;
+  /// 편집 중인 달. 다른 달 칸은 막는다.
+  final DateTime month;
 
   @override
   Widget build(BuildContext context) {
@@ -394,6 +414,7 @@ class PeopleWeekView extends StatelessWidget {
             final list = store.scheduleOfStaff(s.id).where((x) => x.date == ymd(d)).toList();
             return _Cell(
               day: d,
+              locked: _otherMonth(d, month),
               onAdd: () => showShiftDialog(context, date: d, staffId: s.id),
               onDrop: (id) => _drop(context, id, d, staffId: s.id),
               children: [
@@ -524,12 +545,12 @@ class DayTimelineView extends StatelessWidget {
 
   final DateTime day;
 
-  static const from = 360;
-
   @override
   Widget build(BuildContext context) {
     final store = AppScope.of(context);
     final list = store.scheduleOn(day).where((s) => s.kind != ShiftKind.off).toList();
+    // 06시부터. 더 이른 근무가 있으면 그 시각(정시 내림)부터.
+    final from = list.fold<int>(360, (m, s) => s.startMin < m ? s.startMin ~/ 60 * 60 : m);
     final flex = list.where((s) => isFlexShift(store, s)).toList();
     final part = list.where((s) => !isFlexShift(store, s)).toList();
     final st = store.store;
@@ -675,14 +696,18 @@ class _TimelineBlockState extends State<TimelineBlock> {
     final d = _snap(_dx);
     final a = s.startMin, b = s.endAbs;
     return switch (mode) {
-      _Drag.start => ((a + d).clamp(widget.from, b - minSpan), b),
-      _Drag.end => (a, (b + d).clamp(a + minSpan, widget.to)),
+      _Drag.start => (_clamp(a + d, widget.from, math.min(b - minSpan, 1439)), b),
+      _Drag.end => (a, _clamp(b + d, a + minSpan, widget.to)),
       _Drag.move => () {
-          final dd = d.clamp(widget.from - a, widget.to - b);
+          // 시작은 1439 까지만(BE 가 startMin > 1439 를 거부).
+          final dd = _clamp(d, widget.from - a, math.min(widget.to - b, 1439 - a));
           return (a + dd, b + dd);
         }(),
     };
   }
+
+  /// 상한이 하한보다 작으면 하한(clamp 는 그때 던진다).
+  static int _clamp(int v, int lo, int hi) => hi < lo ? lo : v.clamp(lo, hi);
 
   void _commit(_Drag mode) {
     final p = _preview;

@@ -106,7 +106,7 @@ class _WebNoticeScreenState extends State<WebNoticeScreen> {
             Expanded(
                 child: Text('확인 현황 ${staff.length - unread} / ${staff.length}명',
                     style: AppText.style(15, FontWeight.w500))),
-            if (unread > 0)
+            if (unread > 0 && n.required)
               WebButton('미확인자 리마인드',
                   style: WebButtonStyle.soft, onPressed: () => _remind(n)),
           ]),
@@ -237,14 +237,20 @@ Future<String?> showNoticeDialog(BuildContext context) {
     ]),
     actions: (ctx, set) => [
       WebButton('취소', style: WebButtonStyle.outline, onPressed: () => Navigator.pop(ctx)),
-      WebButton('올리기', onPressed: () {
+      WebButton('올리기', onPressed: () async {
         if (title.text.trim().isEmpty || body.text.trim().isEmpty) {
           return set(() => error = '제목과 내용을 입력해 주세요');
         }
-        final n = store.publishNotice(
-            title: title.text.trim(), body: body.text.trim(), required: required, category: category);
+        final Notice n;
+        try {
+          n = await store.publishNoticeRemote(
+              title: title.text.trim(), body: body.text.trim(), required: required, category: category);
+        } catch (e) {
+          return set(() => error = remoteErrorText(e));
+        }
+        if (!ctx.mounted) return;
         Navigator.pop(ctx, n.id);
-        showToast(context, '공지를 올렸어요');
+        if (context.mounted) showToast(context, '공지를 올렸어요');
       }),
     ],
   );

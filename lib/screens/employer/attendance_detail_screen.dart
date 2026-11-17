@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../data/api_client.dart';
 import '../../data/app_scope.dart';
 import '../../data/app_store.dart';
 import '../../data/format.dart';
@@ -21,6 +22,8 @@ class _AttendanceDetailScreenState extends State<AttendanceDetailScreen> {
   final _reason = TextEditingController();
   int? _in;
   int? _out;
+  bool _outTouched = false;
+  bool _saving = false;
 
   @override
   void initState() {
@@ -42,7 +45,8 @@ class _AttendanceDetailScreenState extends State<AttendanceDetailScreen> {
     super.dispose();
   }
 
-  void _save() {
+  Future<void> _save() async {
+    if (_saving) return;
     final store = AppScope.read(context);
     final s = store.shiftById(widget.shiftId)!;
     if (_reason.text.trim().isEmpty) return showToast(context, '수정 사유를 입력해 주세요');
@@ -50,13 +54,36 @@ class _AttendanceDetailScreenState extends State<AttendanceDetailScreen> {
     if (out <= _in!) out += 1440;
     final day = parseYmd(s.date);
     final inAt = day.add(Duration(minutes: _in!));
-    final outAt = day.add(Duration(minutes: out));
     final a = store.attendanceFor(s.id);
-    if (a == null) {
-      store.createAttendance(s.id, clockIn: inAt, clockOut: outAt, reason: _reason.text.trim());
+    // 근무 중(퇴근 없음)인 기록은 퇴근을 건드리지 않았으면 그대로 둔다. 새 기록은 소정 종료가 지났을 때만 기본 퇴근을 보낸다.
+    final sendOut = _outTouched ||
+        (a != null ? a.clockOut != null : !store.shiftEnd(s).isAfter(store.now));
+    final outAt = sendOut ? day.add(Duration(minutes: out)) : null;
+    final reason = _reason.text.trim();
+    if (!store.remote) {
+      a == null
+          ? store.createAttendance(s.id, clockIn: inAt, clockOut: outAt, reason: reason)
+          : store.editAttendance(a.id, clockIn: inAt, clockOut: outAt, reason: reason);
     } else {
-      store.editAttendance(a.id, clockIn: inAt, clockOut: outAt, reason: _reason.text.trim());
+      setState(() => _saving = true);
+      try {
+        await store.saveAttendanceRemote(
+            attendanceId: a?.id, shiftId: s.id, clockIn: inAt, clockOut: outAt, reason: reason);
+      } on ApiException catch (e) {
+        if (mounted) {
+          setState(() => _saving = false);
+          showToast(context, e.message);
+        }
+        return;
+      } catch (_) {
+        if (mounted) {
+          setState(() => _saving = false);
+          showToast(context, '서버와 통신하지 못했어요');
+        }
+        return;
+      }
     }
+    if (!mounted) return;
     Navigator.pop(context);
     showToast(context, '근태 기록을 저장했어요');
   }
@@ -137,7 +164,12 @@ class _AttendanceDetailScreenState extends State<AttendanceDetailScreen> {
                       child: LabeledField('퇴근',
                           child: FieldBox(hm(_out!), onTap: () async {
                             final m = await pickTime(context, _out!);
-                            if (m != null) setState(() => _out = m);
+                            if (m != null) {
+                              setState(() {
+                                _out = m;
+                                _outTouched = true;
+                              });
+                            }
                           })),
                     ),
                   ],

@@ -26,6 +26,8 @@ class _WebPayrollScreenState extends State<WebPayrollScreen> {
     final thisMonth = DateTime(t.year, t.month);
     final month = _month ?? thisMonth;
     final current = month == thisMonth;
+    // 서버가 주는 근무 기록은 지난달부터라 그 이전 달은 계산할 수 없다.
+    final earliest = DateTime(t.year, t.month - 1);
     final total = store.laborTotal(month.year, month.month, projected: current);
     final last = store.laborTotal(month.year, month.month - 1);
     final diff = last == 0 ? 0 : ((total - last) / last * 100).round();
@@ -37,11 +39,13 @@ class _WebPayrollScreenState extends State<WebPayrollScreen> {
     ].where((r) => r.$1.active || r.$2.gross > 0).toList();
     final trend = [
       for (var i = 5; i >= 0; i--)
-        (
-          DateTime(month.year, month.month - i),
-          store.laborTotal(month.year, month.month - i, projected: current && i == 0),
-        ),
+        if (!DateTime(month.year, month.month - i).isBefore(earliest))
+          (
+            DateTime(month.year, month.month - i),
+            store.laborTotal(month.year, month.month - i, projected: current && i == 0),
+          ),
     ];
+    final missingClockOut = rows.fold(0, (n, r) => n + r.$2.missingClockOut);
     final maxTrend = trend.fold(1, (m, x) => x.$2 > m ? x.$2 : m);
     bool isLast(int i) => i == trend.length - 1;
     void later() => showToast(context, '추후 개발 예정이에요');
@@ -53,12 +57,18 @@ class _WebPayrollScreenState extends State<WebPayrollScreen> {
       actions: [
         SizedBox(
           height: 42,
-          child: MonthNav(month: month, max: thisMonth, onChanged: (m) => setState(() => _month = m)),
+          child: MonthNav(month: month, max: thisMonth, min: earliest, onChanged: (m) => setState(() => _month = m)),
         ),
         WebButton('PDF 내보내기', style: WebButtonStyle.outline, onPressed: later),
         WebButton('정산 확정', onPressed: later),
       ],
       children: [
+        if (missingClockOut > 0)
+          Padding(
+            padding: const EdgeInsets.only(bottom: 12),
+            child: Text('퇴근 기록 없는 근무 $missingClockOut건은 급여에서 빠져 있어요. 근태에서 퇴근 시각을 고쳐 주세요.',
+                style: AppText.style(13, FontWeight.w500, AppColors.danger)),
+          ),
         WebRow(children: [
           _Stat(current ? '이번 달 예상 인건비' : '${month.month}월 인건비', wonText(total)),
           _Stat('지급 대상', '${rows.length}명'),

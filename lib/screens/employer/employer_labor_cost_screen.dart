@@ -22,19 +22,23 @@ class _EmployerLaborCostScreenState extends State<EmployerLaborCostScreen> {
     final store = AppScope.of(context);
     final month = _month ?? DateTime(store.today.year, store.today.month);
     final current = month.year == store.today.year && month.month == store.today.month;
+    // 서버가 주는 근무 기록은 지난달부터라 그 이전 달은 계산할 수 없다.
+    final earliest = DateTime(store.today.year, store.today.month - 1);
     final total = store.laborTotal(month.year, month.month, projected: current);
     final last = store.laborTotal(month.year, month.month - 1);
     final diff = last == 0 ? 0 : ((total - last) / last * 100).round();
     final bars = [
       for (var i = 5; i >= 0; i--)
-        (DateTime(month.year, month.month - i),
-            store.laborTotal(month.year, month.month - i, projected: current && i == 0)),
+        if (!DateTime(month.year, month.month - i).isBefore(earliest))
+          (DateTime(month.year, month.month - i),
+              store.laborTotal(month.year, month.month - i, projected: current && i == 0)),
     ];
     final workers = [
       for (final s in store.state.staff.where((s) => s.storeId == store.store.id))
         (s, store.payslip(s.id, month.year, month.month, projected: current)),
     ].where((w) => w.$2.gross > 0).toList()
       ..sort((a, b) => b.$2.net.compareTo(a.$2.net));
+    final missingClockOut = workers.fold(0, (n, w) => n + w.$2.missingClockOut);
 
     return SafeArea(
       bottom: false,
@@ -45,7 +49,7 @@ class _EmployerLaborCostScreenState extends State<EmployerLaborCostScreen> {
             child: Row(
               children: [
                 Expanded(child: Text('인건비', style: AppText.style(24, FontWeight.w500))),
-                MonthNav(month: month, max: store.today, onChanged: (m) => setState(() => _month = m)),
+                MonthNav(month: month, max: store.today, min: earliest, onChanged: (m) => setState(() => _month = m)),
               ],
             ),
           ),
@@ -69,6 +73,11 @@ class _EmployerLaborCostScreenState extends State<EmployerLaborCostScreen> {
                     ],
                   ),
                 ),
+                if (missingClockOut > 0) ...[
+                  const SizedBox(height: 12),
+                  Text('퇴근 기록 없는 근무 $missingClockOut건은 급여에서 빠져 있어요. 근태에서 퇴근 시각을 고쳐 주세요.',
+                      style: AppText.style(13, FontWeight.w500, AppColors.danger)),
+                ],
                 const SizedBox(height: 16),
                 _chart(bars),
                 const SizedBox(height: 16),

@@ -12,9 +12,9 @@ import '../../theme.dart';
 import '../../widgets/common.dart';
 import 'web_common.dart';
 
-/// 근무표를 만들 수 있는 달: 이번 달 + 3달.
-List<DateTime> scheduleMonths(DateTime today) =>
-    [for (var i = 0; i < 4; i++) DateTime(today.year, today.month + i)];
+/// 근무표를 만들 수 있는 달: 이번 달 + 3달. AI 생성은 상태 창(이번 달·다음 달)에 있는 달만 [count] 2.
+List<DateTime> scheduleMonths(DateTime today, {int count = 4}) =>
+    [for (var i = 0; i < count; i++) DateTime(today.year, today.month + i)];
 
 String monthLabel(DateTime m) => '${m.year}년 ${m.month}월';
 
@@ -150,11 +150,11 @@ Future<String?> showCreateScheduleDialog(BuildContext context) {
               final key = ym(month);
               final old = store.monthSchedule(key);
               if (old != null && old.status == ScheduleStatus.draft) {
-                final n = store.state.shifts.where((s) => s.date.startsWith(key)).length;
+                final n = store.state.shifts.where((s) => s.storeId == store.store.id && s.date.startsWith(key)).length;
                 final ok = await showConfirmDialog(ctx,
-                    title: '${monthLabel(month)} 근무표를 새로 만들까요?',
-                    message: '작성 중 근무표(근무 $n건)를 지우고 새로 만들어요.',
-                    confirmLabel: '새로 만들기');
+                    title: '${monthLabel(month)} 작성 중인 근무표가 있어요',
+                    message: '기존 근무($n건)는 그대로 두고, 빠진 고정 근무만 채워요.',
+                    confirmLabel: '계속');
                 if (!ok || !ctx.mounted) return;
               }
               set(() {
@@ -198,7 +198,7 @@ class _GenerateDialog extends StatefulWidget {
 
 class _GenerateDialogState extends State<_GenerateDialog> {
   AppStore get store => widget.store;
-  late final List<DateTime> months = scheduleMonths(store.today);
+  late final List<DateTime> months = scheduleMonths(store.today, count: 2);
   late DateTime month = months.length > 1 ? months[1] : months[0];
   var holiday = HolidayPolicy.minimize;
   var priority = SchedulePriority.fairness;

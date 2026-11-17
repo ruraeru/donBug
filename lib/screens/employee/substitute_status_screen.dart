@@ -177,7 +177,12 @@ class _RequestCard extends StatelessWidget {
                     message: '${shiftDay(s)} 근무는 원래대로 내가 해요.',
                     confirmLabel: '요청 취소',
                     confirmVariant: AppButtonVariant.danger);
-                if (ok && context.mounted) AppScope.read(context).cancelSubstitute(r.id);
+                if (!ok || !context.mounted) return;
+                try {
+                  await AppScope.read(context).cancelSubstituteRemote(r.id);
+                } catch (e) {
+                  if (context.mounted) showToast(context, remoteErrorText(e));
+                }
               },
             ),
           ],
