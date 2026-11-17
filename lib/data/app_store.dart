@@ -97,6 +97,9 @@ class AppStore extends ChangeNotifier {
   bool _versionWarned = false;
   int _reloadSeq = 0;
 
+  /// 서버 상태를 한 번이라도 읽었는지. 그 전의 session 매장 id 는 데모 시드('st-cafe')라 서버에 보내지 않는다.
+  bool _fromServer = false;
+
   /// 지금 매장 상태를 다시 읽는다 (당겨서 새로고침·변경 신호·주기 확인).
   /// [quiet] 면 통신 실패는 알리지 않는다. 앱 버전이 서버와 다르면 한 번 알린다.
   Future<void> refreshNow({bool quiet = false}) async {
@@ -119,13 +122,14 @@ class AppStore extends ChangeNotifier {
     if (a == null || scheduleDirty) return;
     final seq = ++_reloadSeq;
     // 지정이 없으면 지금 보는 매장을 유지한다(안 그러면 서버가 첫 매장으로 돌린다).
-    final sid = storeId != null && storeId.isNotEmpty ? storeId : session.storeId;
+    final want = storeId != null && storeId.isNotEmpty ? storeId : session.storeId;
+    final sid = !_fromServer && want == session.storeId ? '' : want;
     Map<String, dynamic> j;
     try {
       j = await a.get('/api/v1/me/state${sid.isEmpty ? '' : '?storeId=$sid'}')
           as Map<String, dynamic>;
     } on ApiException catch (e) {
-      // 4xx: 내보내졌거나 거절된 매장(403), 없는 매장(404), 로그인 직후 데모 시드 id 'st-cafe'(400).
+      // 4xx: 내보내졌거나 거절된 매장(403), 없는 매장(404), 잘못된 id(400).
       // 매장 지정 없이 다시 읽어 서버가 정한 매장으로.
       if (sid.isEmpty || e.status < 400 || e.status >= 500) rethrow;
       j = await a.get('/api/v1/me/state') as Map<String, dynamic>;
@@ -135,6 +139,7 @@ class AppStore extends ChangeNotifier {
     final s = AppState.fromJson(j);
     if (s == null) throw StateError('서버 상태 버전이 앱과 달라요 (v=${j['v']})');
     state = s;
+    _fromServer = true;
     _localIds.clear();
     _undo.clear();
     _redo.clear();
