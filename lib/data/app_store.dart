@@ -191,8 +191,10 @@ class AppStore extends ChangeNotifier {
     if (a == null || scheduleDirty) return;
     final seq = ++_reloadSeq;
     // 지정이 없으면 지금 보는 매장을 유지한다(안 그러면 서버가 첫 매장으로 돌린다).
-    final want = storeId != null && storeId.isNotEmpty ? storeId : session.storeId;
-    final sid = !_fromServer && want == session.storeId ? '' : want;
+    // 첫 읽기(웹 새로고침·앱 재시작)는 마지막으로 고른 사장님 매장을 고른다.
+    final saved = _fromServer || (storeId?.isNotEmpty ?? false) ? null : a.prefs.getString(ownerStoreKey);
+    final want = storeId != null && storeId.isNotEmpty ? storeId : saved ?? session.storeId;
+    final sid = !_fromServer && saved == null && want == session.storeId ? '' : want;
     Map<String, dynamic> j;
     try {
       j = await a.get('/api/v1/me/state${sid.isEmpty ? '' : '?storeId=$sid'}')
@@ -209,6 +211,10 @@ class AppStore extends ChangeNotifier {
     if (s == null) throw StateError('서버 상태 버전이 앱과 달라요 (v=${j['v']})');
     state = s;
     _fromServer = true;
+    if (role == Role.employer && session.ownerStoreId.isNotEmpty &&
+        a.prefs.getString(ownerStoreKey) != session.ownerStoreId) {
+      a.prefs.setString(ownerStoreKey, session.ownerStoreId);
+    }
     _localIds.clear();
     _undo.clear();
     _redo.clear();
@@ -311,6 +317,15 @@ class AppStore extends ChangeNotifier {
   List<Staff> get myMemberships => state.staff
       .where((s) => s.personId == session.employeeId && s.active)
       .toList();
+
+  /// 사장님(나) 소유 매장들 (id 순).
+  List<Store> get ownedStores => state.stores
+      .where((s) => s.ownerPersonId == session.ownerId)
+      .toList()
+    ..sort((a, b) {
+      final x = int.tryParse(a.id), y = int.tryParse(b.id);
+      return x != null && y != null ? x.compareTo(y) : a.id.compareTo(b.id);
+    });
 
   List<Staff> get activeStaff => state.staff
       .where((s) => s.storeId == store.id && s.active)
@@ -684,6 +699,19 @@ class AppStore extends ChangeNotifier {
     if (remote) return;
     session.role = role;
     _commit();
+  }
+
+  /// 사장님 매장 전환. 웹 근무표 초안에 저장 안 한 변경이 있으면 전환하지 않고 false.
+  bool switchOwnerStore(String storeId) {
+    if (scheduleDirty) return false;
+    session.ownerStoreId = storeId;
+    _commit();
+    if (remote) {
+      reload(storeId: storeId).catchError((Object _) {
+        remoteError.value = '서버와 통신하지 못했어요';
+      });
+    }
+    return true;
   }
 
   /// 근무 중이면 전환하지 않고 false.

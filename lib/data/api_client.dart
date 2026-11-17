@@ -24,6 +24,9 @@ class ApiException implements Exception {
   String toString() => message;
 }
 
+/// 마지막으로 고른 사장님 매장 id (로그아웃 때 지운다).
+const ownerStoreKey = 'donbug.ownerStore';
+
 /// 백엔드 HTTP 클라이언트. 토큰은 SharedPreferences 에 둔다.
 /// 401 이면 refresh 토큰으로 한 번 갱신하고 다시 보낸다. 갱신도 실패하면 토큰을 지우고 [onUnauthorized].
 class ApiClient {
@@ -53,6 +56,7 @@ class ApiClient {
   Future<void> clearTokens() async {
     await prefs.remove(_accessKey);
     await prefs.remove(_refreshKey);
+    await prefs.remove(ownerStoreKey);
   }
 
   /// 웹 카카오 로그인 시작 주소 (브라우저를 이 주소로 보낸다).

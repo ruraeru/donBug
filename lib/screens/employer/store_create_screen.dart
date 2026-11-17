@@ -8,8 +8,11 @@ import 'employer_parts.dart';
 import 'store_code_screen.dart';
 
 /// 매장 만들기 (Figma 47:41). 데모 사장님은 매장이 하나라 그 매장 정보를 채워 둔다.
+/// [addMode]: 사장님 매장 전환 화면의 "새 매장 추가"(서버 모드). 빈 칸으로 시작하고, 만든 뒤 코드 화면에서 닫으면 돌아간다.
 class StoreCreateScreen extends StatefulWidget {
-  const StoreCreateScreen({super.key});
+  const StoreCreateScreen({super.key, this.addMode = false});
+
+  final bool addMode;
 
   @override
   State<StoreCreateScreen> createState() => _StoreCreateScreenState();
@@ -26,7 +29,7 @@ class _StoreCreateScreenState extends State<StoreCreateScreen> {
     super.initState();
     final store = AppScope.read(context);
     // 서버 모드 첫 매장은 없으니 빈 칸으로 시작.
-    final st = store.storeById(store.session.ownerStoreId);
+    final st = widget.addMode ? null : store.storeById(store.session.ownerStoreId);
     _name = TextEditingController(text: st?.name);
     _address = TextEditingController(text: st?.address);
     _size = (st?.isSmall ?? true) ? 0 : 1;
@@ -64,6 +67,11 @@ class _StoreCreateScreenState extends State<StoreCreateScreen> {
         _busy = false;
       }
       if (!mounted) return;
+      if (widget.addMode) {
+        Navigator.pushReplacement(
+            context, MaterialPageRoute(builder: (_) => const StoreCodeScreen(added: true)));
+        return;
+      }
       store.login(Role.employer);
       Navigator.push(context, MaterialPageRoute(builder: (_) => const StoreCodeScreen()));
       return;
