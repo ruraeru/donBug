@@ -89,9 +89,13 @@ void main() {
     expect(toPattern([], '2026-06'), isEmpty);
   });
 
-  test('데모: generateSchedule 은 고정 근무로 채우고 AI 코멘트, confirm 은 미정이면 409', () async {
+  test('데모: previewGenerate 는 저장 안 하고, applyGenerated 는 고정 근무로 채우고 AI 코멘트, confirm 은 미정이면 409', () async {
     final s = _demo();
-    await s.generateSchedule('2026-06', weeklyHolidayPay: HolidayPolicy.minimize, priority: SchedulePriority.cost);
+    final before = s.state.shifts.length;
+    final p = await s.previewGenerate('2026-06', weeklyHolidayPay: HolidayPolicy.minimize, priority: SchedulePriority.cost);
+    expect(s.state.shifts.length, before);
+    expect(p.shifts, isNotEmpty);
+    await s.applyGenerated(p);
     final m = s.monthSchedule('2026-06')!;
     expect([m.source, m.status, m.aiComment], [ScheduleSource.ai, ScheduleStatus.draft, '데모: AI 없이 고정 근무로 채웠어요']);
     expect(m.priority, SchedulePriority.cost);

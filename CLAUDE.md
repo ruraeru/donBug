@@ -12,7 +12,7 @@ Flutter app (돈벌래 - 스마트 매장 관리 앱). 소상공인 사장님·�
 아직 안 만든 것:
 - 휴대폰 푸시 알림 없음. 변경은 롱 폴링(`/me/changes`)·60초 확인·당겨서 새로고침으로 반영.
 - 웹 인건비 "PDF 내보내기"·"정산 확정"은 "추후 개발 예정" 토스트만 띄운다.
-- 근무 창의 "휴게 시작"은 "자동" 고정. 공휴일은 2026년만(`holidays.dart`).
+- 근무 창의 "휴게 시작"은 "자동" 고정. 공휴일은 2026~2027년만(`holidays.dart`).
 - 모바일 근무표(알바생·사장님)는 `shiftsOn` 을 써서 연차·휴무·시간 미정 근무를 숨기기만 한다. 모바일 사장님 근무표·템플릿은 예전 API(즉시 저장) 그대로다.
 - 출근 기록 있는 근무 삭제 시도는 웹 근무 창에서 안내 없이 무시된다.
 - 노무 체크리스트의 5인 미만 판정은 지금 재직 인원으로 근사한다(월 평균 인원 아님).
@@ -77,8 +77,8 @@ Flutter SDK는 PATH에 없음. 프로젝트 루트의 로컬 SDK 사용 (`/flutt
   - `api_client.dart`: `useApi`(= `!DEMO`), `apiBase`, `ApiClient`(SharedPreferences 토큰 `donbug.access`/`donbug.refresh`, 401 이면 refresh 한 번, `multipart`, `authHeaders`), `ApiException(status, code, message)`.
   - `app_store.dart`: `AppStore extends ChangeNotifier`. 조회·파생값(내 근무, 출근 상태, 대타, 급여, 인건비, 안 읽은 수)과 모든 액션(출퇴근, 대타, 근무표(근무표 만들기: planSchedule 미리보기 → applySchedulePlan), 직원, 공지, 서류, 매장, 세션, 데모). 액션마다 관련자에게 `AppNotification` 을 만든다.
   - 서버 모드에서 액션은 로컬 상태를 바꾸고 `_remote(...)` 로 API 를 보낸 뒤 `/me/state` 를 다시 읽는다(실패는 `remoteError`). 결과를 기다려야 하는 일은 `...Remote` Future 메서드(`createStoreRemote`, `requestJoinRemote`, `clockInRemote`, `uploadHealthCertRemote`, `signContractRemote` 등). `reload` 는 늦게 온 응답·초안 편집 중 응답을 버린다. `refreshNow({quiet})` 는 버전 불일치를 한 번 알린다.
-  - 웹 근무표 초안 모드: `setScheduleDraft(true)` 동안 근무 편집은 로컬 + 되돌리기 스택만, `saveSchedule(month)` 이 `PUT /stores/{id}/schedules/{month}/shifts`(그 달 근무 전체). 월 근무표 `createMonthSchedule`·`autofillMonth`·`generateSchedule`(AI job 폴링)·`confirmMonth`·`deleteMonthSchedule`, 템플릿 `saveScheduleTemplate`·`applyScheduleTemplate`·`deleteScheduleTemplate`, 매장 `updateStoreSettings`·`saveParts`.
-  - `autoschedule.dart`: autoSchedule_FE 이식 순수 함수(`fixedShifts`, `autofill`, `toPattern`/`fillMonth`, 휴게 규칙, `hoursOn`). `holidays.dart`: 2026 공휴일. `ai_api.dart`: AI 노무 도우미 호출.
+  - 웹 근무표 초안 모드: `setScheduleDraft(true)` 동안 근무 편집은 로컬 + 되돌리기 스택만, `saveSchedule(month)` 이 `PUT /stores/{id}/schedules/{month}/shifts`(그 달 근무 전체). 월 근무표 `createMonthSchedule`·`autofillMonth`·`previewGenerate`(자동 생성 미리보기, `POST …/schedules/generate/preview`)·`applyGenerated`(`…/generate/apply {planId}`, AI 설명은 서버가 적용 뒤 붙임)·`confirmMonth`·`deleteMonthSchedule`, 템플릿 `saveScheduleTemplate`·`applyScheduleTemplate`·`deleteScheduleTemplate`, 매장 `updateStoreSettings`·`saveParts`.
+  - `autoschedule.dart`: autoSchedule_FE 이식 순수 함수(`fixedShifts`, `autofill`, `toPattern`/`fillMonth`, 휴게 규칙, `hoursOn`). `holidays.dart`: 2026~2027 공휴일. `ai_api.dart`: AI 노무 도우미 호출.
   - `seed.dart`: `buildSeed(now)`. 지난달 1일이 있는 주부터 다음 주까지 근무·출근 기록을 만든다.
   - `payroll.dart`: 급여 순수 함수(`computePayslip`, `weeklyHolidayPay`, `deductionOf`), `minimumWage2026 = 10320`.
   - `format.dart`: `won`, `wonText`, `md`, `hm`, `dDay`, `relative`, `shiftDay/Time/Caption` 등.
@@ -105,8 +105,7 @@ Flutter SDK는 PATH에 없음. 프로젝트 루트의 로컬 SDK 사용 (`/flutt
     - 목록(`web_schedules_screen.dart`): 월별 근무표(작성 중/확정·출처), 직접 만들기·AI 생성(`web_schedule_generate.dart`). `WebSchedulesScreen.openRequest`/`openDay` 로 다른 화면에서 그 달·그날 편집기를 연다.
     - 편집기(`web_schedule_screen.dart` + `web_schedule_views.dart`): 한 달·파트별·인원별·일간. 초안 모드(되돌리기/다시하기 ⌘Z·저장·저장 안 됨 배지), 자동 채우기, 확정하기(미정 있으면 막음), 옆 패널(합계 `scheduleSummary`·AI 브리핑·이미지 저장·템플릿 저장·삭제). 일간 보기 블록 끌기·양끝 크기 조정.
     - 템플릿(`web_templates_screen.dart`), 매장 설정(`web_settings_screen.dart`: 영업시간·사업장 규모·파트 표·기존 설정, `toneColor`).
-    - `web_schedule_create_dialog.dart`(필요 인원 자동 배정)는 웹 메뉴에서 빠졌고 테스트만 남아 있다.
-  - 직원 상세 시트(`web_staff_screen.dart`): 시급·공제·유형·연소자, 알바생 파트×요일 고정 근무 격자, 직원 요일별 출퇴근.
+    - 직원 상세 시트(`web_staff_screen.dart`): 시급·공제·유형·연소자, 알바생 파트×요일 고정 근무 격자, 직원 요일별 출퇴근, 알바생 요일별 추가 근무 가능 시간(`availHours`, 자동 생성 빈칸 후보).
 - `assets/icons/` — Figma에서 받은 SVG (`flutter_svg`). `assets/images/app_icon.svg` — 로고 App Icon(Figma `186:174`). `assets/fonts/` — Noto Sans KR 400/500/700 (OFL).
 
 ## 데이터 규칙

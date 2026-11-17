@@ -42,6 +42,75 @@ class SchedulePlan {
   final int cost;
 }
 
+/// 못 채운 칸 (생성 미리보기).
+class UnfilledSlot {
+  UnfilledSlot(this.date, this.part, this.startMin, this.endMin, this.missing);
+
+  final String date, part;
+  final int startMin, endMin, missing;
+}
+
+/// 근무표 생성 미리보기. [AppStore.previewGenerate] 가 만들고 [AppStore.applyGenerated] 가 저장한다.
+class GeneratePreview {
+  GeneratePreview({
+    required this.planId,
+    required this.month,
+    required this.shifts,
+    required this.lines,
+    required this.laborCost,
+    required this.unfilled,
+    required this.replacing,
+  });
+
+  factory GeneratePreview.fromJson(Map<String, dynamic> j, String storeId) => GeneratePreview(
+        planId: '${j['planId']}',
+        month: j['month'],
+        shifts: [
+          for (final x in (j['shifts'] as List? ?? const []).cast<Map>())
+            Shift(
+                id: '',
+                storeId: storeId,
+                staffId: '${x['staffId']}',
+                date: x['date'],
+                startMin: x['startMin'],
+                endMin: x['endMin'],
+                part: x['part'] ?? '직원',
+                breakMin: x['breakMin'] ?? 0)
+        ],
+        lines: [for (final l in (j['lines'] as List? ?? const [])) '$l'],
+        laborCost: (j['laborCost'] as num?)?.toInt() ?? 0,
+        unfilled: [
+          for (final u in (j['unfilled'] as List? ?? const []).cast<Map>())
+            UnfilledSlot(u['date'], '${u['part'] ?? '직원'}', u['startMin'], u['endMin'], u['missing'] ?? 1)
+        ],
+        replacing: (j['replacing'] as num?)?.toInt() ?? 0,
+      );
+
+  final String planId, month;
+
+  /// 적용하면 생길 근무 전체(id 비어 있음).
+  final List<Shift> shifts;
+  final List<String> lines;
+  final int laborCost;
+  final List<UnfilledSlot> unfilled;
+
+  /// 적용하면 지워질 기존 근무 수(오늘 이후, 출근 기록 없는 것).
+  final int replacing;
+
+  /// 직원 id → 총 근무 분.
+  Map<String, int> get minutesByStaff {
+    final m = <String, int>{};
+    for (final x in shifts) {
+      m[x.staffId] = (m[x.staffId] ?? 0) + x.scheduledMinutes;
+    }
+    return m;
+  }
+
+  // 데모 적용용 설정.
+  HolidayPolicy weeklyHolidayPay = HolidayPolicy.minimize;
+  SchedulePriority priority = SchedulePriority.fairness;
+}
+
 /// 앱 전체 상태 + 액션. 화면은 [AppScope]로 받아 쓴다.
 ///
 /// 액션마다 상태를 바꾸고 [notifyListeners] 후 [onSave]로 JSON 을 넘긴다.
@@ -1588,11 +1657,13 @@ class AppStore extends ChangeNotifier {
       String? part,
       StaffKind? kind,
       List<List<String>>? fixedParts,
-      List<WorkHours?>? workHours}) {
+      List<WorkHours?>? workHours,
+      List<WorkHours?>? availHours}) {
     final s = staffById(staffId)!;
     if (kind != null) s.kind = kind;
     if (fixedParts != null) s.fixedParts = [for (final l in fixedParts) [...l]];
     if (workHours != null) s.workHours = [...workHours];
+    if (availHours != null) s.availHours = [...availHours];
     if (wage != null && wage != s.wage) {
       if (s.wages.isEmpty) s.wages.add(WageStep('2000-01-01', s.wage));
       s.wages.add(WageStep(ymd(today), wage));
@@ -1612,6 +1683,7 @@ class AppStore extends ChangeNotifier {
           'kind': ?kind?.name,
           'fixedParts': ?fixedParts,
           if (workHours != null) 'workHours': [for (final w in workHours) w?.toJson()],
+          if (availHours != null) 'availHours': [for (final w in availHours) w?.toJson()],
         }));
   }
 
@@ -2100,50 +2172,49 @@ class AppStore extends ChangeNotifier {
     _commit();
   }
 
-  /// AI 생성. 서버: 작업을 올리고 2초마다 물어본다(done 이면 reload, failed 면 [ApiException]).
-  /// 데모: 고정 근무 + 직원 근무 시간으로 채운다.
-  Future<void> generateSchedule(String month,
+  /// 근무표 생성 미리보기(저장 안 함). 서버: generate/preview. 데모: 고정 근무로 채운 결과.
+  Future<GeneratePreview> previewGenerate(String month,
       {required HolidayPolicy weeklyHolidayPay, required SchedulePriority priority}) async {
     if (remote) {
-      final r = await _try((a) => a.post('${_sp(store.id)}/schedules/generate', {
+      final r = await _try((a) => a.post('${_sp(store.id)}/schedules/generate/preview', {
             'month': month,
             'weeklyHolidayPay': weeklyHolidayPay.name,
             'priority': priority.name,
           })) as Map;
-      final jobId = r['jobId'];
-      var netFails = 0;
-      for (var i = 0; ; i++) {
-        if (i >= 240) {
-          // 2초 × 240 = 8분. 서버 작업이 끝났을 수 있으니 상태를 다시 읽는다.
-          await _reloadQuiet();
-          throw ApiException(504, 'generate_timeout', 'AI 근무표 생성이 너무 오래 걸려요. 잠시 뒤 근무표를 확인해 주세요');
-        }
-        await Future<void>.delayed(const Duration(seconds: 2));
-        final Map j;
-        try {
-          j = await _try((a) => a.get('${_sp(store.id)}/schedule-jobs/$jobId')) as Map;
-        } on ApiException catch (e) {
-          // 일시적 통신 오류(network, 5xx)는 몇 번 더 본다. 4xx(작업 없음 등)는 바로 끝.
-          if ((e.status == 0 || e.status >= 500) && ++netFails <= 3) continue;
-          await _reloadQuiet();
-          rethrow;
-        }
-        netFails = 0;
-        if (j['status'] == 'done') break;
-        if (j['status'] == 'failed') {
-          throw ApiException(500, 'generate_failed', '${j['message'] ?? 'AI 근무표 생성에 실패했어요'}');
-        }
-      }
+      return GeneratePreview.fromJson(r.cast<String, dynamic>(), store.id);
+    }
+    bool cleared(Shift x) => !parseYmd(x.date).isBefore(today) && attendanceFor(x.id) == null;
+    final month0 = _monthShifts(month);
+    final kept = month0.where((x) => !cleared(x)).toList();
+    final add = auto.autofill(kept, auto.fixedShifts(store, activeStaff, _targetDates(month)));
+    return GeneratePreview(
+      planId: 'demo',
+      month: month,
+      shifts: add,
+      lines: const ['데모: AI 없이 고정 근무로 채웠어요'],
+      laborCost: add.fold(0, (sum, x) => sum + plannedPay(x)),
+      unfilled: const [],
+      replacing: month0.where((x) => cleared(x) && x.kind == ShiftKind.work).length,
+    )
+      ..weeklyHolidayPay = weeklyHolidayPay
+      ..priority = priority;
+  }
+
+  /// 미리보기 [p] 를 저장한다(그 달 오늘 이후·출근 기록 없는 근무를 지우고 바꾼다).
+  /// 서버: generate/apply. 만료면 410 [ApiException]. AI 설명은 서버가 나중에 붙인다.
+  Future<void> applyGenerated(GeneratePreview p) async {
+    if (remote) {
+      await _try((a) => a.post('${_sp(store.id)}/schedules/generate/apply', {'planId': p.planId}));
       await _reloadQuiet();
       return;
     }
     _snapshot();
-    _clearFuture(month);
-    _addAll(auto.autofill(_monthShifts(month), auto.fixedShifts(store, activeStaff, _targetDates(month))));
-    _metaFor(month, ScheduleSource.ai)
-      ..aiComment = '데모: AI 없이 고정 근무로 채웠어요'
-      ..weeklyHolidayPay = weeklyHolidayPay
-      ..priority = priority;
+    _clearFuture(p.month);
+    _addAll(p.shifts);
+    _metaFor(p.month, ScheduleSource.ai)
+      ..aiComment = p.lines.join('\n')
+      ..weeklyHolidayPay = p.weeklyHolidayPay
+      ..priority = p.priority;
     _commit();
   }
 

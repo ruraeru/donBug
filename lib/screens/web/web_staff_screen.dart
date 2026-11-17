@@ -452,18 +452,19 @@ class FixedWorkEditor extends StatefulWidget {
 }
 
 class _FixedWorkEditorState extends State<FixedWorkEditor> {
-  late List<WorkHours?> _wh;
+  late List<WorkHours?> _wh, _av;
+
+  static List<WorkHours?> _copy(List<WorkHours?> l) => [
+        for (var i = 0; i < 7; i++)
+          i < l.length && l[i] != null ? WorkHours(l[i]!.startMin, l[i]!.endMin) : null
+      ];
 
   @override
   void initState() {
     super.initState();
     final s = AppScope.read(context).staffById(widget.staffId)!;
-    _wh = [
-      for (var i = 0; i < 7; i++)
-        i < s.workHours.length && s.workHours[i] != null
-            ? WorkHours(s.workHours[i]!.startMin, s.workHours[i]!.endMin)
-            : null
-    ];
+    _wh = _copy(s.workHours);
+    _av = _copy(s.availHours);
     // 직원인데 아직 정한 적이 없으면 평일 9–18 로 시작한다.
     if (s.kind.flex && _wh.every((w) => w == null)) {
       for (var i = 0; i < 5; i++) {
@@ -479,12 +480,18 @@ class _FixedWorkEditorState extends State<FixedWorkEditor> {
     AppScope.read(context).updateStaff(widget.staffId, workHours: [..._wh]);
   }
 
-  WorkHours _prev(int d) {
+  void _setAvail(int d, WorkHours? w) {
+    setState(() => _av[d] = w);
+    if (_av.any((x) => x != null && workHoursBad(x))) return;
+    AppScope.read(context).updateStaff(widget.staffId, availHours: [..._av]);
+  }
+
+  static WorkHours _prev(List<WorkHours?> l, int d) {
     for (var i = d - 1; i >= 0; i--) {
-      if (_wh[i] != null) return _wh[i]!;
+      if (l[i] != null) return WorkHours(l[i]!.startMin, l[i]!.endMin);
     }
-    final any = _wh.firstWhere((w) => w != null, orElse: () => null);
-    return any ?? WorkHours(540, 1080);
+    final any = l.firstWhere((w) => w != null, orElse: () => null);
+    return any == null ? WorkHours(540, 1080) : WorkHours(any.startMin, any.endMin);
   }
 
   @override
@@ -492,7 +499,13 @@ class _FixedWorkEditorState extends State<FixedWorkEditor> {
     final store = AppScope.of(context);
     final s = store.staffById(widget.staffId);
     if (s == null) return const SizedBox.shrink();
-    return s.kind.flex ? _flex() : _parts(store, s);
+    if (s.kind.flex) return _flex();
+    return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+      _parts(store, s),
+      const SizedBox(height: 16),
+      _head('추가 근무 가능 시간', '빈칸 채우기 때 이 시간 안이면 고정 파트 말고도 넣어요'),
+      ..._days(_av, _setAvail, on: '가능', off: '불가'),
+    ]);
   }
 
   Widget _head(String title, String hint) => Padding(
@@ -507,45 +520,52 @@ class _FixedWorkEditorState extends State<FixedWorkEditor> {
     final err = workHoursError(_wh);
     return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
       _head('고정 근무 요일·시간', '요일을 눌러 근무·쉼 전환'),
-      for (var d = 0; d < 7; d++)
-        Padding(
-          padding: const EdgeInsets.only(bottom: 6),
-          child: Wrap(spacing: 8, runSpacing: 4, crossAxisAlignment: WrapCrossAlignment.center, children: [
-            Semantics(
-              button: true,
-              toggled: _wh[d] != null,
-              label: '${_dayLabels[d]}요일 근무',
-              child: InkWell(
-                borderRadius: BorderRadius.circular(8),
-                onTap: () => _setDay(d, _wh[d] != null ? null : (_prev(d))),
-                child: Container(
-                  width: 40,
-                  height: 36,
-                  alignment: Alignment.center,
-                  decoration: BoxDecoration(
-                      color: _wh[d] != null ? AppColors.purpleSoft : AppColors.bg,
-                      borderRadius: BorderRadius.circular(8)),
-                  child: Text(_dayLabels[d],
-                      style: AppText.style(13, FontWeight.w500,
-                          _wh[d] != null ? AppColors.purple : AppColors.textSecondary)),
-                ),
-              ),
-            ),
-            if (_wh[d] case final w?) ...[
-              TimeRange(
-                  label: _dayLabels[d],
-                  start: w.startMin,
-                  end: w.endMin,
-                  onChanged: (a, b) => _setDay(d, WorkHours(a, b))),
-              if (workHoursBad(w))
-                Text('시각 확인', style: AppText.style(12, FontWeight.w400, AppColors.danger)),
-            ] else
-              Text('쉼', style: AppText.style(12, FontWeight.w400, AppColors.textSecondary)),
-          ]),
-        ),
+      ..._days(_wh, _setDay, on: '근무', off: '쉼'),
       if (err != null) Text(err, style: AppText.style(12, FontWeight.w400, AppColors.danger)),
     ]);
   }
+
+  /// 요일별 시간 줄 7개. 요일을 누르면 켜고 끈다.
+  List<Widget> _days(List<WorkHours?> l, void Function(int, WorkHours?) set,
+          {required String on, required String off}) =>
+      [
+        for (var d = 0; d < 7; d++)
+          Padding(
+            padding: const EdgeInsets.only(bottom: 6),
+            child: Wrap(spacing: 8, runSpacing: 4, crossAxisAlignment: WrapCrossAlignment.center, children: [
+              Semantics(
+                button: true,
+                toggled: l[d] != null,
+                label: '${_dayLabels[d]}요일 $on',
+                child: InkWell(
+                  borderRadius: BorderRadius.circular(8),
+                  onTap: () => set(d, l[d] != null ? null : _prev(l, d)),
+                  child: Container(
+                    width: 40,
+                    height: 36,
+                    alignment: Alignment.center,
+                    decoration: BoxDecoration(
+                        color: l[d] != null ? AppColors.purpleSoft : AppColors.bg,
+                        borderRadius: BorderRadius.circular(8)),
+                    child: Text(_dayLabels[d],
+                        style: AppText.style(13, FontWeight.w500,
+                            l[d] != null ? AppColors.purple : AppColors.textSecondary)),
+                  ),
+                ),
+              ),
+              if (l[d] case final w?) ...[
+                TimeRange(
+                    label: _dayLabels[d],
+                    start: w.startMin,
+                    end: w.endMin,
+                    onChanged: (a, b) => set(d, WorkHours(a, b))),
+                if (workHoursBad(w))
+                  Text('시각 확인', style: AppText.style(12, FontWeight.w400, AppColors.danger)),
+              ] else
+                Text(off, style: AppText.style(12, FontWeight.w400, AppColors.textSecondary)),
+            ]),
+          ),
+      ];
 
   Widget _parts(AppStore store, Staff s) {
     final parts = store.store.parts;
