@@ -166,7 +166,7 @@ Flutter SDK는 PATH에 없음. 프로젝트 루트의 로컬 SDK 사용 (`/flutt
 
 ## Git
 
-- 브랜치: 기능 브랜치 → `develop` PR → `main` PR. `main`/`develop`에 직접 커밋 금지.
-- 배포: `deploy` 브랜치를 배포 레포(donBug_deploy)가 따라간다. 배포할 커밋을 `deploy` 로 올린 뒤 배포 레포 포인터를 올린다.
+- 브랜치: 기능 브랜치 → `develop` PR → `main` PR → `deploy` PR. `main`/`develop`/`deploy` 에 직접 커밋 금지. 남기는 브랜치는 이 셋뿐, 기능 브랜치는 머지 뒤 지운다.
+- 배포: 배포 레포(donBug_deploy) `develop` 은 이 레포 `develop`(테스트 배포), `main` 은 `deploy`(운영)를 가리킨다. 머지 뒤 배포 레포 포인터를 올린다.
 - PR 은 merge commit 으로 머지한다. CI 없음 — 머지 전 로컬에서 analyze·test 확인.
 - remote는 SSH (`git@github.com:ruraeru/donBug.git`). `gh` CLI 로그인됨.

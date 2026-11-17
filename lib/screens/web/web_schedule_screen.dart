@@ -370,7 +370,7 @@ class _WebScheduleScreenState extends State<WebScheduleScreen> {
           if (confirmed)
             Padding(
               padding: const EdgeInsets.only(top: 12),
-              child: Text('확정된 근무표예요. 수정 후 저장하면 변경 내역이 반영돼요.',
+              child: Text('확정된 근무표예요. 수정 후 저장하면 근무가 바뀐 직원에게 알림이 가요.',
                   style: AppText.style(13, FontWeight.w400, AppColors.textSecondary)),
             ),
         ]);
