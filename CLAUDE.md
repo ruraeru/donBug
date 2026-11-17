@@ -94,10 +94,10 @@ Flutter SDK는 PATH에 없음. 프로젝트 루트의 로컬 SDK 사용 (`/flutt
 - `lib/widgets/signature_input.dart` — 서버 모드 서명 패드(`signature` 패키지 → PNG 업로드).
 - `lib/screens/mobile_boot.dart` — 앱 서버 모드 진입: `MobileBoot`, `kakaoAppLogin`, `testAccountLogin`, `enterApp`(매장 없음 → 역할 선택, 가입 대기 → 대기 화면, 그 밖 → 역할별 셸).
 - `lib/screens/employee/` — 알바생 화면. 전용 위젯은 `employee_parts.dart`(`CheckLine`, `ShiftHeroCard`, `TabTitle`, `SignaturePad`, `shiftStatus`).
-- `lib/screens/employer/` — 사장님 화면. 전용 위젯은 `employer_parts.dart`(`SegmentedPicker`, `CountStepper`, `SmallButton`, `SuccessStepsScaffold`, `showWageDialog`, `pickStaff`, `pickTime`, `partColors`, `attStyle`, `employerTarget`).
+- `lib/screens/employer/` — 사장님 화면. 대시보드 매장 이름 → `OwnerStoreSwitchScreen`(내 매장: 전환·매장 설정·서버 모드 새 매장 추가 = `StoreCreateScreen(addMode: true)` → `StoreCodeScreen(added: true)`). 전용 위젯은 `employer_parts.dart`(`SegmentedPicker`, `CountStepper`, `SmallButton`, `SuccessStepsScaffold`, `showWageDialog`, `pickStaff`, `pickTime`, `partColors`, `attStyle`, `employerTarget`).
 - `lib/screens/web/` — 사장님 웹(W1–W7, 대타 승인, 템플릿, 매장 설정)과 POS QR(W8–W9).
   - 서버 모드 진입: `web_boot.dart`(`#/auth?access=..` 토큰 처리 → 상태 읽기 → 매장 만들기 / `WebShell` / 모바일 화면), `web_login_screen.dart`(로고 길게 = 테스트 계정), `web_create_store_screen.dart`, `web_view_mode.dart`(PC/모바일 화면 선택·저장 `donbug.webView`), `web_url*.dart`·`web_download*.dart`(웹 전용 조건부 import).
-  - `web_shell.dart`: 폭 1100 이상 사이드바, 800–1100 아이콘 레일, 800 미만 상단 바 + 서랍. 메뉴 이동은 `WebShell.open(context, WebMenu.xxx)` (dashboard·schedule·staff·substitute·payroll·documents·notice·ai·templates·settings).
+  - `web_shell.dart`: 폭 1100 이상 사이드바, 800–1100 아이콘 레일, 800 미만 상단 바 + 서랍. 로고·매장 이름을 누르면 매장 전환 창(소유 매장 + 서버 모드 "새 매장 추가" = `WebCreateStoreScreen(onCancel:)`). 메뉴 이동은 `WebShell.open(context, WebMenu.xxx)` (dashboard·schedule·staff·substitute·payroll·documents·notice·ai·templates·settings).
   - 웹 공용은 `web_common.dart`: `WebPage`(제목 + 액션, 안 들어가면 액션이 아래 줄), `WebButton`, `WebRow`, `WebSplit`, `WebTable`(`onRowTap`, 좁으면 가로 스크롤), `WebSegmented`, `WebSelect`, `showWebDialog`, `showWebSheet`, `webField`/`webPair`, `DashedBorderPainter`.
   - 상세·작성은 웹 전용 창이다: 근무 추가·수정(`web_shift_dialog.dart`), 직원 상세 시트·직원 초대(`web_staff_screen.dart`), 계약서 작성(`web_documents_screen.dart`), 공지 작성(`web_notice_screen.dart`), 알림·오늘 근무·근태 수정(`web_dashboard_screen.dart`).
   - 대시보드(`web_dashboard_screen.dart`): KPI 4개, 오늘 타임라인(`web_today_strip.dart`), 이번 달 근무 통계, 직원(유동) 주간 근무 현황, 대타·노무 리스크.
@@ -143,6 +143,7 @@ Flutter SDK는 PATH에 없음. 프로젝트 루트의 로컬 SDK 사용 (`/flutt
   - 탭하면 성공하는 모의 동작: QR 스캔, 보건증 사진
   - `SignaturePad`: 손가락 서명
 - 데모에서 사장님은 1인 1매장이다. 매장 만들기는 기존 매장 정보를 바꾼다. 서버 모드는 `POST /api/v1/stores` 로 새로 만든다(매장 코드 8자 `XXXX-XXXX`).
+- 서버 모드 사장님은 여러 매장을 가질 수 있다. `/me/state` 는 모든 소유·재직 매장 데이터를 함께 주므로 화면·게터는 반드시 지금 매장(`store.id`)으로 거른다(사람 기준이 맞는 곳만 예외). `ownedStores`·`switchOwnerStore(id)`(초안 미저장이면 false) → `reload(storeId:)`. 마지막 사장님 매장은 prefs `donbug.ownerStore`(`ownerStoreKey`)에 남아 첫 `reload` 가 고른다. 로그아웃(`clearTokens`) 때 지운다.
 
 ## Tests
 
