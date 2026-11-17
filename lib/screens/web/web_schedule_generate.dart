@@ -12,9 +12,9 @@ import '../../theme.dart';
 import '../../widgets/common.dart';
 import 'web_common.dart';
 
-/// 근무표를 만들 수 있는 달: 이번 달 + 3달. AI 생성은 상태 창(이번 달·다음 달)에 있는 달만 [count] 2.
-List<DateTime> scheduleMonths(DateTime today, {int count = 4}) =>
-    [for (var i = 0; i < count; i++) DateTime(today.year, today.month + i)];
+/// 근무표를 만들 수 있는 달: 이번 달·다음 달. /me/state 가 다음 달 말까지만 주므로 그 뒤 달은 만들면 안 보이고,
+/// 빈 편집기를 저장하면 서버 근무가 지워진다(BE 도 MONTH_TOO_FAR 로 막는다).
+List<DateTime> scheduleMonths(DateTime today) => [for (var i = 0; i < 2; i++) DateTime(today.year, today.month + i)];
 
 String monthLabel(DateTime m) => '${m.year}년 ${m.month}월';
 
@@ -198,7 +198,7 @@ class _GenerateDialog extends StatefulWidget {
 
 class _GenerateDialogState extends State<_GenerateDialog> {
   AppStore get store => widget.store;
-  late final List<DateTime> months = scheduleMonths(store.today, count: 2);
+  late final List<DateTime> months = scheduleMonths(store.today);
   late DateTime month = months.length > 1 ? months[1] : months[0];
   var holiday = HolidayPolicy.minimize;
   var priority = SchedulePriority.fairness;
