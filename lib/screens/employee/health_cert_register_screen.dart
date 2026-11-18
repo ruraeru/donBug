@@ -2,7 +2,6 @@ import 'dart:async';
 import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
-import 'package:image_picker/image_picker.dart';
 
 import '../../data/api_client.dart';
 import '../../data/app_scope.dart';
@@ -50,35 +49,13 @@ class _HealthCertRegisterScreenState extends State<HealthCertRegisterScreen> {
   }
 
   Future<void> _choose() async {
-    final src = await showModalBottomSheet<ImageSource>(
-      context: context,
-      builder: (ctx) => SafeArea(
-        child: Column(mainAxisSize: MainAxisSize.min, children: [
-          ListTile(
-              leading: const Icon(Icons.photo_camera_outlined),
-              title: const Text('카메라로 촬영'),
-              onTap: () => Navigator.pop(ctx, ImageSource.camera)),
-          ListTile(
-              leading: const Icon(Icons.photo_library_outlined),
-              title: const Text('앨범에서 선택'),
-              onTap: () => Navigator.pop(ctx, ImageSource.gallery)),
-        ]),
-      ),
-    );
-    if (src == null) return;
-    try {
-      final f = await ImagePicker().pickImage(source: src, maxWidth: 1600, imageQuality: 85);
-      if (f == null) return;
-      final b = await f.readAsBytes();
-      if (!mounted) return;
-      setState(() {
-        _bytes = b;
-        _name = f.name.contains('.') ? f.name : 'health-cert.jpg';
-        _photo = true;
-      });
-    } catch (_) {
-      if (mounted) showToast(context, '사진을 불러오지 못했어요');
-    }
+    final picked = await pickPhoto(context, fallbackName: 'health-cert.jpg');
+    if (picked == null || !mounted) return;
+    setState(() {
+      _bytes = picked.$1;
+      _name = picked.$2;
+      _photo = true;
+    });
   }
 
   Future<void> _submitRemote() async {

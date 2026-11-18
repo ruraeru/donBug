@@ -4,6 +4,7 @@ import 'package:flutter_svg/flutter_svg.dart';
 import '../../data/app_scope.dart';
 import '../../theme.dart';
 import '../../widgets/common.dart';
+import '../profile_edit_screen.dart';
 import 'web_ai_assistant_screen.dart';
 import 'web_boot.dart';
 import 'web_common.dart';
@@ -164,6 +165,17 @@ class _WebShellState extends State<WebShell> {
         ),
       ));
 
+  void _openProfile() => showWebDialog<void>(context,
+      title: '내 프로필',
+      builder: (ctx, _) => ProfileForm(
+            onSaved: () => Navigator.pop(ctx),
+            layout: (_, fields, save) => Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [...fields, const SizedBox(height: 20), save],
+            ),
+          ));
+
   void _openPos() =>
       Navigator.of(context).push(MaterialPageRoute(builder: (_) => const WebPosQrScreen()));
 
@@ -176,6 +188,17 @@ class _WebShellState extends State<WebShell> {
       _ => 0,
     };
   }
+
+  Widget _profileButton(bool rail) => rail
+      ? IconButton(
+          tooltip: '내 프로필',
+          onPressed: _openProfile,
+          icon: const Icon(Icons.person_outline, size: 22, color: AppColors.textTertiary),
+        )
+      : TextButton(
+          onPressed: _openProfile,
+          child: Text('내 프로필', style: AppText.style(12, FontWeight.w500, AppColors.textTertiary)),
+        );
 
   Widget _sidebar({required bool rail}) => ColoredBox(
         color: AppColors.surface,
@@ -209,6 +232,7 @@ class _WebShellState extends State<WebShell> {
                       )
                     : WebButton('매장 POS 모드 열기',
                         style: WebButtonStyle.dark, height: 46, expand: true, onPressed: _openPos),
+                _profileButton(rail),
                 rail
                     ? IconButton(
                         tooltip: '모바일 화면',
@@ -247,6 +271,7 @@ class _WebShellState extends State<WebShell> {
                     ])
                   : WebButton('매장 POS 모드 열기',
                       style: WebButtonStyle.dark, height: 46, expand: true, onPressed: _openPos),
+              _profileButton(rail),
               if (!rail)
                 TextButton(
                   onPressed: () => _resetDemo(context),
