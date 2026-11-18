@@ -77,7 +77,7 @@ class SubstituteDetailScreen extends StatelessWidget {
           AppCard(
             child: Row(
               children: [
-                MemberAvatar(store.staffById(r.requesterId)!),
+                MemberAvatar(store.staffById(r.requesterId)),
                 const SizedBox(width: 12),
                 Expanded(
                   child: Column(

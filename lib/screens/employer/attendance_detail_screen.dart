@@ -50,10 +50,11 @@ class _AttendanceDetailScreenState extends State<AttendanceDetailScreen> {
     final store = AppScope.read(context);
     final s = store.shiftById(widget.shiftId)!;
     if (_reason.text.trim().isEmpty) return showToast(context, '수정 사유를 입력해 주세요');
+    final inMin = clockInAbs(s, _in!);
     var out = _out!;
-    if (out <= _in!) out += 1440;
+    if (out <= inMin) out += 1440;
     final day = parseYmd(s.date);
-    final inAt = day.add(Duration(minutes: _in!));
+    final inAt = day.add(Duration(minutes: inMin));
     final a = store.attendanceFor(s.id);
     // 근무 중(퇴근 없음)인 기록은 퇴근을 건드리지 않았으면 그대로 둔다. 새 기록은 소정 종료가 지났을 때만 기본 퇴근을 보낸다.
     final sendOut = _outTouched ||

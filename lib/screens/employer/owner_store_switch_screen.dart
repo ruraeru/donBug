@@ -51,7 +51,7 @@ class OwnerStoreSwitchScreen extends StatelessWidget {
                 child: Padding(
                   padding: const EdgeInsets.all(16),
                   child: Row(children: [
-                    LetterAvatar(st.name.substring(0, 1),
+                    LetterAvatar(st.name.characters.take(1).toString(),
                         color: AppColors.textSecondary, background: AppColors.bg),
                     const SizedBox(width: 12),
                     Expanded(
