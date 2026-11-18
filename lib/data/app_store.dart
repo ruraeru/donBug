@@ -1909,6 +1909,34 @@ class AppStore extends ChangeNotifier {
     return r is Map && r['sent'] is num ? (r['sent'] as num).toInt() : 0;
   }
 
+  /// 공지 수정(사장님). 읽음 기록은 그대로 두고 알림도 다시 보내지 않는다. 서버가 거절하면 [ApiException].
+  Future<void> updateNoticeRemote(String noticeId,
+      {required String title, required String body, required bool required, required String category}) async {
+    final n = noticeById(noticeId)!;
+    if (remote) {
+      await _try((a) => a.put('${_sp(n.storeId)}/notices/$noticeId',
+          {'title': title, 'body': body, 'category': category, 'required': required}));
+    }
+    n
+      ..title = title
+      ..body = body
+      ..category = category
+      ..required = required;
+    _commit();
+    if (remote) await _reloadQuiet();
+  }
+
+  /// 공지 삭제(사장님). 그 공지를 가리키는 알림도 함께 사라진다. 서버가 거절하면 [ApiException].
+  Future<void> deleteNoticeRemote(String noticeId) async {
+    final n = noticeById(noticeId);
+    if (n == null) return;
+    if (remote) await _try((a) => a.delete('${_sp(n.storeId)}/notices/$noticeId'));
+    state.notices.removeWhere((x) => x.id == noticeId);
+    state.notifications.removeWhere((x) => x.type == 'notice' && x.refId == noticeId);
+    _commit();
+    if (remote) await _reloadQuiet();
+  }
+
   // ───────────────────────── 서류 ─────────────────────────
 
   /// 알바생(나)이 보건증 갱신본을 등록한다.

@@ -29,6 +29,21 @@ class _WebNoticeScreenState extends State<WebNoticeScreen> {
     if (id != null && mounted) setState(() => _selectedId = id);
   }
 
+  Future<void> _delete(Notice n) async {
+    final ok = await showConfirmDialog(context,
+        title: '공지를 삭제할까요?',
+        message: '「${n.title}」 공지와 확인 기록이 사라지고 되돌릴 수 없어요.',
+        confirmLabel: '삭제',
+        confirmVariant: AppButtonVariant.danger);
+    if (!ok || !mounted) return;
+    try {
+      await AppScope.read(context).deleteNoticeRemote(n.id);
+      if (mounted) showToast(context, '공지를 삭제했어요');
+    } catch (e) {
+      if (mounted) showToast(context, remoteErrorText(e));
+    }
+  }
+
   // 서버는 1시간에 한 번만 다시 알린다(REMIND_TOO_SOON). 그동안 버튼을 막는다.
   bool _remindCooling(AppStore store, Notice n) =>
       n.remindedAt != null &&
@@ -104,6 +119,11 @@ class _WebNoticeScreenState extends State<WebNoticeScreen> {
           Row(children: [
             Expanded(child: Text(n.title, style: AppText.style(20, FontWeight.w500))),
             _tag(n.required),
+            const SizedBox(width: 12),
+            WebButton('수정',
+                style: WebButtonStyle.outline, onPressed: () => showNoticeDialog(context, editing: n)),
+            const SizedBox(width: 8),
+            WebButton('삭제', style: WebButtonStyle.danger, onPressed: () => _delete(n)),
           ]),
           const SizedBox(height: 4),
           Text('${n.category} · ${relative(DateTime.parse(n.createdAt), store.now)}',
@@ -211,18 +231,19 @@ class _NoticeItem extends StatelessWidget {
       );
 }
 
-/// 공지 작성 창. 올리면 새 공지 id 를 돌려준다.
-Future<String?> showNoticeDialog(BuildContext context) {
+/// 공지 작성 창. 올리면 새 공지 id 를 돌려준다. [editing] 을 주면 그 공지를 수정한다.
+Future<String?> showNoticeDialog(BuildContext context, {Notice? editing}) {
   final store = AppScope.read(context);
   const categories = ['일반', '중요', '노무'];
-  final title = TextEditingController(), body = TextEditingController();
-  var category = categories.first;
-  var required = store.store.noticeRequiredDefault;
+  final title = TextEditingController(text: editing?.title),
+      body = TextEditingController(text: editing?.body);
+  var category = categories.contains(editing?.category) ? editing!.category : categories.first;
+  var required = editing?.required ?? store.store.noticeRequiredDefault;
   String? error;
   var sending = false; // 연타로 같은 공지가 두 번 올라가지 않게
   return showWebDialog<String>(
     context,
-    title: '공지 작성',
+    title: editing == null ? '공지 작성' : '공지 수정',
     width: 560,
     builder: (ctx, set) => Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
       webField('제목', AppTextField(controller: title, maxLength: 200, hint: '예: 마감 청소 방법 안내')),
@@ -248,7 +269,10 @@ Future<String?> showNoticeDialog(BuildContext context) {
         ),
       ]),
       const SizedBox(height: 6),
-      Text('재직 직원 ${store.activeStaff.length}명에게 알림이 가요',
+      Text(
+          editing == null
+              ? '재직 직원 ${store.activeStaff.length}명에게 알림이 가요'
+              : '수정해도 알림은 다시 가지 않고 확인 기록은 그대로예요',
           style: AppText.style(12, FontWeight.w400, AppColors.textTertiary)),
       if (error != null) ...[
         const SizedBox(height: 10),
@@ -257,15 +281,21 @@ Future<String?> showNoticeDialog(BuildContext context) {
     ]),
     actions: (ctx, set) => [
       WebButton('취소', style: WebButtonStyle.outline, onPressed: () => Navigator.pop(ctx)),
-      WebButton(sending ? '올리는 중…' : '올리기', onPressed: sending ? null : () async {
+      WebButton(sending ? '저장 중…' : (editing == null ? '올리기' : '저장'), onPressed: sending ? null : () async {
         if (title.text.trim().isEmpty || body.text.trim().isEmpty) {
           return set(() => error = '제목과 내용을 입력해 주세요');
         }
         set(() => sending = true);
-        final Notice n;
+        final String id;
         try {
-          n = await store.publishNoticeRemote(
-              title: title.text.trim(), body: body.text.trim(), required: required, category: category);
+          if (editing == null) {
+            id = (await store.publishNoticeRemote(
+                    title: title.text.trim(), body: body.text.trim(), required: required, category: category))
+                .id;
+          } else {
+            await store.updateNoticeRemote(id = editing.id,
+                title: title.text.trim(), body: body.text.trim(), required: required, category: category);
+          }
         } catch (e) {
           if (ctx.mounted) {
             set(() {
@@ -276,8 +306,8 @@ Future<String?> showNoticeDialog(BuildContext context) {
           return;
         }
         if (!ctx.mounted) return;
-        Navigator.pop(ctx, n.id);
-        if (context.mounted) showToast(context, '공지를 올렸어요');
+        Navigator.pop(ctx, id);
+        if (context.mounted) showToast(context, editing == null ? '공지를 올렸어요' : '공지를 수정했어요');
       }),
     ],
   );
