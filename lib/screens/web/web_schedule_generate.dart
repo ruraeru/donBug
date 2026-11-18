@@ -1,6 +1,3 @@
-import 'dart:async';
-import 'dart:math' as math;
-
 import 'package:flutter/material.dart';
 
 import '../../data/api_client.dart';
@@ -174,13 +171,7 @@ Future<String?> showCreateScheduleDialog(BuildContext context) {
   );
 }
 
-const _steps = ['매장 조건·가능 시간 분석', '직원 출근 시간 배치', '알바생 파트 배치', '근로 규칙 검증·보정'];
-const _stepAt = [0, 25, 55, 80];
-
-/// 걸린 시간으로 추정한 진행률(%). 실제 진행률은 알 수 없다. 레퍼런스와 같은 식.
-double estimateProgress(double sec) => 95 * (1 - math.exp(-sec / 60));
-
-/// AI 근무표 생성(레퍼런스 Generate). 만든 달('yyyy-MM')을 돌려준다.
+/// AI 근무표 생성(레퍼런스 Generate): 설정 → 미리보기 → 적용. 적용한 달('yyyy-MM')을 돌려준다.
 Future<String?> showGenerateScheduleDialog(BuildContext context) => showDialog<String>(
       context: context,
       barrierDismissible: false,
@@ -202,100 +193,44 @@ class _GenerateDialogState extends State<_GenerateDialog> {
   late DateTime month = months.length > 1 ? months[1] : months[0];
   var holiday = HolidayPolicy.minimize;
   var priority = SchedulePriority.fairness;
-  var running = false;
-  double sec = 0;
+  var busy = false;
+  GeneratePreview? preview;
   String? error;
-  Timer? _timer;
 
-  @override
-  void dispose() {
-    _timer?.cancel();
-    super.dispose();
-  }
-
-  Future<void> _start() async {
-    final started = DateTime.now();
+  Future<void> _run(String label, Future<void> Function() call) async {
+    if (busy) return; // 같은 프레임 두 번 탭
     setState(() {
-      running = true;
+      busy = true;
       error = null;
-      sec = 0;
-    });
-    _timer = Timer.periodic(const Duration(milliseconds: 500), (_) {
-      if (mounted) setState(() => sec = DateTime.now().difference(started).inMilliseconds / 1000);
     });
     try {
-      await store.generateSchedule(ym(month), weeklyHolidayPay: holiday, priority: priority);
-      if (mounted) Navigator.pop(context, ym(month));
+      await call();
     } on ApiException catch (e) {
-      if (mounted) setState(() => error = e.message);
+      if (!mounted) return;
+      setState(() {
+        error = '$label: ${e.message}';
+        // 미리보기가 만료됐으면 설정 화면으로 돌아가 다시 만든다.
+        if (e.status == 410) preview = null;
+      });
     } catch (_) {
-      if (mounted) setState(() => error = '서버와 통신하지 못했어요');
+      if (mounted) setState(() => error = '$label: 서버와 통신하지 못했어요');
     } finally {
-      _timer?.cancel();
-      if (mounted) setState(() => running = false);
+      if (mounted) setState(() => busy = false);
     }
   }
 
-  @override
-  Widget build(BuildContext context) {
-    final flex = store.flexStaff.length, part = store.partStaff.length;
-    final pct = estimateProgress(sec);
-    final step = _stepAt.where((a) => pct >= a).length - 1;
-    final Widget body;
-    if (running) {
-      body = Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-        Text('${monthLabel(month)} · 직원 $flex명 · 알바생 $part명 · 보통 1~2분 걸려요',
-            style: AppText.style(13, FontWeight.w400, AppColors.textSecondary)),
-        const SizedBox(height: 20),
-        ClipRRect(
-          borderRadius: BorderRadius.circular(4),
-          child: LinearProgressIndicator(
-              value: pct / 100,
-              minHeight: 6,
-              backgroundColor: AppColors.primarySoft,
-              color: AppColors.primary),
-        ),
-        const SizedBox(height: 6),
-        Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
-          Text('${pct.round()}%', style: AppText.style(12, FontWeight.w400, AppColors.textSecondary)),
-          Text('${sec ~/ 60}:${(sec % 60).floor().toString().padLeft(2, '0')} 경과',
-              style: AppText.style(12, FontWeight.w400, AppColors.textSecondary)),
-        ]),
-        const SizedBox(height: 18),
-        for (final (i, s) in _steps.indexed)
-          Padding(
-            padding: const EdgeInsets.only(bottom: 10),
-            child: Row(children: [
-              Container(
-                width: 24,
-                height: 24,
-                alignment: Alignment.center,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: i < step
-                      ? AppColors.primarySoft
-                      : i == step
-                          ? AppColors.primary
-                          : null,
-                  border: i > step ? Border.all(color: AppColors.border, width: 1.5) : null,
-                ),
-                child: i < step
-                    ? const Icon(Icons.check_rounded, size: 14, color: AppColors.primary)
-                    : i == step
-                        ? const SizedBox(width: 6, height: 6, child: DecoratedBox(decoration: BoxDecoration(color: Colors.white, shape: BoxShape.circle)))
-                        : null,
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                  child: Text(s,
-                      style: AppText.style(14, FontWeight.w400,
-                          i > step ? AppColors.textSecondary : AppColors.textPrimary))),
-            ]),
-          ),
-      ]);
-    } else {
-      body = Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-        Text('알바생은 고정 파트, 직원은 고정 근무시간대로 넣고, 빈 시간은 고정 시간이 없는 직원으로 채워요. AI는 결과를 설명만 해서 AI 서버가 느려도 근무표는 만들어져요.',
+  Future<void> _preview() => _run('미리보기 실패', () async {
+        final p = await store.previewGenerate(ym(month), weeklyHolidayPay: holiday, priority: priority);
+        if (mounted) setState(() => preview = p);
+      });
+
+  Future<void> _apply(GeneratePreview p) => _run('적용 실패', () async {
+        await store.applyGenerated(p);
+        if (mounted) Navigator.pop(context, p.month);
+      });
+
+  Widget _settings(int staffCount) => Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+        Text('알바생은 고정 파트, 직원은 고정 근무시간대로 넣고, 빈 시간은 고정 시간이 없는 직원과 추가 근무 가능한 알바생으로 채워요. 미리보기를 보고 적용해요.',
             style: AppText.style(13, FontWeight.w400, AppColors.textSecondary)),
         const SizedBox(height: 18),
         _section(
@@ -338,9 +273,45 @@ class _GenerateDialogState extends State<_GenerateDialog> {
                   title: '인건비 절감',
                   desc: '빈 시간을 시급이 낮은 직원부터 채워요'),
             ])),
-        if (error != null) _error('생성 실패: $error'),
-        if (flex + part == 0) _error('직원·알바생을 먼저 등록하세요.'),
+        if (error != null) _error(error!),
+        if (staffCount == 0) _error('직원·알바생을 먼저 등록하세요.'),
       ]);
+
+  @override
+  Widget build(BuildContext context) {
+    final staffCount = store.flexStaff.length + store.partStaff.length;
+    final p = preview;
+    final Widget body;
+    final List<Widget> actions;
+    if (p == null) {
+      body = busy
+          ? const Padding(
+              padding: EdgeInsets.symmetric(vertical: 40),
+              child: Center(child: CircularProgressIndicator(color: AppColors.primary)))
+          : _settings(staffCount);
+      actions = [
+        WebButton('취소', style: WebButtonStyle.outline, onPressed: busy ? null : () => Navigator.pop(context)),
+        const SizedBox(width: 8),
+        WebButton(busy ? '만드는 중…' : '미리보기', onPressed: busy || staffCount == 0 ? null : _preview),
+      ];
+    } else {
+      body = Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+        GeneratePreviewView(preview: p),
+        if (error != null) _error(error!),
+      ]);
+      actions = [
+        WebButton('설정 바꾸기',
+            style: WebButtonStyle.outline,
+            onPressed: busy
+                ? null
+                : () => setState(() {
+                      preview = null;
+                      error = null;
+                    })),
+        const SizedBox(width: 8),
+        WebButton(busy ? '적용하는 중…' : (p.replacing > 0 ? '덮어쓰고 적용' : '적용'),
+            onPressed: busy || p.shifts.isEmpty ? null : () => _apply(p)),
+      ];
     }
     return Dialog(
       backgroundColor: AppColors.surface,
@@ -355,31 +326,111 @@ class _GenerateDialogState extends State<_GenerateDialog> {
             padding: const EdgeInsets.fromLTRB(20, 16, 8, 14),
             child: Row(children: [
               Expanded(
-                  child: Text(running ? '근무표를 만드는 중이에요' : 'AI 근무표 생성',
+                  child: Text(p == null ? 'AI 근무표 생성' : '${monthLabel(parseYmd('${p.month}-01'))} 근무표 미리보기',
                       style: AppText.style(18, FontWeight.w500))),
-              if (!running)
-                IconButton(
-                  tooltip: '닫기',
-                  onPressed: () => Navigator.pop(context),
-                  icon: const Icon(Icons.close_rounded, size: 20, color: AppColors.textSecondary),
-                ),
+              IconButton(
+                tooltip: '닫기',
+                onPressed: busy ? null : () => Navigator.pop(context),
+                icon: const Icon(Icons.close_rounded, size: 20, color: AppColors.textSecondary),
+              ),
             ]),
           ),
           const Divider(height: 1, color: AppColors.border),
           Flexible(child: SingleChildScrollView(padding: const EdgeInsets.fromLTRB(20, 18, 20, 20), child: body)),
-          if (!running) ...[
-            const Divider(height: 1, color: AppColors.border),
-            Padding(
-              padding: const EdgeInsets.all(14),
-              child: Row(mainAxisAlignment: MainAxisAlignment.end, children: [
-                WebButton('취소', style: WebButtonStyle.outline, onPressed: () => Navigator.pop(context)),
-                const SizedBox(width: 8),
-                WebButton('근무표 생성', onPressed: flex + part == 0 ? null : _start),
-              ]),
-            ),
-          ],
+          const Divider(height: 1, color: AppColors.border),
+          Padding(
+            padding: const EdgeInsets.all(14),
+            child: Row(mainAxisAlignment: MainAxisAlignment.end, children: actions),
+          ),
         ]),
       ),
     );
+  }
+}
+
+/// 생성 미리보기. [preview] 만으로 그린다(테스트에서 가짜를 넘길 수 있다).
+class GeneratePreviewView extends StatelessWidget {
+  const GeneratePreviewView({super.key, required this.preview});
+
+  final GeneratePreview preview;
+
+  @override
+  Widget build(BuildContext context) {
+    final store = AppScope.of(context);
+    final p = preview;
+    final byStaff = p.minutesByStaff;
+    final most = byStaff.values.fold(0, (a, b) => a > b ? a : b);
+    final people = byStaff.entries.toList()..sort((a, b) => b.value.compareTo(a.value));
+    final missing = p.unfilled.fold(0, (sum, u) => sum + u.missing);
+    final muted = AppText.style(14, FontWeight.w400, AppColors.textSecondary);
+    final small = AppText.style(13, FontWeight.w400, AppColors.textSecondary);
+    return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+      if (p.replacing > 0) ...[
+        NoteBox(
+            '${int.parse(p.month.substring(5))}월 작성 중 근무 ${p.replacing}건(오늘 이후, 출근 기록 없는 것)을 지우고 이 근무표로 바꿔요',
+            color: AppColors.danger, background: AppColors.dangerSoft),
+        const SizedBox(height: 16),
+      ],
+      Text('새 근무 ${p.shifts.length}건', style: AppText.style(22, FontWeight.w500)),
+      const SizedBox(height: 8),
+      Text('못 채운 칸 $missing',
+          style: missing > 0 ? AppText.style(14, FontWeight.w500, AppColors.accent) : muted),
+      const SizedBox(height: 4),
+      Text('예상 인건비 ${won(p.laborCost)}', style: muted),
+      if (p.shifts.isEmpty) ...[
+        const SizedBox(height: 16),
+        Text('만들 근무가 없어요', style: AppText.style(13, FontWeight.w400, AppColors.textTertiary)),
+      ],
+      if (p.lines.isNotEmpty) ...[
+        const SizedBox(height: 16),
+        for (final l in p.lines)
+          Padding(padding: const EdgeInsets.only(bottom: 4), child: Text('· $l', style: small)),
+      ],
+      const SizedBox(height: 8),
+      Text('AI 설명은 적용 뒤 잠시 후 근무표 상단에 붙어요.',
+          style: AppText.style(12, FontWeight.w400, AppColors.textTertiary)),
+      if (people.isNotEmpty) ...[
+        const SizedBox(height: 20),
+        Text('직원별 총 시간', style: AppText.style(13, FontWeight.w500)),
+        const SizedBox(height: 8),
+        for (final e in people)
+          Padding(
+            padding: const EdgeInsets.symmetric(vertical: 4),
+            child: Row(children: [
+              SizedBox(
+                  width: 72,
+                  child: Text(store.nameOf(e.key),
+                      overflow: TextOverflow.ellipsis, style: AppText.style(13, FontWeight.w400))),
+              Expanded(
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(2),
+                  child: LinearProgressIndicator(
+                    value: most == 0 ? 0 : e.value / most,
+                    minHeight: 4,
+                    color: AppColors.textTertiary,
+                    backgroundColor: AppColors.bg,
+                  ),
+                ),
+              ),
+              SizedBox(
+                  width: 56,
+                  child: Text(hours(e.value),
+                      textAlign: TextAlign.right,
+                      style: AppText.style(13, FontWeight.w400, AppColors.textSecondary))),
+            ]),
+          ),
+      ],
+      if (p.unfilled.isNotEmpty) ...[
+        const SizedBox(height: 20),
+        Text('못 채운 칸', style: AppText.style(13, FontWeight.w500, AppColors.accent)),
+        const SizedBox(height: 8),
+        for (final u in p.unfilled)
+          Padding(
+            padding: const EdgeInsets.symmetric(vertical: 3),
+            child: Text('${md(parseYmd(u.date))} · ${u.part} · ${range(u.startMin, u.endMin)} · ${u.missing}명 부족',
+                style: small),
+          ),
+      ],
+    ]);
   }
 }

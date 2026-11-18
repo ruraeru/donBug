@@ -14,15 +14,21 @@ const String _appDefaultBase = 'https://donbug.ruraeru.xyz';
 
 /// 서버 에러 응답 `{code, message, details}`.
 class ApiException implements Exception {
-  ApiException(this.status, this.code, this.message);
+  ApiException(this.status, this.code, this.message, [this.body]);
 
   final int status;
   final String code;
   final String message;
 
+  /// 오류 응답 JSON 본문(있으면). 예: 예전 서버의 가입 신청 404/409 `{result, store}`.
+  final Map<String, dynamic>? body;
+
   @override
   String toString() => message;
 }
+
+/// 마지막으로 고른 사장님 매장 id (로그아웃 때 지운다).
+const ownerStoreKey = 'donbug.ownerStore';
 
 /// 백엔드 HTTP 클라이언트. 토큰은 SharedPreferences 에 둔다.
 /// 401 이면 refresh 토큰으로 한 번 갱신하고 다시 보낸다. 갱신도 실패하면 토큰을 지우고 [onUnauthorized].
@@ -53,6 +59,7 @@ class ApiClient {
   Future<void> clearTokens() async {
     await prefs.remove(_accessKey);
     await prefs.remove(_refreshKey);
+    await prefs.remove(ownerStoreKey);
   }
 
   /// 웹 카카오 로그인 시작 주소 (브라우저를 이 주소로 보낸다).
@@ -168,7 +175,7 @@ class ApiClient {
     try {
       final j = jsonDecode(utf8.decode(res.bodyBytes)) as Map<String, dynamic>;
       return ApiException(res.statusCode, '${j['code'] ?? res.statusCode}',
-          '${j['message'] ?? '요청을 처리하지 못했어요'}');
+          '${j['message'] ?? '요청을 처리하지 못했어요'}', j);
     } catch (_) {
       return ApiException(res.statusCode, '${res.statusCode}',
           res.statusCode == 401 ? '다시 로그인해 주세요' : '서버와 통신하지 못했어요 (${res.statusCode})');

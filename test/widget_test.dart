@@ -114,9 +114,13 @@ void main() {
     await visitTabs(tester, ['근무표', '인건비', '서류', '공지', '홈']);
   });
 
-  testWidgets('대시보드 매장 이름 → 매장 설정', (tester) async {
+  testWidgets('대시보드 매장 이름 → 내 매장 → 매장 설정', (tester) async {
     await pumpAt(tester, const EmployerShell(), const Size(390, 844), store: employerStore());
     await tester.tap(find.text('카페 커푸치노'));
+    await tester.pumpAndSettle();
+    expect(find.text('내 매장'), findsOneWidget);
+    expect(find.text('새 매장 추가'), findsNothing); // 데모는 1인 1매장
+    await tester.tap(find.text('카페 커푸치노 매장 설정'));
     await tester.pumpAndSettle();
     expect(find.text('매장 설정'), findsOneWidget);
   });

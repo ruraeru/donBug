@@ -5,10 +5,10 @@ import '../../theme.dart';
 import '../../widgets/common.dart';
 import 'web_common.dart';
 
-/// 서버 모드 첫 로그인: 사장님이 아직 매장이 없을 때.
+/// 서버 모드 첫 로그인: 사장님이 아직 매장이 없을 때. [onCancel] 이 있으면 매장 추가(웹 셸 매장 전환 메뉴).
 class WebCreateStoreScreen extends StatefulWidget {
   const WebCreateStoreScreen(
-      {super.key, required this.onCreate, required this.onLogout, this.onEmployee});
+      {super.key, required this.onCreate, this.onLogout, this.onCancel, this.onEmployee});
 
   final Future<void> Function({
     required String name,
@@ -16,7 +16,10 @@ class WebCreateStoreScreen extends StatefulWidget {
     required bool isSmall,
     required Deduction deduction,
   }) onCreate;
-  final VoidCallback onLogout;
+  final VoidCallback? onLogout;
+
+  /// 매장 추가 모드: '로그아웃' 대신 '취소'.
+  final VoidCallback? onCancel;
 
   /// 알바생: 모바일 화면에서 매장 코드로 가입.
   final VoidCallback? onEmployee;
@@ -66,12 +69,12 @@ class _WebCreateStoreScreenState extends State<WebCreateStoreScreen> {
               child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
                 Text('매장 만들기', style: AppText.style(24, FontWeight.w700)),
                 const SizedBox(height: 6),
-                Text('처음 오셨네요. 매장 정보를 입력해 주세요.',
+                Text(widget.onCancel != null ? '새 매장 정보를 입력해 주세요.' : '처음 오셨네요. 매장 정보를 입력해 주세요.',
                     style: AppText.style(14, FontWeight.w400, AppColors.textSecondary)),
                 const SizedBox(height: 24),
-                webField('매장 이름', AppTextField(controller: _name, hint: '예: 카페 커푸치노')),
+                webField('매장 이름', AppTextField(controller: _name, maxLength: 100, hint: '예: 카페 커푸치노')),
                 const SizedBox(height: 16),
-                webField('주소', AppTextField(controller: _address, hint: '매장 주소')),
+                webField('주소', AppTextField(controller: _address, maxLength: 255, hint: '매장 주소')),
                 const SizedBox(height: 16),
                 ToggleCard(
                   title: '5인 미만 사업장',
@@ -100,8 +103,8 @@ class _WebCreateStoreScreenState extends State<WebCreateStoreScreen> {
                 ],
                 const SizedBox(height: 8),
                 TextButton(
-                  onPressed: widget.onLogout,
-                  child: Text('로그아웃',
+                  onPressed: widget.onCancel ?? widget.onLogout,
+                  child: Text(widget.onCancel != null ? '취소' : '로그아웃',
                       style: AppText.style(13, FontWeight.w500, AppColors.textTertiary)),
                 ),
               ]),

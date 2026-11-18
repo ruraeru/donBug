@@ -7,6 +7,7 @@ import '../../widgets/common.dart';
 import 'web_ai_assistant_screen.dart';
 import 'web_boot.dart';
 import 'web_common.dart';
+import 'web_create_store_screen.dart';
 import 'web_dashboard_screen.dart';
 import 'web_documents_screen.dart';
 import 'web_notice_screen.dart';
@@ -104,6 +105,65 @@ class _WebShellState extends State<WebShell> {
     if (ok && context.mounted) AppScope.read(context).resetDemo();
   }
 
+  /// 매장 이름 → 소유 매장 전환 메뉴 + 새 매장 추가(서버 모드).
+  Future<void> _switchStore() async {
+    final store = AppScope.read(context);
+    if (store.scheduleDirty) {
+      return showToast(context, '저장하지 않은 근무표 변경 사항이 있어요. 저장한 뒤 전환해 주세요');
+    }
+    final picked = await showWebDialog<String>(context,
+        title: '매장 전환',
+        builder: (context, _) => Padding(
+              padding: const EdgeInsets.fromLTRB(12, 0, 12, 16),
+              child: Column(mainAxisSize: MainAxisSize.min, children: [
+                for (final st in store.ownedStores)
+                  ListTile(
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                    title: Text(st.name, style: AppText.style(15, FontWeight.w500)),
+                    subtitle: Text(st.code,
+                        style: AppText.style(12, FontWeight.w400, AppColors.textSecondary)),
+                    trailing: st.id == store.store.id
+                        ? Text('현재', style: AppText.style(13, FontWeight.w500, AppColors.primary))
+                        : null,
+                    onTap: () => Navigator.pop(context, st.id),
+                  ),
+                if (store.remote) ...[
+                  const SizedBox(height: 8),
+                  WebButton('+ 새 매장 추가',
+                      style: WebButtonStyle.outline,
+                      expand: true,
+                      onPressed: () => Navigator.pop(context, '')),
+                ],
+              ]),
+            ));
+    if (picked == null || !mounted) return;
+    if (picked.isEmpty) return _addStore();
+    if (picked == store.store.id) return;
+    if (!store.switchOwnerStore(picked)) {
+      return showToast(context, '저장하지 않은 근무표 변경 사항이 있어요. 저장한 뒤 전환해 주세요');
+    }
+    _done(store.store.name);
+  }
+
+  void _done(String name) {
+    _select(WebMenu.dashboard);
+    showToast(context, '$name 매장으로 전환했어요');
+  }
+
+  void _addStore() => Navigator.of(context).push(MaterialPageRoute(
+        builder: (route) => WebCreateStoreScreen(
+          onCancel: () => Navigator.pop(route),
+          onCreate: ({required name, required address, required isSmall, required deduction}) async {
+            final store = AppScope.read(context);
+            await store.createStoreRemote(
+                name: name, address: address, isSmall: isSmall, deduction: deduction);
+            if (!route.mounted || !mounted) return;
+            Navigator.pop(route);
+            _done(store.store.name);
+          },
+        ),
+      ));
+
   void _openPos() =>
       Navigator.of(context).push(MaterialPageRoute(builder: (_) => const WebPosQrScreen()));
 
@@ -125,7 +185,7 @@ class _WebShellState extends State<WebShell> {
             child: Column(children: [
               Expanded(
                 child: ListView(children: [
-                  _Logo(compact: rail),
+                  _Logo(compact: rail, onTap: _switchStore),
                   for (var i = 0; i < _menu.length; i++) ...[
                     _MenuItem(
                       label: _menu[i].$1,
@@ -228,32 +288,44 @@ class _WebShellState extends State<WebShell> {
 }
 
 class _Logo extends StatelessWidget {
-  const _Logo({required this.compact});
+  const _Logo({required this.compact, required this.onTap});
 
   final bool compact;
 
+  /// 매장 전환 메뉴.
+  final VoidCallback onTap;
+
   @override
   Widget build(BuildContext context) {
+    final name = AppScope.of(context).store.name;
     final icon = ClipRRect(
       borderRadius: BorderRadius.circular(10),
       child: SvgPicture.asset('assets/images/app_icon.svg', width: 36, height: 36),
     );
     return Padding(
-      padding: EdgeInsets.only(left: compact ? 4 : 6, bottom: 24),
-      child: compact
-          ? Tooltip(message: AppScope.of(context).store.name, child: icon)
-          : Row(children: [
-              icon,
-              const SizedBox(width: 10),
-              Expanded(
-                child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                  Text('돈벌래', style: AppText.style(16, FontWeight.w500)),
-                  Text(AppScope.of(context).store.name,
-                      overflow: TextOverflow.ellipsis,
-                      style: AppText.style(11, FontWeight.w400, AppColors.textSecondary)),
+      padding: const EdgeInsets.only(bottom: 24),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(10),
+        child: Padding(
+          padding: EdgeInsets.fromLTRB(compact ? 4 : 6, 4, 4, 4),
+          child: compact
+              ? Tooltip(message: '$name · 매장 전환', child: icon)
+              : Row(children: [
+                  icon,
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                      Text('돈벌래', style: AppText.style(16, FontWeight.w500)),
+                      Text(name,
+                          overflow: TextOverflow.ellipsis,
+                          style: AppText.style(11, FontWeight.w400, AppColors.textSecondary)),
+                    ]),
+                  ),
+                  const Icon(Icons.unfold_more_rounded, size: 18, color: AppColors.textTertiary),
                 ]),
-              ),
-            ]),
+        ),
+      ),
     );
   }
 }

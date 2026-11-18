@@ -12,8 +12,8 @@ import 'attendance_screen.dart';
 import 'employer_parts.dart';
 import 'staff_approval_screen.dart';
 import 'staff_detail_screen.dart';
+import 'owner_store_switch_screen.dart';
 import 'staff_management_screen.dart';
-import 'store_settings_screen.dart';
 import 'substitute_approval_screen.dart';
 
 /// B1 사장님 대시보드 (Figma 47:139, 대타 알림 변형 47:502 — 레이아웃 동일).
@@ -51,9 +51,9 @@ class EmployerDashboardScreen extends StatelessWidget {
             Row(
               children: [
                 Expanded(
-                  // 매장 이름 → 매장 설정 (Figma에 진입 경로가 없어 임시 배치).
+                  // 매장 이름 → 내 매장(전환·매장 설정·새 매장 추가). Figma에 진입 경로가 없어 임시 배치.
                   child: InkWell(
-                    onTap: () => _push(context, const StoreSettingsScreen()),
+                    onTap: () => _push(context, const OwnerStoreSwitchScreen()),
                     borderRadius: BorderRadius.circular(8),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,

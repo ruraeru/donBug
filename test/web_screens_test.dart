@@ -8,6 +8,7 @@ import 'dart:io';
 import 'package:donbug/data/app_scope.dart';
 import 'package:donbug/data/app_store.dart';
 import 'package:donbug/data/models.dart';
+import 'package:donbug/screens/web/web_common.dart';
 import 'package:donbug/screens/web/web_pos_qr_screen.dart';
 import 'package:donbug/screens/web/web_schedule_screen.dart';
 import 'package:donbug/screens/web/web_shell.dart';
@@ -104,11 +105,16 @@ void main() {
     await tester.pumpAndSettle();
     await _shot(tester, 'sheet_staff');
     final field = find.byType(TextField).last;
+    // 직원 시트가 길어 시급 칸이 화면 밖일 수 있다.
+    await tester.ensureVisible(field);
+    await tester.pumpAndSettle();
     await tester.enterText(field, '9000');
+    await tester.pumpAndSettle();
     await tester.tap(find.text('저장'));
     await tester.pump();
     expect(find.textContaining('최저임금'), findsWidgets);
     await tester.enterText(field, '11000');
+    await tester.pumpAndSettle();
     await tester.tap(find.text('저장'));
     await tester.pumpAndSettle();
     expect(store.activeStaff[1].wage, 11000);
@@ -150,6 +156,8 @@ void main() {
     await tester.tap(find.text('미확인자 리마인드'));
     await tester.pumpAndSettle();
     expect(find.textContaining('명에게 다시 알렸어요'), findsOneWidget);
+    // 1시간 안에는 다시 알릴 수 없다(서버 REMIND_TOO_SOON).
+    expect(tester.widget<WebButton>(find.widgetWithText(WebButton, '미확인자 리마인드')).onPressed, isNull);
   });
 
   testWidgets('대시보드: 알림 · 오늘 근무 창', (tester) async {
