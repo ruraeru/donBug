@@ -175,7 +175,7 @@ class _WebScheduleScreenState extends State<WebScheduleScreen> {
     final name = await showWebDialog<String>(
       context,
       title: '템플릿으로 저장',
-      builder: (ctx, set) => webField('템플릿 이름', AppTextField(controller: c),
+      builder: (ctx, set) => webField('템플릿 이름', AppTextField(controller: c, maxLength: 100),
           help: '그 달 첫 완전한 월~일 주의 요일 패턴을 저장해요.'),
       actions: (ctx, set) => [
         WebButton('취소', style: WebButtonStyle.outline, onPressed: () => Navigator.pop(ctx)),

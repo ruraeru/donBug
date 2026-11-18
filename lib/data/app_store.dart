@@ -1844,6 +1844,14 @@ class AppStore extends ChangeNotifier {
     return targets.length;
   }
 
+  /// [remindUnread] 의 서버 모드판: 서버가 보낸 인원 수를 돌려준다. 실패(쿨다운 409 등)하면 예외.
+  Future<int> remindUnreadRemote(String noticeId) async {
+    if (!remote) return remindUnread(noticeId);
+    final n = noticeById(noticeId)!;
+    final res = await _remoteWait((api) => api.post('${_sp(n.storeId)}/notices/$noticeId/remind'));
+    return res is Map && res['sent'] is num ? (res['sent'] as num).toInt() : 0;
+  }
+
   // ───────────────────────── 서류 ─────────────────────────
 
   /// 알바생(나)이 보건증 갱신본을 등록한다.
