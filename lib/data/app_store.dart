@@ -2008,6 +2008,75 @@ class AppStore extends ChangeNotifier {
     await reload(storeId: session.storeId);
   }
 
+  // ───────────────────────── 프로필 ─────────────────────────
+
+  /// 프로필 입력 검증(서버 규칙·문구와 같다). 문제 없으면 null. 이름 길이는 code point(이모지 1자).
+  static String? profileError({String? fullName, String? contact}) {
+    if (fullName != null) {
+      final n = fullName.trim();
+      if (n.isEmpty) return '이름을 입력해 주세요';
+      if (n.runes.length > 50) return '이름은 50자 이하로 입력해 주세요';
+    }
+    if (contact != null && (!RegExp(r'^[0-9-]*$').hasMatch(contact) || contact.length > 20)) {
+      return '연락처는 숫자와 - 로 20자 이하로 입력해 주세요';
+    }
+    return null;
+  }
+
+  /// 내 이름·연락처 저장. 보낸 값만 바뀐다(연락처 '' 는 지우기). 실패 시 [ApiException].
+  Future<void> updateProfile({String? fullName, String? contact}) async {
+    final err = profileError(fullName: fullName, contact: contact);
+    if (err != null) throw ApiException(400, 'validation', err);
+    if (remote) {
+      await _try((a) => a.patch('/api/v1/me/profile', {
+            'fullName': ?fullName?.trim(),
+            'contact': ?contact,
+          }));
+      await _reloadQuiet();
+      return;
+    }
+    final p = me;
+    // 서버도 이름을 바꾸면 name = fullName 으로 맞춘다.
+    if (fullName != null) p.fullName = p.name = fullName.trim();
+    if (contact != null) p.contact = contact.isEmpty ? null : contact;
+    _commit();
+  }
+
+  /// 데모 모드 프로필 사진(서버가 없어 메모리에만 둔다). 키는 사람 id.
+  final Map<String, Uint8List> demoPhotos = {};
+
+  /// 내 프로필 사진 올리기. 실패 시 [ApiException].
+  Future<void> uploadProfilePhoto(Uint8List bytes, String filename) async {
+    if (remote) {
+      await _try((a) => a.multipart('PUT', '/api/v1/me/photo',
+          fileField: 'photo', bytes: bytes, filename: filename));
+      await _reloadQuiet();
+      return;
+    }
+    demoPhotos[me.id] = bytes;
+    me
+      ..hasPhoto = true
+      ..photoVer = '${now.millisecondsSinceEpoch}';
+    _commit();
+  }
+
+  /// 내 프로필 사진 지우기. 실패 시 [ApiException].
+  Future<void> deleteProfilePhoto() async {
+    if (remote) {
+      await _try((a) => a.delete('/api/v1/me/photo'));
+      await _reloadQuiet();
+      return;
+    }
+    demoPhotos.remove(me.id);
+    me
+      ..hasPhoto = false
+      ..photoVer = null;
+    _commit();
+  }
+
+  /// 프로필 사진 주소. Image.network 에 `api.authHeaders` 를 같이 넘긴다. `?v=` 가 캐시 키.
+  String personPhotoUrl(Person p) => '${api!.baseUrl}/api/v1/people/${p.id}/photo?v=${p.photoVer}';
+
   /// 직원 보건증 사진 주소 (사장님). Image.network 에 `api.authHeaders` 를 같이 넘긴다.
   String staffCertPhotoUrl(Staff s) =>
       '${api!.baseUrl}${_sp(s.storeId)}/staff/${s.id}/health-cert/photo';
@@ -2110,6 +2179,7 @@ class AppStore extends ChangeNotifier {
   /// 매장 설정 저장. 실패 시 [ApiException].
   Future<void> updateStoreSettings({
     String? name,
+    String? address,
     int? openMin,
     int? closeMin,
     int? weekendOpenMin,
@@ -2123,9 +2193,13 @@ class AppStore extends ChangeNotifier {
     final err = validateHours(openMin ?? st.openMin, closeMin ?? st.closeMin,
         weekendOpenMin ?? st.weekendOpenMin, weekendCloseMin ?? st.weekendCloseMin);
     if (err != null) throw ApiException(400, 'validation', err);
+    if (address != null && address.trim().isEmpty) {
+      throw ApiException(400, 'STORE_REQUIRED_FIELDS', '주소를 입력해 주세요');
+    }
     if (remote) {
       await _try((a) => a.patch('${_sp(st.id)}/settings', {
             'name': ?name,
+            'address': ?address,
             'openMin': ?openMin,
             'closeMin': ?closeMin,
             'weekendOpenMin': ?weekendOpenMin,
@@ -2139,6 +2213,7 @@ class AppStore extends ChangeNotifier {
       return;
     }
     if (name != null) st.name = name;
+    if (address != null) st.address = address.trim();
     if (openMin != null) st.openMin = openMin;
     if (closeMin != null) st.closeMin = closeMin;
     if (weekendOpenMin != null) st.weekendOpenMin = weekendOpenMin;

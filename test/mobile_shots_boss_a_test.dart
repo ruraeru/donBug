@@ -10,10 +10,12 @@ import 'package:donbug/screens/employer/employer_schedule_screen.dart';
 import 'package:donbug/screens/employer/schedule_template_screen.dart';
 import 'package:donbug/screens/employer/shift_add_screen.dart';
 import 'package:donbug/screens/employer/store_code_screen.dart';
+import 'package:donbug/screens/employer/store_info_edit_screen.dart';
 import 'package:donbug/screens/employer/store_create_screen.dart';
 import 'package:donbug/screens/employer/store_settings_screen.dart';
 import 'package:donbug/screens/employer/substitute_approval_screen.dart';
 import 'package:donbug/screens/employer/substitute_done_screen.dart';
+import 'package:donbug/screens/profile_edit_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -42,6 +44,8 @@ void main() {
       'store_settings': const StoreSettingsScreen(),
       'store_create': const StoreCreateScreen(),
       'store_code': const StoreCodeScreen(),
+      'store_info_edit': const StoreInfoEditScreen(),
+      'profile_edit': const ProfileEditScreen(),
     };
     for (final e in screens.entries) {
       await pumpShot(tester, e.value, store: s, height: 1400);

@@ -287,6 +287,8 @@ class _StaffSheetState extends State<_StaffSheet> {
             Text(p.fullName, style: AppText.style(20, FontWeight.w500)),
             Text('${s.kind.label} · ${s.kind.flex ? '유동 근무' : s.part} · ${dotDate(parseYmd(s.joinedAt))} 입사',
                 style: AppText.style(13, FontWeight.w400, AppColors.textSecondary)),
+            if (p.contact != null)
+              Text('연락처 ${p.contact}', style: AppText.style(13, FontWeight.w400, AppColors.textSecondary)),
           ]),
         ),
       ]),

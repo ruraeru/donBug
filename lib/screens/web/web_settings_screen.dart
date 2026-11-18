@@ -94,7 +94,7 @@ class WebSettingsScreen extends StatefulWidget {
 }
 
 class _WebSettingsScreenState extends State<WebSettingsScreen> {
-  late String _name;
+  late String _name, _address;
   late int _open, _close, _wOpen, _wClose;
   late SizeMode _sizeMode;
   late bool _notice, _push;
@@ -117,6 +117,7 @@ class _WebSettingsScreenState extends State<WebSettingsScreen> {
   void _load() {
     final s = AppScope.read(context).store;
     _name = s.name;
+    _address = s.address;
     _open = s.openMin;
     _close = s.closeMin;
     _wOpen = s.weekendOpenMin;
@@ -135,6 +136,7 @@ class _WebSettingsScreenState extends State<WebSettingsScreen> {
 
   bool _dirty(Store s) =>
       _name != s.name ||
+      _address != s.address ||
       _open != s.openMin ||
       _close != s.closeMin ||
       _wOpen != s.weekendOpenMin ||
@@ -192,6 +194,7 @@ class _WebSettingsScreenState extends State<WebSettingsScreen> {
 
   Future<void> _save() async {
     final store = AppScope.read(context);
+    final s = store.store;
     final messenger = ScaffoldMessenger.of(context);
     setState(() {
       _saving = true;
@@ -200,6 +203,7 @@ class _WebSettingsScreenState extends State<WebSettingsScreen> {
     try {
       await store.updateStoreSettings(
         name: _name.trim().isEmpty ? '내 매장' : _name.trim(),
+        address: _address.trim() != s.address ? _address.trim() : null,
         openMin: _open,
         closeMin: _close,
         weekendOpenMin: _wOpen,
@@ -313,6 +317,17 @@ class _WebSettingsScreenState extends State<WebSettingsScreen> {
                     onChanged: (v) => setState(() => _name = v),
                     maxLength: 100,
                     decoration: _inputDeco('내 매장'),
+                    style: AppText.style(15),
+                  )),
+              const SizedBox(height: 16),
+              webField(
+                  '주소',
+                  TextFormField(
+                    key: ValueKey('address$_gen'),
+                    initialValue: _address,
+                    onChanged: (v) => setState(() => _address = v),
+                    maxLength: 255,
+                    decoration: _inputDeco('매장 주소'),
                     style: AppText.style(15),
                   )),
               const SizedBox(height: 16),

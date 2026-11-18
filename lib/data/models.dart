@@ -79,6 +79,9 @@ class Person {
     this.certExpiry,
     List<int>? certAlertDays,
     this.certHasPhoto = false,
+    this.contact,
+    this.hasPhoto = false,
+    this.photoVer,
   }) : certAlertDays = certAlertDays ?? [30, 14, 7, 0];
 
   final String id;
@@ -87,6 +90,13 @@ class Person {
   String? certExpiry;
   List<int> certAlertDays;
   bool certHasPhoto;
+
+  /// 연락처. 서버는 내 것과 (사장님이면) 재직 직원 것만 준다. 없으면 null.
+  String? contact;
+
+  /// 프로필 사진. [photoVer] 는 사진이 바뀔 때마다 바뀌는 값(이미지 캐시 키).
+  bool hasPhoto;
+  String? photoVer;
 
   // runes: 이모지(서로게이트 쌍)로 시작하는 이름도 깨지지 않게
   String get letter => name.isEmpty ? '?' : String.fromCharCode(name.runes.first);
@@ -98,6 +108,9 @@ class Person {
         'certExpiry': certExpiry,
         'certAlertDays': certAlertDays,
         'certHasPhoto': certHasPhoto,
+        'contact': contact,
+        'hasPhoto': hasPhoto,
+        'photoVer': photoVer,
       };
 
   factory Person.fromJson(Map<String, dynamic> j) => Person(
@@ -107,6 +120,9 @@ class Person {
         certExpiry: j['certExpiry'],
         certAlertDays: (j['certAlertDays'] as List).cast<int>(),
         certHasPhoto: j['certHasPhoto'] ?? false,
+        contact: j['contact'],
+        hasPhoto: j['hasPhoto'] ?? false,
+        photoVer: j['photoVer'],
       );
 }
 

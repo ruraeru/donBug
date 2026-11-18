@@ -4,6 +4,7 @@ import '../../data/app_scope.dart';
 import '../../theme.dart';
 import '../../widgets/common.dart';
 import '../../widgets/demo_menu.dart';
+import '../profile_edit_screen.dart';
 import 'my_documents_screen.dart';
 import 'notification_center_screen.dart';
 import 'store_switch_screen.dart';
@@ -30,22 +31,29 @@ class EmployeeMyScreen extends StatelessWidget {
           Text('MY', style: AppText.style(24, FontWeight.w500)),
           const SizedBox(height: 16),
           AppCard(
+            onTap: () => _push(context, const ProfileEditScreen()),
             child: Row(
               children: [
                 LetterAvatar(p.letter,
-                    color: AppColors.primary, background: AppColors.primarySoft),
+                    color: AppColors.primary, background: AppColors.primarySoft, person: p),
                 const SizedBox(width: 12),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(p.fullName, style: AppText.style(18, FontWeight.w500)),
+                      if (p.contact != null) ...[
+                        const SizedBox(height: 2),
+                        Text(p.contact!,
+                            style: AppText.style(13, FontWeight.w400, AppColors.textSecondary)),
+                      ],
                       const SizedBox(height: 2),
                       Text('알바생 · ${store.store.name}',
                           style: AppText.style(13, FontWeight.w400, AppColors.textSecondary)),
                     ],
                   ),
                 ),
+                chevron,
               ],
             ),
           ),
