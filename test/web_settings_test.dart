@@ -76,7 +76,7 @@ void main() {
   testWidgets('파트 추가하면 저장 활성, 되돌리기', (tester) async {
     final store = employerStore();
     await pumpAt(tester, const WebSettingsScreen(), const Size(1440, 1200), store: store);
-    await tester.tap(find.text('+ 파트 추가'));
+    await tester.tap(find.text('+ 파트 추가').first); // 알바생 카드
     await tester.pumpAndSettle();
     expect(find.text('새 파트'), findsOneWidget);
     expect(find.byType(TextFormField), findsWidgets);

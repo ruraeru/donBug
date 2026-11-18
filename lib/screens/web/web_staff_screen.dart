@@ -73,7 +73,7 @@ class _WebStaffScreenState extends State<WebStaffScreen> {
     final filters = <(String?, String)>[
       (null, '전체 ${active.length}'),
       if (store.flexStaff.isNotEmpty) (flexFilter, '유동 근무 ${store.flexStaff.length}'),
-      for (final p in store.store.parts)
+      for (final p in store.store.timerParts)
         (p.name, '${p.name} ${store.partStaff.where((s) => s.part == p.name).length}'),
     ];
     return WebPage(
@@ -321,14 +321,14 @@ class _StaffSheetState extends State<_StaffSheet> {
               ),
             ]),
           ),
-          if (store.store.parts.isNotEmpty)
+          if (store.store.timerParts.isNotEmpty)
             webField(
                 '기본 파트',
                 WebSelect<String>(
-                  value: store.store.parts.any((x) => x.name == s.part)
+                  value: store.store.timerParts.any((x) => x.name == s.part)
                       ? s.part
-                      : store.store.parts.first.name,
-                  items: [for (final x in store.store.parts) (x.name, x.name)],
+                      : store.store.timerParts.first.name,
+                  items: [for (final x in store.store.timerParts) (x.name, x.name)],
                   onChanged: (v) => store.updateStaff(s.id, part: v),
                 )),
         ],
@@ -570,7 +570,7 @@ class _FixedWorkEditorState extends State<FixedWorkEditor> {
       ];
 
   Widget _parts(AppStore store, Staff s) {
-    final parts = store.store.parts;
+    final parts = store.store.timerParts;
     if (parts.isEmpty) {
       return Text('매장 설정에서 알바생 근무 파트를 먼저 추가하세요.',
           style: AppText.style(12, FontWeight.w400, AppColors.textSecondary));

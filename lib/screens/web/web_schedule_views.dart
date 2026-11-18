@@ -22,6 +22,9 @@ Color dayColor(DateTime d, [Color normal = AppColors.textPrimary]) => switch (d.
 /// 유동 근무 칸인지(파트 템플릿에 없는 파트).
 bool isFlexShift(AppStore store, Shift s) => !store.store.parts.any((p) => p.name == s.part);
 
+/// 직원 근무인지: 유동 근무('직원') 또는 직원 파트 근무. 알바생 파트 근무만 false.
+bool isEmployeeShift(AppStore store, Shift s) => !store.store.timerParts.any((p) => p.name == s.part);
+
 /// 파트 색(톤): 오픈 · 미들 · 마감.
 (Color, Color) partColor(PartTemplate p) => switch (p.tone) {
       PartTone.open => (AppColors.primary, AppColors.primarySoft),
@@ -252,15 +255,15 @@ void _drop(BuildContext context, String shiftId, DateTime day,
   final problem = moveProblem(store, s,
       day: day, staffId: staffId, start: part?.startMin, end: part?.endMin);
   if (problem != null) return showToast(context, problem);
-  // 유동 직원 칸에 파트 근무를 놓으면 '직원' 근무로, 반대로 알바 칸에 놓으면 그 알바의 파트로.
+  // 유동 직원 칸에 알바생 파트 근무를 놓으면 '직원' 근무로(직원 파트 근무는 그대로), 반대로 알바 칸에 직원 근무를 놓으면 그 알바의 파트로.
   final target = store.staffById(staffId);
-  final flexShift = isFlexShift(store, s);
+  final employeeShift = isEmployeeShift(store, s);
   final partName = part?.name ??
       (target == null
           ? null
           : target.kind.flex
-              ? (flexShift ? null : flexPart)
-              : (flexShift ? target.part : null));
+              ? (employeeShift ? null : flexPart)
+              : (employeeShift ? target.part : null));
   store.updateShift(shiftId,
       date: day,
       staffId: staffId,
@@ -300,18 +303,28 @@ class PartWeekView extends StatelessWidget {
       rows: [
         for (final p in store.store.parts)
           [
-            partLabel(partColor(p).$1, p.name, '${range(p.startMin, p.endMin)} · 필요 ${p.need}명'),
+            partLabel(
+                partColor(p).$1,
+                p.name,
+                '${p.flex ? '직원 · ' : ''}${range(p.startMin, p.endMin)} · 필요 ${p.need}명'
+                '${p.days == PartDays.all ? '' : ' · ${p.days.label}'}'),
             for (final d in days)
               Builder(builder: (context) {
                 final list = store.scheduleOn(d).where((s) => s.part == p.name).toList();
                 final working = list.where((s) => s.kind == ShiftKind.work).length;
-                final short = working < p.need && !d.isBefore(store.today);
+                final short = p.appliesOn(d) && working < p.need && !d.isBefore(store.today);
                 return _Cell(
                   day: d,
                   locked: _otherMonth(d, month),
                   highlight: short,
                   onAdd: () => showShiftDialog(context, date: d, part: p.name),
-                  onDrop: (id) => _drop(context, id, d, part: isFlexShift(store, store.shiftById(id)!) ? null : p),
+                  // 직원 파트엔 직원 근무만, 알바생 파트엔 알바생 근무만 파트를 바꾼다(아니면 날짜만 옮김).
+                  onDrop: (id) {
+                    final s = store.shiftById(id)!;
+                    final staffFlex = store.staffById(s.staffId)?.kind.flex ?? false;
+                    final fits = p.flex ? staffFlex : !staffFlex && !isFlexShift(store, s);
+                    _drop(context, id, d, part: fits ? p : null);
+                  },
                   children: [
                     for (final s in list) _named(store, s),
                     if (short)
@@ -432,7 +445,7 @@ class PeopleWeekView extends StatelessWidget {
       ];
     }
 
-    final parts = store.store.parts.map((p) => '${p.name} ${_short(p.startMin)}–${_short(p.endMin)}').join(' · ');
+    final parts = store.store.timerParts.map((p) => '${p.name} ${_short(p.startMin)}–${_short(p.endMin)}').join(' · ');
     return _Grid(
       labelWidth: 210,
       header: [_labelHead('구성원 · 주간 합계'), for (final d in days) _dayHead(store, d)],
@@ -507,7 +520,7 @@ class MonthView extends StatelessWidget {
               ),
             if (!d.isBefore(store.today))
               for (final p in store.store.parts)
-                if (list.where((s) => s.part == p.name && s.kind == ShiftKind.work).length < p.need)
+                if (p.appliesOn(d) && list.where((s) => s.part == p.name && s.kind == ShiftKind.work).length < p.need)
                   Padding(
                     padding: const EdgeInsets.only(top: 4, left: 2),
                     child: Text('${p.name} 인원 부족',

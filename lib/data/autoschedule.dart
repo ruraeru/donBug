@@ -64,7 +64,7 @@ List<Shift> fixedShifts(Store store, List<Staff> staff, List<DateTime> dates) {
       if (!st.kind.flex) {
         final names = st.fixedParts[di];
         final h = hoursOn(store, date);
-        for (final p in store.parts.where((p) => names.contains(p.name))) {
+        for (final p in store.timerParts.where((p) => names.contains(p.name))) {
           // 그날 영업시간으로 자른다. 새벽 파트는 전날 야간 영업(마감 > 1440)의 이어지는 구간으로 (BE FixedShiftPlanner 와 같음).
           var s = max(p.startMin, h.open), e = min(p.endMin, h.close);
           if (e <= s) {
@@ -81,6 +81,38 @@ List<Shift> fixedShifts(Store store, List<Staff> staff, List<DateTime> dates) {
         final h = hoursOn(store, date);
         if (w == null || w.startMin < h.open || w.endMin > h.close || w.endMin <= w.startMin) continue;
         out.add(_blank(st.id, date, w.startMin, w.endMin, flexPart, breakFor(w.startMin, w.endMin)));
+      }
+    }
+  }
+  return out..sort(_byDateStart);
+}
+
+/// 직원 파트(`flex`)를 직원(매니저·정직원)으로 채운다 (BE 자동 생성과 같은 규칙, 데모용 근사).
+/// 파트가 쓰이는 날([PartTemplate.appliesOn])만, 파트 시각 그대로(영업시간으로 자르지 않음), part = 파트 이름.
+/// 한 사람은 하루 한 근무: [existing] 에 그날 근무·연차·휴무가 있으면 뺀다. 그 요일 출퇴근이 있는 직원 먼저,
+/// 그다음 여기서 덜 배정된 직원. [existing] 의 같은 파트 근무는 필요 인원에 센다. 날짜·시작 시각 순.
+List<Shift> flexPartShifts(Store store, List<Staff> staff, List<DateTime> dates, List<Shift> existing) {
+  final flex = [for (final s in staff) if (s.kind.flex) s];
+  final out = <Shift>[];
+  final count = <String, int>{};
+  for (final date in dates) {
+    final day = _ymd(date);
+    final busy = {for (final s in [...existing, ...out]) if (s.date == day) s.staffId};
+    for (final p in store.flexParts.where((p) => p.appliesOn(date))) {
+      var have = existing.where((s) => s.date == day && s.isWork && s.part == p.name).length;
+      while (have < p.need) {
+        final free = flex.where((s) => !busy.contains(s.id)).toList()
+          ..sort((a, b) {
+            final w = (a.workHours[dayIndexOf(date)] == null ? 1 : 0)
+                .compareTo(b.workHours[dayIndexOf(date)] == null ? 1 : 0);
+            return w != 0 ? w : (count[a.id] ?? 0).compareTo(count[b.id] ?? 0);
+          });
+        if (free.isEmpty) break;
+        final who = free.first;
+        out.add(_blank(who.id, date, p.startMin, p.endMin, p.name, p.breakMin));
+        busy.add(who.id);
+        count[who.id] = (count[who.id] ?? 0) + 1;
+        have++;
       }
     }
   }

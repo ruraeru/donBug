@@ -1364,7 +1364,8 @@ class AppStore extends ChangeNotifier {
     for (var i = 0; i < 7; i++) {
       final day = monday.add(Duration(days: i));
       if (day.isBefore(today)) continue;
-      for (final p in store.parts) {
+      // 서버(ShiftService.fill)와 같게 직원 파트·그날 안 쓰는 파트는 건너뛴다.
+      for (final p in store.parts.where((p) => !p.flex && p.appliesOn(day))) {
         var have = scheduleOn(day).where((x) => x.part == p.name && x.kind == ShiftKind.work).length;
         while (have < p.need) {
           final span = (p.endMin <= p.startMin ? p.endMin + 1440 : p.endMin) - p.startMin;
@@ -1498,6 +1499,7 @@ class AppStore extends ChangeNotifier {
       for (var day = start; !day.isAfter(end); day = day.add(const Duration(days: 1))) {
         for (var i = 0; i < store.parts.length; i++) {
           final p = store.parts[i], need = i < needs.length ? needs[i] : p.need;
+          if (p.flex || !p.appliesOn(day)) continue; // 서버 ShiftService.fill 과 같다
           final span = (p.endMin <= p.startMin ? p.endMin + 1440 : p.endMin) - p.startMin;
           var have = scheduleOn(day).where((x) => x.part == p.name && x.kind == ShiftKind.work).length +
               planned.where((x) => x.part == p.name && x.date == ymd(day)).length;
@@ -1650,7 +1652,7 @@ class AppStore extends ChangeNotifier {
       id: _id('m'),
       storeId: st.id,
       personId: session.employeeId,
-      part: st.parts.first.name,
+      part: st.timerParts.firstOrNull?.name ?? '',
       wage: minimumWage2026,
       joinedAt: ymd(today),
       status: StaffStatus.pending,
@@ -2261,6 +2263,8 @@ class AppStore extends ChangeNotifier {
                   'endMin': p.endMin,
                   'breakMin': p.breakMin,
                   'need': p.need,
+                  'flex': p.flex,
+                  'days': p.days.name,
                 }
             ]
           }));
@@ -2382,7 +2386,7 @@ class AppStore extends ChangeNotifier {
     _commit();
   }
 
-  /// 근무표 생성 미리보기(저장 안 함). 서버: generate/preview. 데모: 고정 근무로 채운 결과.
+  /// 근무표 생성 미리보기(저장 안 함). 서버: generate/preview. 데모: 직원 파트 + 고정 근무로 채운 결과.
   Future<GeneratePreview> previewGenerate(String month,
       {required HolidayPolicy weeklyHolidayPay, required SchedulePriority priority}) async {
     if (remote) {
@@ -2396,7 +2400,12 @@ class AppStore extends ChangeNotifier {
     bool cleared(Shift x) => !parseYmd(x.date).isBefore(today) && attendanceFor(x.id) == null;
     final month0 = _monthShifts(month);
     final kept = month0.where((x) => !cleared(x)).toList();
-    final add = auto.autofill(kept, auto.fixedShifts(store, activeStaff, _targetDates(month)));
+    // 서버처럼 직원 파트를 직원으로 먼저 채우고, 그다음 고정 근무(직원은 그날 근무가 있으면 건너뜀).
+    final flexAdd = auto.flexPartShifts(store, activeStaff, _targetDates(month), kept);
+    final add = [
+      ...flexAdd,
+      ...auto.autofill([...kept, ...flexAdd], auto.fixedShifts(store, activeStaff, _targetDates(month))),
+    ];
     return GeneratePreview(
       planId: 'demo',
       month: month,
