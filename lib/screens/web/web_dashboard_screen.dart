@@ -96,7 +96,7 @@ class _WebDashboardScreenState extends State<WebDashboardScreen> {
                   certLabel(certs.first.$2),
                   '${store.nameOf(certs.first.$1.id)}님'
                       '${certs.length > 1 ? ' 외 ${certs.length - 1}명' : ''}'
-                      ' · ${store.personOf(certs.first.$1).certAlertDays.where((d) => d > 0).join('·')}일 전 알림',
+                      '${_alertDaysText(certs.first.$2, store.personOf(certs.first.$1))}',
                   valueColor: AppColors.danger,
                   onTap: () => go(WebMenu.documents)),
         ]),
@@ -109,7 +109,7 @@ class _WebDashboardScreenState extends State<WebDashboardScreen> {
             const SizedBox(height: 16),
             _StaffWeekCard(
               monday: mondayOf(t).add(Duration(days: 7 * _week)),
-              onWeek: (d) => setState(() => _week += d),
+              onWeek: (d) => setState(() => _week = clampWeek(t, _week + d)),
             ),
           ]),
           right: Column(children: [
@@ -121,6 +121,21 @@ class _WebDashboardScreenState extends State<WebDashboardScreen> {
       ],
     );
   }
+}
+
+/// 보건증 KPI 캡션 끝 " · 7·30일 전 알림". 미등록이거나 알림일이 없으면 뺀다.
+String _alertDaysText(int? left, Person p) {
+  final days = p.certAlertDays.where((d) => d > 0);
+  return left == null || days.isEmpty ? '' : ' · ${days.join('·')}일 전 알림';
+}
+
+/// 직원 근무 현황 주 이동 범위: `/me/state` 가 주는 근무 범위
+/// (지난달 1일이 든 주 월요일 ~ 3개월 뒤 말일이 든 주) 안으로 자른다.
+int clampWeek(DateTime today, int week) {
+  final base = mondayOf(today);
+  int weeksTo(DateTime d) => (mondayOf(d).difference(base).inDays / 7).round();
+  return week.clamp(weeksTo(DateTime(today.year, today.month - 1, 1)),
+      weeksTo(DateTime(today.year, today.month + 4, 0)));
 }
 
 class _Kpi extends StatelessWidget {
@@ -592,8 +607,13 @@ Future<void> _showNotifications(BuildContext context) {
             onTap: () {
               store.markNotificationRead(n.id);
               Navigator.pop(ctx);
-              final page = target(n);
-              if (page != null) WebShell.open(context, page);
+              // 근태 알림(퇴근 미기록·자동 퇴근)은 오늘 근무 창에서 바로 고친다.
+              if (n.type == 'pay') {
+                showTodayAttendance(context);
+              } else {
+                final page = target(n);
+                if (page != null) WebShell.open(context, page);
+              }
             },
             child: Padding(
               padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 6),
@@ -692,6 +712,8 @@ Future<void> _editAttendance(BuildContext context, Shift shift) {
   final day = parseYmd(shift.date);
   var inMin = a == null ? shift.startMin : _minOf(DateTime.parse(a.clockIn), day);
   int? outMin = a?.clockOut == null ? null : _minOf(DateTime.parse(a!.clockOut!), day);
+  // 끝난 근무는 퇴근 없이 저장하지 않는다(근무 중 기록이 남는다). 소정 종료로 시작.
+  if (outMin == null && !store.shiftEnd(shift).isAfter(store.now)) outMin = shift.endMin;
   final reason = TextEditingController();
   String? error;
   return showWebDialog<void>(
@@ -723,7 +745,7 @@ Future<void> _editAttendance(BuildContext context, Shift shift) {
       WebButton('취소', style: WebButtonStyle.outline, onPressed: () => Navigator.pop(ctx)),
       WebButton('저장', onPressed: () {
         if (reason.text.trim().isEmpty) return set(() => error = '수정 사유를 적어 주세요');
-        final clockIn = day.add(Duration(minutes: inMin));
+        final clockIn = day.add(Duration(minutes: attendanceInMin(shift, inMin)));
         DateTime? clockOut;
         if (outMin != null) {
           clockOut = day.add(Duration(minutes: outMin!));
@@ -743,3 +765,8 @@ Future<void> _editAttendance(BuildContext context, Shift shift) {
 }
 
 int _minOf(DateTime t, DateTime day) => t.difference(day).inMinutes;
+
+/// 출근 시각(근무 날짜 기준 분). 자정을 넘는 근무에서 시작보다 12시간 넘게 이른
+/// 시각(예: 22:00 근무의 00:10)은 다음 날 출근으로 본다.
+int attendanceInMin(Shift shift, int inMin) =>
+    shift.endAbs > 1440 && inMin < shift.startMin - 720 ? inMin + 1440 : inMin;
