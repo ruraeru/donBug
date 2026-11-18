@@ -2,6 +2,8 @@
 /// 새로 만든 근무는 id·storeId 가 비어 있다(호출한 쪽이 채운다).
 library;
 
+import 'dart:math';
+
 import 'holidays.dart';
 import 'models.dart';
 
@@ -61,13 +63,23 @@ List<Shift> fixedShifts(Store store, List<Staff> staff, List<DateTime> dates) {
       final di = dayIndexOf(date);
       if (!st.kind.flex) {
         final names = st.fixedParts[di];
+        final h = hoursOn(store, date);
         for (final p in store.parts.where((p) => names.contains(p.name))) {
-          out.add(_blank(st.id, date, p.startMin, p.endMin, p.name, p.breakMin));
+          // 그날 영업시간으로 자른다. 새벽 파트는 전날 야간 영업(마감 > 1440)의 이어지는 구간으로 (BE FixedShiftPlanner 와 같음).
+          var s = max(p.startMin, h.open), e = min(p.endMin, h.close);
+          if (e <= s) {
+            final prev = hoursOn(store, DateTime(date.year, date.month, date.day - 1));
+            s = max(p.startMin, prev.open - 1440);
+            e = min(p.endMin, prev.close - 1440);
+          }
+          if (e <= s) continue;
+          final cut = s != p.startMin || e != p.endMin;
+          out.add(_blank(st.id, date, s, e, p.name, cut ? minBreakFor(e - s) : p.breakMin));
         }
       } else {
         final w = st.workHours[di];
         final h = hoursOn(store, date);
-        if (w == null || w.startMin < h.open || w.endMin > h.close) continue;
+        if (w == null || w.startMin < h.open || w.endMin > h.close || w.endMin <= w.startMin) continue;
         out.add(_blank(st.id, date, w.startMin, w.endMin, flexPart, breakFor(w.startMin, w.endMin)));
       }
     }
@@ -75,16 +87,39 @@ List<Shift> fixedShifts(Store store, List<Staff> staff, List<DateTime> dates) {
   return out..sort(_byDateStart);
 }
 
-/// [existing] 은 그대로 두고, 고정 근무 [fixed] 중 빠진 것만 돌려준다.
-/// 연차인 날은 넣지 않는다. 직원은 그 날 근무가 하나라도 있으면, 알바생은 같은 파트 근무가 있으면 건너뛴다.
-List<Shift> autofill(List<Shift> existing, List<Shift> fixed) => [
-      for (final f in fixed)
-        if (!existing.any((s) =>
-            s.staffId == f.staffId &&
-            s.date == f.date &&
-            (s.kind == ShiftKind.leave || f.part == flexPart || s.part == f.part)))
-          f
-    ];
+/// [existing] 은 그대로 두고, 고정 근무 [fixed] 중 빠진 것만 돌려준다 (BE MonthScheduleService.fill 과 같은 규칙).
+/// 연차·휴무인 날은 넣지 않는다. 직원은 그 날 근무가 하나라도 있으면, 알바생은 같은 파트 근무가 있으면 건너뛴다.
+/// 그 직원의 다른 실제 근무(먼저 넣은 고정 근무 포함)와 시간이 겹치면 건너뛴다.
+List<Shift> autofill(List<Shift> existing, List<Shift> fixed) {
+  final work = existing.where((s) => s.isWork).toList();
+  final out = <Shift>[];
+  for (final f in fixed) {
+    if (existing.any((s) =>
+        s.staffId == f.staffId &&
+        s.date == f.date &&
+        (s.kind != ShiftKind.work || f.part == flexPart || s.part == f.part))) {
+      continue;
+    }
+    final (s0, e0) = _span(f);
+    if (work.any((s) {
+      if (s.staffId != f.staffId) return false;
+      final (s1, e1) = _span(s);
+      return s0 < e1 && s1 < e0;
+    })) {
+      continue;
+    }
+    out.add(f);
+    work.add(f);
+  }
+  return out;
+}
+
+/// 근무의 절대 시작·끝(분). 끝 <= 시작이면 야간(다음 날까지).
+(int, int) _span(Shift s) {
+  final p = s.date.split('-');
+  final base = DateTime.utc(int.parse(p[0]), int.parse(p[1]), int.parse(p[2])).millisecondsSinceEpoch ~/ 60000;
+  return (base + s.startMin, base + (s.endMin <= s.startMin ? s.endMin + 1440 : s.endMin));
+}
 
 DateTime _monthStart(String month) {
   final p = month.split('-');

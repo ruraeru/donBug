@@ -90,6 +90,9 @@ Future<void> showShiftDialog(BuildContext context,
     if (kind == ShiftKind.work && breakMin < legal) {
       return set(() => error = '법정 최소 휴게는 $legal분이에요');
     }
+    if (kind == ShiftKind.work && breakMin >= span()) {
+      return set(() => error = '휴게 시간은 근무 시간보다 짧아야 해요');
+    }
     final partName = who.kind.flex ? flexPart : (pt?.name ?? flexPart);
     final endMin = end > 1440 ? end - 1440 : end;
     if (kind == ShiftKind.work && !tbd) {

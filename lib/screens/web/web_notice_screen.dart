@@ -18,6 +18,7 @@ class WebNoticeScreen extends StatefulWidget {
 
 class _WebNoticeScreenState extends State<WebNoticeScreen> {
   String? _selectedId;
+  bool _reminding = false;
 
   Widget _tag(bool required) => required
       ? const Pill('필독', color: AppColors.danger, background: AppColors.dangerSoft)
@@ -28,9 +29,21 @@ class _WebNoticeScreenState extends State<WebNoticeScreen> {
     if (id != null && mounted) setState(() => _selectedId = id);
   }
 
-  void _remind(Notice n) {
-    final count = AppScope.read(context).remindUnread(n.id);
-    showToast(context, '$count명에게 다시 알렸어요');
+  // 서버는 1시간에 한 번만 다시 알린다(REMIND_TOO_SOON). 그동안 버튼을 막는다.
+  bool _remindCooling(AppStore store, Notice n) =>
+      n.remindedAt != null &&
+      store.now.difference(DateTime.parse(n.remindedAt!)) < const Duration(hours: 1);
+
+  Future<void> _remind(Notice n) async {
+    setState(() => _reminding = true);
+    try {
+      final count = await AppScope.read(context).remindUnreadRemote(n.id);
+      if (mounted) showToast(context, '$count명에게 다시 알렸어요');
+    } catch (e) {
+      if (mounted) showToast(context, remoteErrorText(e));
+    } finally {
+      if (mounted) setState(() => _reminding = false);
+    }
   }
 
   @override
@@ -39,9 +52,9 @@ class _WebNoticeScreenState extends State<WebNoticeScreen> {
     final notices = store.storeNotices;
     final staff = store.activeStaff;
     final current = store.noticeById(_selectedId) ?? notices.firstOrNull;
-    double ratio(Notice n) => staff.isEmpty
-        ? 0
-        : staff.where((s) => n.readBy.containsKey(s.id)).length / staff.length;
+    // 분모·분자는 확인 현황과 같다: 가입 전 공지 대상이 아닌 직원은 확인한 것으로 친다.
+    double ratio(Notice n) =>
+        staff.isEmpty ? 0 : (staff.length - store.unreadStaffOf(n).length) / staff.length;
     return WebPage(
       title: '공지 관리',
       subtitle: '매장 전체 공지와 필독 확인 현황',
@@ -80,7 +93,9 @@ class _WebNoticeScreenState extends State<WebNoticeScreen> {
   }
 
   Widget _detail(AppStore store, Notice n, List<Staff> staff) {
-    final unread = store.unreadStaffOf(n).length;
+    final unreadIds = {for (final s in store.unreadStaffOf(n)) s.id};
+    final unread = unreadIds.length;
+    final cooling = _remindCooling(store, n);
     return AppCard(
       padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 22),
       child: Column(
@@ -107,8 +122,10 @@ class _WebNoticeScreenState extends State<WebNoticeScreen> {
                 child: Text('확인 현황 ${staff.length - unread} / ${staff.length}명',
                     style: AppText.style(15, FontWeight.w500))),
             if (unread > 0 && n.required)
-              WebButton('미확인자 리마인드',
-                  style: WebButtonStyle.soft, onPressed: () => _remind(n)),
+              WebButton(_reminding ? '보내는 중…' : '미확인자 리마인드',
+                  style: WebButtonStyle.soft,
+                  tooltip: cooling ? '방금 알렸어요. 1시간 뒤에 다시 알릴 수 있어요' : null,
+                  onPressed: _reminding || cooling ? null : () => _remind(n)),
           ]),
           for (final s in staff) ...[
             const SizedBox(height: 16),
@@ -120,9 +137,11 @@ class _WebNoticeScreenState extends State<WebNoticeScreen> {
                 Expanded(
                     child: Text(store.personOf(s).name,
                         style: AppText.style(14, FontWeight.w500))),
-                n.readBy[s.id] == null
-                    ? webCellText('미확인', color: AppColors.danger, weight: FontWeight.w500)
-                    : webCellText('${clock(DateTime.parse(n.readBy[s.id]!))} 확인'),
+                n.readBy[s.id] != null
+                    ? webCellText('${clock(DateTime.parse(n.readBy[s.id]!))} 확인')
+                    : unreadIds.contains(s.id)
+                        ? webCellText('미확인', color: AppColors.danger, weight: FontWeight.w500)
+                        : webCellText('가입 전 공지'),
               ]),
             ),
           ],
@@ -200,14 +219,15 @@ Future<String?> showNoticeDialog(BuildContext context) {
   var category = categories.first;
   var required = store.store.noticeRequiredDefault;
   String? error;
+  var sending = false; // 연타로 같은 공지가 두 번 올라가지 않게
   return showWebDialog<String>(
     context,
     title: '공지 작성',
     width: 560,
     builder: (ctx, set) => Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-      webField('제목', AppTextField(controller: title, hint: '예: 마감 청소 방법 안내')),
+      webField('제목', AppTextField(controller: title, maxLength: 200, hint: '예: 마감 청소 방법 안내')),
       const SizedBox(height: 14),
-      webField('내용', AppTextField(controller: body, maxLines: 6, hint: '직원에게 알릴 내용을 적어 주세요')),
+      webField('내용', AppTextField(controller: body, maxLines: 6, maxLength: 5000, hint: '직원에게 알릴 내용을 적어 주세요')),
       const SizedBox(height: 14),
       Row(children: [
         WebSegmented(
@@ -237,16 +257,23 @@ Future<String?> showNoticeDialog(BuildContext context) {
     ]),
     actions: (ctx, set) => [
       WebButton('취소', style: WebButtonStyle.outline, onPressed: () => Navigator.pop(ctx)),
-      WebButton('올리기', onPressed: () async {
+      WebButton(sending ? '올리는 중…' : '올리기', onPressed: sending ? null : () async {
         if (title.text.trim().isEmpty || body.text.trim().isEmpty) {
           return set(() => error = '제목과 내용을 입력해 주세요');
         }
+        set(() => sending = true);
         final Notice n;
         try {
           n = await store.publishNoticeRemote(
               title: title.text.trim(), body: body.text.trim(), required: required, category: category);
         } catch (e) {
-          return set(() => error = remoteErrorText(e));
+          if (ctx.mounted) {
+            set(() {
+              sending = false;
+              error = remoteErrorText(e);
+            });
+          }
+          return;
         }
         if (!ctx.mounted) return;
         Navigator.pop(ctx, n.id);

@@ -54,7 +54,7 @@ class StoreSwitchScreen extends StatelessWidget {
                 padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
                 child: Row(
                   children: [
-                    LetterAvatar(st.name.substring(0, 1), color: fg, background: bg),
+                    LetterAvatar(st.name.characters.take(1).toString(), color: fg, background: bg),
                     const SizedBox(width: 12),
                     Expanded(
                       child: Column(

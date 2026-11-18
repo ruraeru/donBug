@@ -88,7 +88,8 @@ class Person {
   List<int> certAlertDays;
   bool certHasPhoto;
 
-  String get letter => name.isEmpty ? '?' : name.substring(0, 1);
+  // runes: 이모지(서로게이트 쌍)로 시작하는 이름도 깨지지 않게
+  String get letter => name.isEmpty ? '?' : String.fromCharCode(name.runes.first);
 
   Map<String, dynamic> toJson() => {
         'id': id,
@@ -388,8 +389,11 @@ class Contract {
     this.duty = '',
     this.ownerSignedAt,
     this.employeeSignedAt,
+    this.id,
   });
 
+  /// 서버 계약서 id (서명할 때 본 계약서를 보낸다). 데모는 null.
+  final String? id;
   String start;
   String end;
   int wage;
@@ -410,6 +414,7 @@ class Contract {
         'duty': duty,
         'ownerSignedAt': ownerSignedAt,
         'employeeSignedAt': employeeSignedAt,
+        if (id != null) 'id': id,
       };
 
   factory Contract.fromJson(Map<String, dynamic> j) => Contract(
@@ -421,6 +426,7 @@ class Contract {
         duty: j['duty'] ?? '',
         ownerSignedAt: j['ownerSignedAt'],
         employeeSignedAt: j['employeeSignedAt'],
+        id: j['id']?.toString(),
       );
 }
 
@@ -457,9 +463,11 @@ class Staff {
     List<WageStep>? wages,
     List<List<String>>? fixedParts,
     List<WorkHours?>? workHours,
+    List<WorkHours?>? availHours,
   })  : wages = wages ?? [],
         fixedParts = fixedParts ?? List.generate(7, (_) => <String>[]),
-        workHours = workHours ?? List.filled(7, null);
+        workHours = workHours ?? List.filled(7, null),
+        availHours = availHours ?? List.filled(7, null);
 
   final String id;
   final String storeId;
@@ -497,6 +505,9 @@ class Staff {
   /// 직원(매니저·정직원) 요일별 출퇴근 (월~일 7칸, null=쉼).
   List<WorkHours?> workHours;
 
+  /// 알바생 추가 근무 가능 시간 (월~일 7칸, null=그 요일 추가 근무 불가). 빈칸 채우기 후보 범위.
+  List<WorkHours?> availHours;
+
   bool get active => status == StaffStatus.active;
 
   Map<String, dynamic> toJson() => {
@@ -518,6 +529,7 @@ class Staff {
         'wages': [for (final w in wages) w.toJson()],
         'fixedParts': fixedParts,
         'workHours': [for (final w in workHours) w?.toJson()],
+        'availHours': [for (final w in availHours) w?.toJson()],
       };
 
   factory Staff.fromJson(Map<String, dynamic> j) => Staff(
@@ -541,6 +553,7 @@ class Staff {
         ],
         fixedParts: _fixedParts(j['fixedParts']),
         workHours: _workHours(j['workHours']),
+        availHours: _workHours(j['availHours']),
       );
 }
 

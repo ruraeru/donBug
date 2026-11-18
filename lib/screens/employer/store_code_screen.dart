@@ -11,7 +11,10 @@ import 'employer_parts.dart';
 
 /// 매장 코드 공유 (Figma 47:78).
 class StoreCodeScreen extends StatelessWidget {
-  const StoreCodeScreen({super.key, this.invite = false});
+  const StoreCodeScreen({super.key, this.invite = false, this.added = false});
+
+  /// 사장님 매장 전환의 "새 매장 추가"로 만든 직후. 닫으면 돌아간다.
+  final bool added;
 
   /// 직원 관리의 "+ 초대"에서 열면 true (매장 만들기 직후가 아님).
   final bool invite;
@@ -69,8 +72,8 @@ class StoreCodeScreen extends StatelessWidget {
         ),
         bottomNavigationBar: BottomBar(children: [
           AppButton(
-            invite ? '닫기' : '직원 승인하러 가기',
-            onPressed: () => invite
+            invite || added ? '닫기' : '직원 승인하러 가기',
+            onPressed: () => invite || added
                 ? Navigator.pop(context)
                 : Navigator.push(
                     context,

@@ -42,6 +42,75 @@ class SchedulePlan {
   final int cost;
 }
 
+/// 못 채운 칸 (생성 미리보기).
+class UnfilledSlot {
+  UnfilledSlot(this.date, this.part, this.startMin, this.endMin, this.missing);
+
+  final String date, part;
+  final int startMin, endMin, missing;
+}
+
+/// 근무표 생성 미리보기. [AppStore.previewGenerate] 가 만들고 [AppStore.applyGenerated] 가 저장한다.
+class GeneratePreview {
+  GeneratePreview({
+    required this.planId,
+    required this.month,
+    required this.shifts,
+    required this.lines,
+    required this.laborCost,
+    required this.unfilled,
+    required this.replacing,
+  });
+
+  factory GeneratePreview.fromJson(Map<String, dynamic> j, String storeId) => GeneratePreview(
+        planId: '${j['planId']}',
+        month: j['month'],
+        shifts: [
+          for (final x in (j['shifts'] as List? ?? const []).cast<Map>())
+            Shift(
+                id: '',
+                storeId: storeId,
+                staffId: '${x['staffId']}',
+                date: x['date'],
+                startMin: x['startMin'],
+                endMin: x['endMin'],
+                part: x['part'] ?? '직원',
+                breakMin: x['breakMin'] ?? 0)
+        ],
+        lines: [for (final l in (j['lines'] as List? ?? const [])) '$l'],
+        laborCost: (j['laborCost'] as num?)?.toInt() ?? 0,
+        unfilled: [
+          for (final u in (j['unfilled'] as List? ?? const []).cast<Map>())
+            UnfilledSlot(u['date'], '${u['part'] ?? '직원'}', u['startMin'], u['endMin'], u['missing'] ?? 1)
+        ],
+        replacing: (j['replacing'] as num?)?.toInt() ?? 0,
+      );
+
+  final String planId, month;
+
+  /// 적용하면 생길 근무 전체(id 비어 있음).
+  final List<Shift> shifts;
+  final List<String> lines;
+  final int laborCost;
+  final List<UnfilledSlot> unfilled;
+
+  /// 적용하면 지워질 기존 근무 수(오늘 이후, 출근 기록 없는 것).
+  final int replacing;
+
+  /// 직원 id → 총 근무 분.
+  Map<String, int> get minutesByStaff {
+    final m = <String, int>{};
+    for (final x in shifts) {
+      m[x.staffId] = (m[x.staffId] ?? 0) + x.scheduledMinutes;
+    }
+    return m;
+  }
+
+  // 데모 적용용 설정.
+  HolidayPolicy weeklyHolidayPay = HolidayPolicy.minimize;
+  SchedulePriority priority = SchedulePriority.fairness;
+}
+
 /// 앱 전체 상태 + 액션. 화면은 [AppScope]로 받아 쓴다.
 ///
 /// 액션마다 상태를 바꾸고 [notifyListeners] 후 [onSave]로 JSON 을 넘긴다.
@@ -122,8 +191,10 @@ class AppStore extends ChangeNotifier {
     if (a == null || scheduleDirty) return;
     final seq = ++_reloadSeq;
     // 지정이 없으면 지금 보는 매장을 유지한다(안 그러면 서버가 첫 매장으로 돌린다).
-    final want = storeId != null && storeId.isNotEmpty ? storeId : session.storeId;
-    final sid = !_fromServer && want == session.storeId ? '' : want;
+    // 첫 읽기(웹 새로고침·앱 재시작)는 마지막으로 고른 사장님 매장을 고른다.
+    final saved = _fromServer || (storeId?.isNotEmpty ?? false) ? null : a.prefs.getString(ownerStoreKey);
+    final want = storeId != null && storeId.isNotEmpty ? storeId : saved ?? session.storeId;
+    final sid = !_fromServer && saved == null && want == session.storeId ? '' : want;
     Map<String, dynamic> j;
     try {
       j = await a.get('/api/v1/me/state${sid.isEmpty ? '' : '?storeId=$sid'}')
@@ -140,6 +211,10 @@ class AppStore extends ChangeNotifier {
     if (s == null) throw StateError('서버 상태 버전이 앱과 달라요 (v=${j['v']})');
     state = s;
     _fromServer = true;
+    if (role == Role.employer && session.ownerStoreId.isNotEmpty &&
+        a.prefs.getString(ownerStoreKey) != session.ownerStoreId) {
+      a.prefs.setString(ownerStoreKey, session.ownerStoreId);
+    }
     _localIds.clear();
     _undo.clear();
     _redo.clear();
@@ -243,6 +318,15 @@ class AppStore extends ChangeNotifier {
       .where((s) => s.personId == session.employeeId && s.active)
       .toList();
 
+  /// 사장님(나) 소유 매장들 (id 순).
+  List<Store> get ownedStores => state.stores
+      .where((s) => s.ownerPersonId == session.ownerId)
+      .toList()
+    ..sort((a, b) {
+      final x = int.tryParse(a.id), y = int.tryParse(b.id);
+      return x != null && y != null ? x.compareTo(y) : a.id.compareTo(b.id);
+    });
+
   List<Staff> get activeStaff => state.staff
       .where((s) => s.storeId == store.id && s.active)
       .toList();
@@ -328,6 +412,16 @@ class AppStore extends ChangeNotifier {
 
   bool get isWorking => myOpenAttendance != null;
 
+  /// 다른 매장에 퇴근하지 않은 내 출근 기록(서버는 매장과 상관없이 새 출근을 막는다).
+  /// 그 매장은 `storeById(a.storeId)`, 퇴근은 `clockOut(a)`.
+  Attendance? get myOpenAttendanceElsewhere {
+    final mine = state.staff
+        .where((s) => s.personId == session.employeeId && s.storeId != session.employeeStoreId)
+        .map((s) => s.id)
+        .toSet();
+    return state.attendance.where((a) => mine.contains(a.staffId) && a.clockOut == null).firstOrNull;
+  }
+
   AttStatus attendanceStatus(Shift s) {
     final a = attendanceFor(s.id);
     if (a == null) {
@@ -385,8 +479,11 @@ class AppStore extends ChangeNotifier {
       state.subs.where((r) => r.storeId == store.id).toList()
         ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
 
-  List<SubstituteRequest> get pendingSubs =>
-      storeSubs.where((r) => r.pending).toList();
+  /// 진행 중 요청. 근무가 이미 시작했으면 승인·배정할 수 없으니 뺀다(서버 `?status=pending` 과 같음).
+  List<SubstituteRequest> get pendingSubs => storeSubs.where((r) {
+        final sh = shiftById(r.shiftId);
+        return r.pending && (sh == null || shiftStart(sh).isAfter(now));
+      }).toList();
 
   /// 내가 지원할 수 있는 동료 요청.
   List<SubstituteRequest> get subsAvailableToMe {
@@ -398,7 +495,8 @@ class AppStore extends ChangeNotifier {
             r.requesterId != m.id &&
             !r.applicantIds.contains(m.id) &&
             shiftById(r.shiftId) != null &&
-            shiftStart(shiftById(r.shiftId)!).isAfter(now))
+            shiftStart(shiftById(r.shiftId)!).isAfter(now) &&
+            overlappingShift(m.id, shiftById(r.shiftId)!) == null)
         .toList();
   }
 
@@ -432,11 +530,11 @@ class AppStore extends ChangeNotifier {
   int get unreadNoticeCount =>
       storeNotices.where((n) => !isNoticeReadByMe(n)).length;
 
-  /// 최신순. 같은 시각이면 나중에 생긴 것이 먼저.
+  /// 최신순. 같은 시각이면 나중에 생긴 것이 먼저. 지금 매장 알림 + 상태에 없는 매장(퇴사·가입 거절된 곳) 알림.
   List<AppNotification> get myNotifications {
     final all = state.notifications;
     final list = all
-        .where((x) => x.toPersonId == session.meId && x.storeId == store.id)
+        .where((x) => x.toPersonId == session.meId && (x.storeId == store.id || storeById(x.storeId) == null))
         .toList();
     final order = {for (var i = 0; i < all.length; i++) all[i]: i};
     list.sort((a, b) {
@@ -588,12 +686,19 @@ class AppStore extends ChangeNotifier {
   }
 
   void markAllNotificationsRead() {
+    final sid = store.id;
+    // read-all 은 매장 단위라 떠난 매장 알림은 하나씩 읽음 처리한다.
+    final gone = [for (final x in myNotifications) if (!x.read && x.storeId != sid) x.id];
     for (final x in myNotifications) {
       x.read = true;
     }
     _commit();
-    final sid = store.id;
-    _remote((api) => api.post('/api/v1/me/notifications/read-all?storeId=$sid'));
+    _remote((api) async {
+      await api.post('/api/v1/me/notifications/read-all?storeId=$sid');
+      for (final id in gone) {
+        await api.post('/api/v1/me/notifications/$id/read');
+      }
+    });
   }
 
   // ───────────────────────── 세션 ─────────────────────────
@@ -615,6 +720,19 @@ class AppStore extends ChangeNotifier {
     if (remote) return;
     session.role = role;
     _commit();
+  }
+
+  /// 사장님 매장 전환. 웹 근무표 초안에 저장 안 한 변경이 있으면 전환하지 않고 false.
+  bool switchOwnerStore(String storeId) {
+    if (scheduleDirty) return false;
+    session.ownerStoreId = storeId;
+    _commit();
+    if (remote) {
+      reload(storeId: storeId).catchError((Object _) {
+        remoteError.value = '서버와 통신하지 못했어요';
+      });
+    }
+    return true;
   }
 
   /// 근무 중이면 전환하지 않고 false.
@@ -665,7 +783,15 @@ class AppStore extends ChangeNotifier {
   /// 서버 모드 출근: POS 에서 스캔한 [qrToken] 을 보내고 reload. 실패하면 ApiException. 출근 기록을 돌려준다.
   Future<Attendance> clockInRemote(String shiftId, String qrToken) async {
     final s = shiftById(shiftId)!;
-    final res = await api!.post('${_sp(s.storeId)}/shifts/$shiftId/clock-in', {'qrToken': qrToken});
+    final Object? res;
+    try {
+      res = await api!.post('${_sp(s.storeId)}/shifts/$shiftId/clock-in', {'qrToken': qrToken});
+    } on ApiException catch (e) {
+      final other = e.code == 'ALREADY_CLOCKED_IN' ? myOpenAttendanceElsewhere : null;
+      final name = other == null ? null : storeById(other.storeId)?.name;
+      if (name == null) rethrow;
+      throw ApiException(e.status, e.code, '$name에서 아직 퇴근하지 않았어요. 먼저 퇴근해 주세요');
+    }
     try {
       await reload(storeId: s.storeId);
     } catch (_) {} // 출근은 서버에 저장됨 — reload 실패여도 응답으로 계속
@@ -687,8 +813,9 @@ class AppStore extends ChangeNotifier {
     return a;
   }
 
-  Attendance? clockOut() {
-    final a = myOpenAttendance;
+  /// 지금 매장 출근 기록을 퇴근 처리. [open] 을 주면 그 기록(다른 매장 것도 됨).
+  Attendance? clockOut([Attendance? open]) {
+    final a = open ?? myOpenAttendance;
     if (a == null) return null;
     a.clockOut = _iso(now);
     _commit();
@@ -1474,12 +1601,13 @@ class AppStore extends ChangeNotifier {
       final thisMonday = mondayOf(today);
       for (var d = 0; d < 7; d++) {
         final target = thisMonday.add(Duration(days: d));
-        for (final s in scheduleOn(target.subtract(const Duration(days: 7)))) {
+        // BE applyTemplate 과 같은 규칙: 실제 근무만, 지난 날 제외, 같은 직원·파트 있으면·겹치면 건너뜀.
+        if (target.isBefore(today)) continue;
+        for (final s in scheduleOn(target.subtract(const Duration(days: 7))).where((x) => x.isWork)) {
           final staffId = s.originalStaffId ?? s.staffId;
-          final exists = scheduleOn(target).any((x) =>
-              (x.originalStaffId ?? x.staffId) == staffId && x.part == s.part);
+          final exists = scheduleOn(target).any((x) => x.isWork && x.staffId == staffId && x.part == s.part);
           if (exists || !(staffById(staffId)?.active ?? false)) continue;
-          state.shifts.add(Shift(
+          final draft = Shift(
             id: _id('s'),
             storeId: store.id,
             staffId: staffId,
@@ -1488,9 +1616,9 @@ class AppStore extends ChangeNotifier {
             endMin: s.endMin,
             part: s.part,
             breakMin: s.breakMin,
-            kind: s.kind,
-            timeTbd: s.timeTbd,
-          ));
+          );
+          if (overlappingShift(staffId, draft) != null) continue;
+          state.shifts.add(draft);
           copied++;
         }
       }
@@ -1536,9 +1664,17 @@ class AppStore extends ChangeNotifier {
   }
 
   /// 서버 모드 가입 신청. 서버 응답의 result 를 [JoinResult] 로 돌려준다. 신청이 됐으면 서버 상태로 다시 읽는다.
+  /// 서버는 200 `{result, store}`(신청 201). 예전 서버는 notFound·already* 를 404/409 본문으로 준다 — 둘 다 읽는다.
   Future<(JoinResult, Store?)> requestJoinRemote(String code) async {
-    final j = await _try((api) => api.post('/api/v1/stores/join-requests', {'code': code.trim()}))
-        as Map<String, dynamic>;
+    Map<String, dynamic> j;
+    try {
+      j = await _try((api) => api.post('/api/v1/stores/join-requests', {'code': code.trim()}))
+          as Map<String, dynamic>;
+    } on ApiException catch (e) {
+      final b = e.body;
+      if ((e.status != 404 && e.status != 409) || b == null || b['result'] is! String) rethrow;
+      j = b;
+    }
     final result = JoinResult.values.firstWhere((r) => r.name == j['result'],
         orElse: () => JoinResult.notFound);
     final ref = j['store'] as Map<String, dynamic>?;
@@ -1588,11 +1724,13 @@ class AppStore extends ChangeNotifier {
       String? part,
       StaffKind? kind,
       List<List<String>>? fixedParts,
-      List<WorkHours?>? workHours}) {
+      List<WorkHours?>? workHours,
+      List<WorkHours?>? availHours}) {
     final s = staffById(staffId)!;
     if (kind != null) s.kind = kind;
     if (fixedParts != null) s.fixedParts = [for (final l in fixedParts) [...l]];
     if (workHours != null) s.workHours = [...workHours];
+    if (availHours != null) s.availHours = [...availHours];
     if (wage != null && wage != s.wage) {
       if (s.wages.isEmpty) s.wages.add(WageStep('2000-01-01', s.wage));
       s.wages.add(WageStep(ymd(today), wage));
@@ -1612,6 +1750,7 @@ class AppStore extends ChangeNotifier {
           'kind': ?kind?.name,
           'fixedParts': ?fixedParts,
           if (workHours != null) 'workHours': [for (final w in workHours) w?.toJson()],
+          if (availHours != null) 'availHours': [for (final w in availHours) w?.toJson()],
         }));
   }
 
@@ -1731,9 +1870,22 @@ class AppStore extends ChangeNotifier {
           s.storeId == n.storeId && s.active && !n.readBy.containsKey(s.id) && !_noticeBeforeJoin(n, s))
       .toList();
 
-  /// 안 읽은 직원에게 다시 알린다. 보낸 인원 수를 돌려준다.
+  /// 재알림은 1시간에 한 번(서버 NoticeService 와 같음).
+  static const remindCooldown = Duration(hours: 1);
+
+  /// 다시 알릴 수 있을 때까지 남은 시간. 지금 알릴 수 있으면 null.
+  Duration? remindWait(Notice n) {
+    final at = n.remindedAt == null ? null : DateTime.tryParse(n.remindedAt!);
+    if (at == null) return null;
+    final left = at.add(remindCooldown).difference(now);
+    return left > Duration.zero ? left : null;
+  }
+
+  /// 안 읽은 직원에게 다시 알린다. 보낸 인원 수를 돌려준다. 1시간 안이면 아무것도 안 하고 0.
+  /// 서버 모드 화면은 결과를 기다리는 [remindUnreadRemote] 를 쓴다.
   int remindUnread(String noticeId) {
     final n = noticeById(noticeId)!;
+    if (remindWait(n) != null) return 0;
     final targets = unreadStaffOf(n);
     for (final s in targets) {
       _notifyStaff(s.id, 'notice', '필독 공지를 확인해 주세요', body: n.title, refId: n.id);
@@ -1742,6 +1894,19 @@ class AppStore extends ChangeNotifier {
     _commit();
     _remote((api) => api.post('${_sp(n.storeId)}/notices/$noticeId/remind'));
     return targets.length;
+  }
+
+  /// [remindUnread] 의 결과를 기다리는 판. 서버가 실제로 보낸 인원 수를 돌려준다.
+  /// 1시간 안이거나 서버가 거절하면 ApiException(`REMIND_TOO_SOON` 등).
+  Future<int> remindUnreadRemote(String noticeId) async {
+    final n = noticeById(noticeId)!;
+    if (remindWait(n) != null) {
+      throw ApiException(409, 'REMIND_TOO_SOON', '방금 알렸어요. 1시간 뒤에 다시 알릴 수 있어요');
+    }
+    if (!remote) return remindUnread(noticeId);
+    final r = await _try((a) => a.post('${_sp(n.storeId)}/notices/$noticeId/remind'));
+    await _reloadQuiet();
+    return r is Map && r['sent'] is num ? (r['sent'] as num).toInt() : 0;
   }
 
   // ───────────────────────── 서류 ─────────────────────────
@@ -1783,10 +1948,19 @@ class AppStore extends ChangeNotifier {
   }
 
   /// 서버 모드 계약 서명 (알바생). 서명 이미지를 올린 뒤 서명한다. 실패하면 던진다.
+  /// 지금 보고 있는 계약서 id 를 함께 보낸다. 그 사이 사장님이 다시 작성했으면(409) 새 계약서를 읽고 다시 확인하게 한다.
   Future<void> signContractRemote(List<int> png) async {
     final s = myStaff!;
+    final contractId = s.contract?.id;
     final url = await uploadSignatureRemote(png);
-    await api!.post('${_sp(s.storeId)}/staff/${s.id}/contract/sign', {'signatureUrl': url});
+    try {
+      await api!.post('${_sp(s.storeId)}/staff/${s.id}/contract/sign',
+          {'signatureUrl': url, if (contractId != null) 'contractId': int.tryParse(contractId) ?? contractId});
+    } on ApiException catch (e) {
+      if (e.status != 409 || e.code == 'ALREADY_SIGNED') rethrow;
+      await _reloadQuiet();
+      throw ApiException(409, e.code, '계약서 내용이 바뀌었어요. 바뀐 내용을 확인하고 다시 서명해 주세요');
+    }
     await reload(storeId: session.storeId);
   }
 
@@ -1851,7 +2025,7 @@ class AppStore extends ChangeNotifier {
     _commit();
     // 서명 이미지는 아직 올리지 않는다. 서버는 비어 있지 않은 문자열만 요구한다.
     _remote((api) => api.post('${_sp(s.storeId)}/staff/${s.id}/contract/sign',
-        {'signatureUrl': 'app-signature'}));
+        {'signatureUrl': 'app-signature', if (s.contract!.id case final cid?) 'contractId': int.tryParse(cid) ?? cid}));
   }
 
   // ───────────────────────── 매장 ─────────────────────────
@@ -1955,6 +2129,11 @@ class AppStore extends ChangeNotifier {
     _commit();
   }
 
+  /// DB(utf8mb4_unicode_ci)가 같은 이름으로 보는 키: 대소문자·전각/반각 무시.
+  static String partNameKey(String name) => String.fromCharCodes(name.runes.map((c) =>
+          c >= 0xFF01 && c <= 0xFF5E ? c - 0xFEE0 : c == 0x3000 ? 0x20 : c))
+      .toLowerCase();
+
   /// 파트 목록을 통째로 저장(추가·수정·삭제). 이름이 바뀌면 근무·직원·고정 파트의 이름도 따라 바뀐다. 실패 시 [ApiException].
   Future<void> saveParts(List<PartTemplate> parts) async {
     final names = <String>{};
@@ -1964,7 +2143,7 @@ class AppStore extends ChangeNotifier {
       if (p.endMin <= p.startMin) {
         throw ApiException(400, 'validation', '$n 종료 시각은 시작 시각보다 늦어야 합니다.');
       }
-      if (!names.add(n)) throw ApiException(400, 'validation', '파트 이름이 겹쳐요: $n');
+      if (!names.add(partNameKey(n))) throw ApiException(400, 'validation', '파트 이름이 겹쳐요: $n');
     }
     final st = store;
     if (remote) {
@@ -2100,50 +2279,49 @@ class AppStore extends ChangeNotifier {
     _commit();
   }
 
-  /// AI 생성. 서버: 작업을 올리고 2초마다 물어본다(done 이면 reload, failed 면 [ApiException]).
-  /// 데모: 고정 근무 + 직원 근무 시간으로 채운다.
-  Future<void> generateSchedule(String month,
+  /// 근무표 생성 미리보기(저장 안 함). 서버: generate/preview. 데모: 고정 근무로 채운 결과.
+  Future<GeneratePreview> previewGenerate(String month,
       {required HolidayPolicy weeklyHolidayPay, required SchedulePriority priority}) async {
     if (remote) {
-      final r = await _try((a) => a.post('${_sp(store.id)}/schedules/generate', {
+      final r = await _try((a) => a.post('${_sp(store.id)}/schedules/generate/preview', {
             'month': month,
             'weeklyHolidayPay': weeklyHolidayPay.name,
             'priority': priority.name,
           })) as Map;
-      final jobId = r['jobId'];
-      var netFails = 0;
-      for (var i = 0; ; i++) {
-        if (i >= 240) {
-          // 2초 × 240 = 8분. 서버 작업이 끝났을 수 있으니 상태를 다시 읽는다.
-          await _reloadQuiet();
-          throw ApiException(504, 'generate_timeout', 'AI 근무표 생성이 너무 오래 걸려요. 잠시 뒤 근무표를 확인해 주세요');
-        }
-        await Future<void>.delayed(const Duration(seconds: 2));
-        final Map j;
-        try {
-          j = await _try((a) => a.get('${_sp(store.id)}/schedule-jobs/$jobId')) as Map;
-        } on ApiException catch (e) {
-          // 일시적 통신 오류(network, 5xx)는 몇 번 더 본다. 4xx(작업 없음 등)는 바로 끝.
-          if ((e.status == 0 || e.status >= 500) && ++netFails <= 3) continue;
-          await _reloadQuiet();
-          rethrow;
-        }
-        netFails = 0;
-        if (j['status'] == 'done') break;
-        if (j['status'] == 'failed') {
-          throw ApiException(500, 'generate_failed', '${j['message'] ?? 'AI 근무표 생성에 실패했어요'}');
-        }
-      }
+      return GeneratePreview.fromJson(r.cast<String, dynamic>(), store.id);
+    }
+    bool cleared(Shift x) => !parseYmd(x.date).isBefore(today) && attendanceFor(x.id) == null;
+    final month0 = _monthShifts(month);
+    final kept = month0.where((x) => !cleared(x)).toList();
+    final add = auto.autofill(kept, auto.fixedShifts(store, activeStaff, _targetDates(month)));
+    return GeneratePreview(
+      planId: 'demo',
+      month: month,
+      shifts: add,
+      lines: const ['데모: AI 없이 고정 근무로 채웠어요'],
+      laborCost: add.fold(0, (sum, x) => sum + plannedPay(x)),
+      unfilled: const [],
+      replacing: month0.where((x) => cleared(x) && x.kind == ShiftKind.work).length,
+    )
+      ..weeklyHolidayPay = weeklyHolidayPay
+      ..priority = priority;
+  }
+
+  /// 미리보기 [p] 를 저장한다(그 달 오늘 이후·출근 기록 없는 근무를 지우고 바꾼다).
+  /// 서버: generate/apply. 만료면 410 [ApiException]. AI 설명은 서버가 나중에 붙인다.
+  Future<void> applyGenerated(GeneratePreview p) async {
+    if (remote) {
+      await _try((a) => a.post('${_sp(store.id)}/schedules/generate/apply', {'planId': p.planId}));
       await _reloadQuiet();
       return;
     }
     _snapshot();
-    _clearFuture(month);
-    _addAll(auto.autofill(_monthShifts(month), auto.fixedShifts(store, activeStaff, _targetDates(month))));
-    _metaFor(month, ScheduleSource.ai)
-      ..aiComment = '데모: AI 없이 고정 근무로 채웠어요'
-      ..weeklyHolidayPay = weeklyHolidayPay
-      ..priority = priority;
+    _clearFuture(p.month);
+    _addAll(p.shifts);
+    _metaFor(p.month, ScheduleSource.ai)
+      ..aiComment = p.lines.join('\n')
+      ..weeklyHolidayPay = p.weeklyHolidayPay
+      ..priority = p.priority;
     _commit();
   }
 
