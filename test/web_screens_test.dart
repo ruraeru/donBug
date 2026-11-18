@@ -8,6 +8,7 @@ import 'dart:io';
 import 'package:donbug/data/app_scope.dart';
 import 'package:donbug/data/app_store.dart';
 import 'package:donbug/data/models.dart';
+import 'package:donbug/screens/web/web_common.dart';
 import 'package:donbug/screens/web/web_pos_qr_screen.dart';
 import 'package:donbug/screens/web/web_schedule_screen.dart';
 import 'package:donbug/screens/web/web_shell.dart';
@@ -155,6 +156,8 @@ void main() {
     await tester.tap(find.text('미확인자 리마인드'));
     await tester.pumpAndSettle();
     expect(find.textContaining('명에게 다시 알렸어요'), findsOneWidget);
+    // 1시간 안에는 다시 알릴 수 없다(서버 REMIND_TOO_SOON).
+    expect(tester.widget<WebButton>(find.widgetWithText(WebButton, '미확인자 리마인드')).onPressed, isNull);
   });
 
   testWidgets('대시보드: 알림 · 오늘 근무 창', (tester) async {

@@ -49,7 +49,7 @@ class _WebBootState extends State<WebBoot> {
       if (access != null && refresh != null) {
         await _api.setTokens(access, refresh);
       } else {
-        _error = q['error'] ?? '로그인하지 못했어요';
+        _error = loginErrorText(q['error']);
       }
     }
     await _load();
@@ -121,3 +121,11 @@ class _WebBootState extends State<WebBoot> {
         _Phase.ready => const WebShell(),
       };
 }
+
+/// 카카오 콜백 `?error=` 코드를 사용자 문구로 바꾼다.
+String loginErrorText(String? code) => switch (code) {
+      'invalid_state' => '로그인 시간이 지났어요. 다시 시도해 주세요',
+      'kakao_denied' => '카카오 로그인을 취소했어요',
+      'missing_code' || 'login_failed' => '로그인하지 못했어요. 다시 시도해 주세요',
+      _ => '로그인하지 못했어요',
+    };

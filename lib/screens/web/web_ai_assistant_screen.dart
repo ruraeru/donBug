@@ -205,11 +205,13 @@ class _WebAiAssistantScreenState extends State<WebAiAssistantScreen> {
         Expanded(
           child: TextField(
             controller: _input,
+            maxLength: 1000,
             onSubmitted: remote ? (_) => _send() : null,
             style: AppText.style(14),
             decoration: InputDecoration(
               border: InputBorder.none,
               isDense: true,
+              counterText: '', // 52px 입력 줄이라 글자 수 표시는 숨긴다
               hintText: '궁금한 노무 질문을 입력하세요',
               hintStyle: AppText.style(
                   14, FontWeight.w400, AppColors.textTertiary),
