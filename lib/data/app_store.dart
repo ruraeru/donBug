@@ -366,6 +366,7 @@ class AppStore extends ChangeNotifier {
 
   /// 유동 근무(매니저·정직원) / 파트 근무(알바·연소자) 재직자.
   List<Staff> get flexStaff => activeStaff.where((s) => s.kind.flex).toList();
+  Set<String> get _flexIds => {for (final s in flexStaff) s.id};
   List<Staff> get partStaff => activeStaff.where((s) => !s.kind.flex).toList();
 
   List<Shift> get myShifts {
@@ -2363,7 +2364,8 @@ class AppStore extends ChangeNotifier {
     _snapshot();
     _metaFor(month, ScheduleSource.manual);
     if (prefillFixed) {
-      _addAll(auto.autofill(_monthShifts(month), auto.fixedShifts(store, activeStaff, _targetDates(month))));
+      _addAll(auto.autofill(_monthShifts(month), auto.fixedShifts(store, activeStaff, _targetDates(month)),
+          flexIds: _flexIds));
     }
     _commit();
   }
@@ -2376,7 +2378,8 @@ class AppStore extends ChangeNotifier {
       return;
     }
     _snapshot();
-    final add = auto.autofill(_monthShifts(month), auto.fixedShifts(store, activeStaff, _targetDates(month)));
+    final add = auto.autofill(_monthShifts(month), auto.fixedShifts(store, activeStaff, _targetDates(month)),
+        flexIds: _flexIds);
     if (add.isEmpty) {
       _undo.removeLast();
       return;
@@ -2400,11 +2403,12 @@ class AppStore extends ChangeNotifier {
     bool cleared(Shift x) => !parseYmd(x.date).isBefore(today) && attendanceFor(x.id) == null;
     final month0 = _monthShifts(month);
     final kept = month0.where((x) => !cleared(x)).toList();
-    // 서버처럼 직원 파트를 직원으로 먼저 채우고, 그다음 고정 근무(직원은 그날 근무가 있으면 건너뜀).
-    final flexAdd = auto.flexPartShifts(store, activeStaff, _targetDates(month), kept);
+    // 서버처럼 고정 근무(직원 고정 파트는 그 파트 인원에 셈)를 먼저 깔고, 남은 직원 파트를 순환 직원으로 채운다.
+    final fixed =
+        auto.autofill(kept, auto.fixedShifts(store, activeStaff, _targetDates(month)), flexIds: _flexIds);
     final add = [
-      ...flexAdd,
-      ...auto.autofill([...kept, ...flexAdd], auto.fixedShifts(store, activeStaff, _targetDates(month))),
+      ...fixed,
+      ...auto.flexPartShifts(store, activeStaff, _targetDates(month), [...kept, ...fixed]),
     ];
     return GeneratePreview(
       planId: 'demo',

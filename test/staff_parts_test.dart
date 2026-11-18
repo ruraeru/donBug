@@ -1,8 +1,10 @@
 import 'dart:convert';
+import 'dart:math';
 
 import 'package:donbug/data/api_client.dart';
 import 'package:donbug/data/app_store.dart';
 import 'package:donbug/data/autoschedule.dart';
+import 'package:donbug/data/format.dart';
 import 'package:donbug/data/models.dart';
 import 'package:donbug/data/seed.dart';
 import 'package:donbug/screens/web/web_common.dart';
@@ -53,7 +55,7 @@ void main() {
   test('flexPartShifts: 직원 파트를 직원으로, 파트 이름·자르지 않은 시각·요일대로', () {
     final s = AppStore.seeded(now: testNow)..login(Role.employer);
     s.store.parts.add(PartTemplate('얼리', 300, 960, 1, flex: true, days: PartDays.weekend, breakMin: 60));
-    final jihun = s.flexStaff.single;
+    final jihun = s.flexStaff.single..workHours = List.filled(7, null); // 고정 근무 없음 = 순환
     final dates = [for (var d = 18; d <= 24; d++) DateTime(2026, 5, d)]; // 월~일
     final out = flexPartShifts(s.store, s.activeStaff, dates, const []);
     expect(out.map((x) => x.date), ['2026-05-23', '2026-05-24']);
@@ -65,10 +67,10 @@ void main() {
     expect(flexPartShifts(s.store, s.activeStaff, dates, [busy, have]), isEmpty);
   });
 
-  test('데모 자동 생성: 직원 파트는 직원으로 채우고, 그날 직원 고정 근무는 건너뛴다', () async {
+  test('데모 자동 생성: 직원 파트는 순환 직원으로 채운다', () async {
     final s = AppStore.seeded(now: testNow)..login(Role.employer);
     s.store.parts.add(PartTemplate('얼리', 300, 960, 1, flex: true, days: PartDays.weekend));
-    final jihun = s.flexStaff.single;
+    final jihun = s.flexStaff.single..workHours = List.filled(7, null);
     final p = await s.previewGenerate('2026-05',
         weeklyHolidayPay: HolidayPolicy.allow, priority: SchedulePriority.fairness);
     final early = p.shifts.where((x) => x.part == '얼리').toList();
@@ -76,7 +78,80 @@ void main() {
     expect(early.every((x) => x.staffId == jihun.id && x.startMin == 300 && x.endMin == 960), isTrue);
     final days = early.map((x) => x.date).toSet();
     expect(days.contains('2026-05-16') && days.contains('2026-05-17') && !days.contains('2026-05-18'), isTrue);
-    expect(p.shifts.where((x) => x.staffId == jihun.id && x.part == '직원' && days.contains(x.date)), isEmpty);
+  });
+
+  test('데모 자동 생성: 직원 고정 파트는 그 요일만, 고정 직원은 순환에서 빠진다', () async {
+    final s = AppStore.seeded(now: testNow)..login(Role.employer);
+    s.store.parts.add(PartTemplate('얼리', 300, 960, 1, flex: true, days: PartDays.weekend, breakMin: 60));
+    final jihun = s.flexStaff.single
+      ..workHours = List.filled(7, null)
+      ..fixedParts[5] = ['얼리']; // 토
+    final p = await s.previewGenerate('2026-05',
+        weeklyHolidayPay: HolidayPolicy.allow, priority: SchedulePriority.fairness);
+    final early = p.shifts.where((x) => x.part == '얼리').toList();
+    expect(early.map((x) => (x.staffId, x.startMin, x.endMin, x.breakMin)).toSet(), {(jihun.id, 300, 960, 60)});
+    // 오늘(5/14) 이후 토요일만. 일요일은 순환할 직원이 없어 비어 있다.
+    expect(early.map((x) => x.date), ['2026-05-16', '2026-05-23', '2026-05-30']);
+  });
+
+  test('fixedShifts: 직원 고정 파트는 파트 이름·시각·휴게 그대로(영업시간으로 안 자름), 그 파트 인원에 센다', () {
+    final s = AppStore.seeded(now: testNow)..login(Role.employer);
+    s.store.parts.add(PartTemplate('얼리', 300, 960, 1, flex: true, breakMin: 60));
+    final jihun = s.flexStaff.single..fixedParts[0] = ['얼리'];
+    final mon = DateTime(2026, 5, 18), tue = DateTime(2026, 5, 19);
+    final fixed = fixedShifts(s.store, [jihun], [mon, tue]);
+    expect(fixed.map((x) => (x.date, x.part, x.startMin, x.endMin, x.breakMin)), [
+      ('2026-05-18', '얼리', 300, 960, 60), // 월: 고정 파트
+      ('2026-05-19', '직원', 630, 1170, 60), // 화: 요일별 출퇴근(시드)
+    ]);
+    expect(hasFixedWork(s.store, jihun), isTrue);
+    // 직원 파트가 아닌 이름은 무시한다.
+    final other = Staff(id: 'e', storeId: s.store.id, personId: 'x', part: '직원', wage: 10320,
+        kind: StaffKind.fulltime, joinedAt: '2026-01-01', fixedParts: [['오픈'], [], [], [], [], [], []]);
+    expect([hasFixedWork(s.store, other), fixedShifts(s.store, [other], [mon])], [false, isEmpty]);
+    // 고정 파트가 필요 인원을 채워 순환이 더 넣지 않는다.
+    expect(flexPartShifts(s.store, [jihun, other], [mon], fixed).where((x) => x.part == '얼리'), isEmpty);
+    // 그날 이미 근무가 있는 직원에게는 고정 파트를 또 넣지 않는다(서버 autofill 과 같음).
+    final day = Shift(id: '9', storeId: '', staffId: jihun.id, date: '2026-05-18', startMin: 1000, endMin: 1200, part: '직원');
+    expect(autofill([day], fixed, flexIds: {jihun.id}).map((x) => x.date), ['2026-05-19']);
+  });
+
+  test('flexPartShifts: 순환 — 빈칸 없음, 파트별 사람마다 횟수 차이 2026-05 는 1 이하, 24개월 2 이하', () {
+    final s = AppStore.seeded(now: testNow)..login(Role.employer);
+    s.store.parts = [
+      PartTemplate('오픈', 420, 1020, 1, flex: true, days: PartDays.weekday, breakMin: 60),
+      PartTemplate('주말 오픈', 480, 1080, 1, flex: true, days: PartDays.weekend, breakMin: 60),
+      PartTemplate('미들', 660, 1260, 1, flex: true, breakMin: 60),
+      PartTemplate('마감', 840, 1440, 1, flex: true, breakMin: 60),
+    ];
+    final staff = [
+      for (var i = 0; i < 5; i++)
+        Staff(id: 'e$i', storeId: s.store.id, personId: 'x', part: '직원', wage: 10320,
+            kind: StaffKind.fulltime, joinedAt: '2026-01-01')
+    ];
+    // 2026-01 ~ 2027-12: 날짜순 탐욕 배정이라 1 은 모든 달에 지켜지지 않는다(4·9·11월 등 2). 지키는 가장 좁은 범위 2.
+    for (var m = 0; m < 24; m++) {
+      final mo = '${2026 + m ~/ 12}-${(m % 12 + 1).toString().padLeft(2, '0')}';
+      final days = monthDates(mo, DateTime(2000));
+      final o = flexPartShifts(s.store, staff, days, const []);
+      expect(o.length, days.length * 3, reason: mo); // 빈칸 없음
+      for (final p in s.store.parts) {
+        final n = [for (final x in staff) o.where((y) => y.staffId == x.id && y.part == p.name).length];
+        expect(n.reduce(max) - n.reduce(min), lessThanOrEqualTo(2), reason: '$mo ${p.name} $n');
+      }
+    }
+    final dates = monthDates('2026-05', DateTime(2026, 5, 1)); // 5/5 어린이날, 5/25 대체공휴일
+    final out = flexPartShifts(s.store, staff, dates, const []);
+    for (final d in dates) {
+      final names = out.where((x) => x.date == ymd(d)).map((x) => x.part).toList()..sort();
+      final want = s.store.parts.where((p) => p.appliesOn(d)).map((p) => p.name).toList()..sort();
+      expect(names, want, reason: ymd(d));
+      expect(out.where((x) => x.date == ymd(d)).map((x) => x.staffId).toSet().length, 3); // 하루 한 근무
+    }
+    for (final p in s.store.parts) {
+      final n = [for (final m in staff) out.where((x) => x.staffId == m.id && x.part == p.name).length];
+      expect(n.reduce(max) - n.reduce(min), lessThanOrEqualTo(1), reason: '${p.name} $n');
+    }
   });
 
   test('autoFill(예전 API): 주말 전용 파트는 평일에 안 채우고, 직원 파트는 건너뛴다(서버와 같음)', () {

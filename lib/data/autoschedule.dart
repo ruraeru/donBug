@@ -55,7 +55,8 @@ int _byDateStart(Shift a, Shift b) {
 }
 
 /// 고정 근무를 [dates] 에 깐다. 알바생(partTimer·minor)은 그 요일에 고른 파트마다,
-/// 직원(manager·fulltime)은 요일별 출퇴근(영업시간 밖이면 뺀다). 날짜·시작 시각 순.
+/// 직원(manager·fulltime)은 그 요일 고정 직원 파트(파트 이름·시각·휴게 그대로) 또는 요일별 출퇴근('직원',
+/// 영업시간 밖이어도 넣는다). 날짜·시작 시각 순.
 List<Shift> fixedShifts(Store store, List<Staff> staff, List<DateTime> dates) {
   final out = <Shift>[];
   for (final st in staff) {
@@ -76,10 +77,11 @@ List<Shift> fixedShifts(Store store, List<Staff> staff, List<DateTime> dates) {
           final cut = s != p.startMin || e != p.endMin;
           out.add(_blank(st.id, date, s, e, p.name, cut ? minBreakFor(e - s) : p.breakMin));
         }
+      } else if (fixedFlexPart(store, st, di) case final p?) {
+        out.add(_blank(st.id, date, p.startMin, p.endMin, p.name, p.breakMin));
       } else {
         final w = st.workHours[di];
-        final h = hoursOn(store, date);
-        if (w == null || w.startMin < h.open || w.endMin > h.close || w.endMin <= w.startMin) continue;
+        if (w == null || w.endMin <= w.startMin) continue;
         out.add(_blank(st.id, date, w.startMin, w.endMin, flexPart, breakFor(w.startMin, w.endMin)));
       }
     }
@@ -87,31 +89,46 @@ List<Shift> fixedShifts(Store store, List<Staff> staff, List<DateTime> dates) {
   return out..sort(_byDateStart);
 }
 
-/// 직원 파트(`flex`)를 직원(매니저·정직원)으로 채운다 (BE 자동 생성과 같은 규칙, 데모용 근사).
+/// 직원 [st] 의 요일 [di] 고정 직원 파트. 지금 직원 파트가 아닌 이름은 무시한다.
+PartTemplate? fixedFlexPart(Store store, Staff st, int di) =>
+    store.flexParts.where((p) => st.fixedParts[di].contains(p.name)).firstOrNull;
+
+/// 고정 근무(직원 파트·출퇴근)가 한 요일이라도 있는 직원. 순환에서 빠진다.
+bool hasFixedWork(Store store, Staff st) =>
+    [for (var d = 0; d < 7; d++) d].any((d) => fixedFlexPart(store, st, d) != null || st.workHours[d] != null);
+
+/// 직원 파트(`flex`)를 순환 직원(고정 근무 없는 매니저·정직원)으로 채운다 (BE 자동 생성과 같은 규칙, 데모용 근사).
 /// 파트가 쓰이는 날([PartTemplate.appliesOn])만, 파트 시각 그대로(영업시간으로 자르지 않음), part = 파트 이름.
-/// 한 사람은 하루 한 근무: [existing] 에 그날 근무·연차·휴무가 있으면 뺀다. 그 요일 출퇴근이 있는 직원 먼저,
-/// 그다음 여기서 덜 배정된 직원. [existing] 의 같은 파트 근무는 필요 인원에 센다. 날짜·시작 시각 순.
+/// 한 사람은 하루 한 근무: [existing] 에 그날 근무·연차·휴무가 있으면 뺀다. 그달 그 파트를 덜 맡은 사람,
+/// 그다음 그 주(월~일) 근무 분이 적은 사람. [existing] 의 같은 파트 근무는 필요 인원에 센다. 날짜·시작 시각 순.
+/// shortcut: 주 6일·주 40시간 제한·COST 순서 없음, 서버와 다르면 서버가 맞다.
 List<Shift> flexPartShifts(Store store, List<Staff> staff, List<DateTime> dates, List<Shift> existing) {
-  final flex = [for (final s in staff) if (s.kind.flex) s];
+  final flex = [for (final s in staff) if (s.kind.flex && !hasFixedWork(store, s)) s];
   final out = <Shift>[];
-  final count = <String, int>{};
   for (final date in dates) {
+    final month = _ymd(date).substring(0, 7);
+    final weekStart = DateTime(date.year, date.month, date.day - dayIndexOf(date));
+    final week = {for (var i = 0; i < 7; i++) _ymd(DateTime(weekStart.year, weekStart.month, weekStart.day + i))};
     final day = _ymd(date);
     final busy = {for (final s in [...existing, ...out]) if (s.date == day) s.staffId};
     for (final p in store.flexParts.where((p) => p.appliesOn(date))) {
       var have = existing.where((s) => s.date == day && s.isWork && s.part == p.name).length;
       while (have < p.need) {
+        final all = [...existing, ...out].where((s) => s.isWork);
+        int times(Staff st) =>
+            all.where((s) => s.staffId == st.id && s.part == p.name && s.date.startsWith(month)).length;
+        int mins(Staff st) => all
+            .where((s) => s.staffId == st.id && week.contains(s.date))
+            .fold(0, (m, s) => m + s.scheduledMinutes);
         final free = flex.where((s) => !busy.contains(s.id)).toList()
           ..sort((a, b) {
-            final w = (a.workHours[dayIndexOf(date)] == null ? 1 : 0)
-                .compareTo(b.workHours[dayIndexOf(date)] == null ? 1 : 0);
-            return w != 0 ? w : (count[a.id] ?? 0).compareTo(count[b.id] ?? 0);
+            final c = times(a).compareTo(times(b));
+            return c != 0 ? c : mins(a).compareTo(mins(b));
           });
         if (free.isEmpty) break;
         final who = free.first;
         out.add(_blank(who.id, date, p.startMin, p.endMin, p.name, p.breakMin));
         busy.add(who.id);
-        count[who.id] = (count[who.id] ?? 0) + 1;
         have++;
       }
     }
@@ -122,14 +139,15 @@ List<Shift> flexPartShifts(Store store, List<Staff> staff, List<DateTime> dates,
 /// [existing] 은 그대로 두고, 고정 근무 [fixed] 중 빠진 것만 돌려준다 (BE MonthScheduleService.fill 과 같은 규칙).
 /// 연차·휴무인 날은 넣지 않는다. 직원은 그 날 근무가 하나라도 있으면, 알바생은 같은 파트 근무가 있으면 건너뛴다.
 /// 그 직원의 다른 실제 근무(먼저 넣은 고정 근무 포함)와 시간이 겹치면 건너뛴다.
-List<Shift> autofill(List<Shift> existing, List<Shift> fixed) {
+/// [flexIds]: 직원(매니저·정직원) id. 직원 고정 파트 근무(파트 이름)도 '직원' 처럼 그날 근무가 있으면 건너뛴다.
+List<Shift> autofill(List<Shift> existing, List<Shift> fixed, {Set<String> flexIds = const {}}) {
   final work = existing.where((s) => s.isWork).toList();
   final out = <Shift>[];
   for (final f in fixed) {
     if (existing.any((s) =>
         s.staffId == f.staffId &&
         s.date == f.date &&
-        (s.kind != ShiftKind.work || f.part == flexPart || s.part == f.part))) {
+        (s.kind != ShiftKind.work || f.part == flexPart || flexIds.contains(f.staffId) || s.part == f.part))) {
       continue;
     }
     final (s0, e0) = _span(f);
