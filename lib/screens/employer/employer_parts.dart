@@ -274,6 +274,13 @@ Future<int?> pickTime(BuildContext context, int minutes) async {
   return t == null ? null : t.hour * 60 + t.minute;
 }
 
+/// 근무 날짜 기준 출근 분. 자정을 넘는 근무에서 시작보다 이른 시각은
+/// 종료(다음 날)와 시작 사이 가운데보다 앞이면 다음 날로 본다(00:10 → 1450).
+int clockInAbs(Shift s, int inMin) {
+  if (s.endAbs <= 1440 || inMin >= s.startMin || inMin >= 1440) return inMin;
+  return inMin < (s.endAbs - 1440 + s.startMin) ~/ 2 ? inMin + 1440 : inMin;
+}
+
 /// 시급 · 공제 입력 다이얼로그 (가입 승인용). 최저임금 미만은 막는다.
 Future<(int, Deduction)?> showWageDialog(BuildContext context,
     {required String title, required int wage, required Deduction deduction}) {

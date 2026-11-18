@@ -88,7 +88,8 @@ class Person {
   List<int> certAlertDays;
   bool certHasPhoto;
 
-  String get letter => name.isEmpty ? '?' : name.substring(0, 1);
+  // runes: 이모지(서로게이트 쌍)로 시작하는 이름도 깨지지 않게
+  String get letter => name.isEmpty ? '?' : String.fromCharCode(name.runes.first);
 
   Map<String, dynamic> toJson() => {
         'id': id,
@@ -388,8 +389,11 @@ class Contract {
     this.duty = '',
     this.ownerSignedAt,
     this.employeeSignedAt,
+    this.id,
   });
 
+  /// 서버 계약서 id (서명할 때 본 계약서를 보낸다). 데모는 null.
+  final String? id;
   String start;
   String end;
   int wage;
@@ -410,6 +414,7 @@ class Contract {
         'duty': duty,
         'ownerSignedAt': ownerSignedAt,
         'employeeSignedAt': employeeSignedAt,
+        if (id != null) 'id': id,
       };
 
   factory Contract.fromJson(Map<String, dynamic> j) => Contract(
@@ -421,6 +426,7 @@ class Contract {
         duty: j['duty'] ?? '',
         ownerSignedAt: j['ownerSignedAt'],
         employeeSignedAt: j['employeeSignedAt'],
+        id: j['id']?.toString(),
       );
 }
 

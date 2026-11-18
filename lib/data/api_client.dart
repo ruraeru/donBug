@@ -14,11 +14,14 @@ const String _appDefaultBase = 'https://donbug.ruraeru.xyz';
 
 /// 서버 에러 응답 `{code, message, details}`.
 class ApiException implements Exception {
-  ApiException(this.status, this.code, this.message);
+  ApiException(this.status, this.code, this.message, [this.body]);
 
   final int status;
   final String code;
   final String message;
+
+  /// 오류 응답 JSON 본문(있으면). 예: 예전 서버의 가입 신청 404/409 `{result, store}`.
+  final Map<String, dynamic>? body;
 
   @override
   String toString() => message;
@@ -172,7 +175,7 @@ class ApiClient {
     try {
       final j = jsonDecode(utf8.decode(res.bodyBytes)) as Map<String, dynamic>;
       return ApiException(res.statusCode, '${j['code'] ?? res.statusCode}',
-          '${j['message'] ?? '요청을 처리하지 못했어요'}');
+          '${j['message'] ?? '요청을 처리하지 못했어요'}', j);
     } catch (_) {
       return ApiException(res.statusCode, '${res.statusCode}',
           res.statusCode == 401 ? '다시 로그인해 주세요' : '서버와 통신하지 못했어요 (${res.statusCode})');

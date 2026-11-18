@@ -797,12 +797,17 @@ Future<bool> showConfirmDialog(
 class MemberAvatar extends StatelessWidget {
   const MemberAvatar(this.staff, {super.key, this.size = 40});
 
-  final Staff staff;
+  /// 없으면(퇴사해 상태에 없는 동료) 이름 없는 '-' 아바타.
+  final Staff? staff;
   final double size;
 
   @override
   Widget build(BuildContext context) {
     final store = AppScope.of(context);
+    final staff = this.staff;
+    if (staff == null) {
+      return LetterAvatar('-', color: AppColors.textSecondary, background: AppColors.bg, size: size);
+    }
     final (fg, bg) = toneColors(staff.tone);
     return LetterAvatar(store.personOf(staff).letter, color: fg, background: bg, size: size);
   }

@@ -90,7 +90,7 @@ class _SubstituteStatusScreenState extends State<SubstituteStatusScreen> {
     return [
       for (final r in list) ...[
         PersonRow(
-          avatar: MemberAvatar(store.staffById(r.requesterId)!),
+          avatar: MemberAvatar(store.staffById(r.requesterId)),
           title: '${shiftDay(store.shiftById(r.shiftId)!)} ${shiftTime(store.shiftById(r.shiftId)!)}',
           subtitle: '${store.nameOf(r.requesterId)}님의 요청 · ${r.reason}',
           trailing: const Pill.accent('대타 구해요'),

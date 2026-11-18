@@ -53,7 +53,7 @@ class ShiftDetailScreen extends StatelessWidget {
                   const SizedBox(height: 12),
                   Row(
                     children: [
-                      MemberAvatar(store.staffById(c.staffId)!),
+                      MemberAvatar(store.staffById(c.staffId)),
                       const SizedBox(width: 12),
                       Expanded(
                         child: Row(children: [

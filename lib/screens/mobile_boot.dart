@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_web_auth_2/flutter_web_auth_2.dart';
 
+import '../data/api_client.dart';
 import '../data/app_scope.dart';
 import '../data/models.dart';
 import '../theme.dart';
@@ -64,7 +65,8 @@ Future<void> kakaoAppLogin(BuildContext context) async {
     final q = Uri.parse(result).queryParameters;
     final access = q['access'], refresh = q['refresh'];
     if (access == null || refresh == null) {
-      throw Exception(q['error'] ?? '로그인하지 못했어요');
+      if (context.mounted) showToast(context, loginErrorText(q['error']));
+      return;
     }
     await api.setTokens(access, refresh);
     await store.reload();
@@ -72,10 +74,20 @@ Future<void> kakaoAppLogin(BuildContext context) async {
   } on PlatformException catch (e) {
     if (e.code == 'CANCELED') return; // 사용자가 로그인 시트를 닫음
     if (context.mounted) showToast(context, '로그인하지 못했어요 (${e.code})');
-  } catch (e) {
-    if (context.mounted) showToast(context, '로그인하지 못했어요: $e');
+  } on ApiException catch (e) {
+    if (context.mounted) showToast(context, e.message);
+  } catch (_) {
+    if (context.mounted) showToast(context, '로그인하지 못했어요. 다시 시도해 주세요');
   }
 }
+
+/// 서버 OAuth 콜백의 `error` 코드를 사용자 문구로 바꾼다(앱·웹 공용).
+String loginErrorText(String? code) => switch (code) {
+      'kakao_denied' => '카카오 로그인을 취소했어요',
+      'invalid_state' => '로그인 시간이 지났어요. 다시 시도해 주세요',
+      'missing_code' => '카카오 로그인 응답이 없어요. 다시 시도해 주세요',
+      _ => '로그인하지 못했어요. 다시 시도해 주세요',
+    };
 
 /// 테스트 계정 로그인: 서버 TEST_LOGIN_TOKEN 과 같은 비밀 토큰을 카카오 토큰 자리에 보낸다.
 /// 로그인 화면 로고를 길게 누르면 열린다.
@@ -127,6 +139,18 @@ void enterApp(BuildContext context) {
       MaterialPageRoute(builder: (_) => const RoleSelectScreen()),
       (_) => false,
     );
+    // 퇴사·거절로 매장이 사라졌으면 그 알림(지금 매장 목록에 없는 매장의 가입 알림)을 한 번 알린다.
+    final gone = store.state.notifications
+        .where((n) =>
+            !n.read && n.type == 'join' && n.toPersonId == s.employeeId && store.storeById(n.storeId) == null)
+        .toList()
+      ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
+    if (gone.isNotEmpty) {
+      showToast(context, gone.first.title);
+      for (final n in gone) {
+        store.markNotificationRead(n.id);
+      }
+    }
     return;
   }
   if (s.role == Role.employee &&

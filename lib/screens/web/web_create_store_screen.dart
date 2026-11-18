@@ -72,9 +72,9 @@ class _WebCreateStoreScreenState extends State<WebCreateStoreScreen> {
                 Text(widget.onCancel != null ? '새 매장 정보를 입력해 주세요.' : '처음 오셨네요. 매장 정보를 입력해 주세요.',
                     style: AppText.style(14, FontWeight.w400, AppColors.textSecondary)),
                 const SizedBox(height: 24),
-                webField('매장 이름', AppTextField(controller: _name, hint: '예: 카페 커푸치노')),
+                webField('매장 이름', AppTextField(controller: _name, maxLength: 100, hint: '예: 카페 커푸치노')),
                 const SizedBox(height: 16),
-                webField('주소', AppTextField(controller: _address, hint: '매장 주소')),
+                webField('주소', AppTextField(controller: _address, maxLength: 255, hint: '매장 주소')),
                 const SizedBox(height: 16),
                 ToggleCard(
                   title: '5인 미만 사업장',

@@ -311,6 +311,7 @@ class _WebSettingsScreenState extends State<WebSettingsScreen> {
                     key: ValueKey('name$_gen'),
                     initialValue: _name,
                     onChanged: (v) => setState(() => _name = v),
+                    maxLength: 100,
                     decoration: _inputDeco('내 매장'),
                     style: AppText.style(15),
                   )),
