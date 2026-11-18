@@ -43,6 +43,7 @@ class EmployeeHomeScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final store = AppScope.of(context);
     final open = store.myOpenAttendance;
+    final elsewhere = open == null ? store.myOpenAttendanceElsewhere : null;
     final today = store.myTodayShift;
     final sub = store.subsAvailableToMe.firstOrNull;
     return SafeArea(
@@ -79,6 +80,22 @@ class EmployeeHomeScreen extends StatelessWidget {
             padding: const EdgeInsets.fromLTRB(20, 8, 20, 0),
             child: Column(
               children: [
+                if (elsewhere != null) ...[
+                  // 다른 매장에서 퇴근을 안 찍으면 이 매장 출근이 막힌다
+                  AppCard(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text('${store.storeById(elsewhere.storeId)?.name ?? '다른 매장'}에 퇴근하지 않은 기록이 있어요',
+                            style: AppText.style(14, FontWeight.w500)),
+                        const SizedBox(height: 12),
+                        AppButton('퇴근하기',
+                            onPressed: () => AppScope.read(context).clockOut(elsewhere)),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                ],
                 if (open != null)
                   _WorkingCard(attendance: open, onCheckOut: () => _checkOut(context))
                 else if (today != null && store.attendanceFor(today.id) == null)

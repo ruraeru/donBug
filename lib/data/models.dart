@@ -88,7 +88,8 @@ class Person {
   List<int> certAlertDays;
   bool certHasPhoto;
 
-  String get letter => name.isEmpty ? '?' : name.substring(0, 1);
+  // runes: 이모지(서로게이트 쌍)로 시작하는 이름도 깨지지 않게
+  String get letter => name.isEmpty ? '?' : String.fromCharCode(name.runes.first);
 
   Map<String, dynamic> toJson() => {
         'id': id,
