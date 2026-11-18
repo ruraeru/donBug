@@ -91,13 +91,14 @@ class _EmployerNoticeScreenState extends State<EmployerNoticeScreen> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        _Input(controller: _title, hint: '제목', style: AppText.style(16, FontWeight.w500)),
+                        _Input(controller: _title, hint: '제목', style: AppText.style(16, FontWeight.w500), maxLength: 200),
                         const SizedBox(height: 12),
                         _Input(
                           controller: _body,
                           hint: '내용을 입력해 주세요',
                           style: AppText.style(14).copyWith(height: 1.5),
                           maxLines: null,
+                          maxLength: 5000,
                         ),
                         const SizedBox(height: 12),
                         SegmentedPicker(
@@ -148,7 +149,7 @@ class _EmployerNoticeScreenState extends State<EmployerNoticeScreen> {
                             )
                           else
                             const SizedBox(height: 12),
-                          _NoticeRow(store: store, notice: notices[i], targets: targets),
+                          _NoticeRow(store: store, notice: notices[i]),
                         ],
                       ],
                     ),
@@ -164,18 +165,22 @@ class _EmployerNoticeScreenState extends State<EmployerNoticeScreen> {
 }
 
 class _Input extends StatelessWidget {
-  const _Input({required this.controller, required this.hint, required this.style, this.maxLines = 1});
+  const _Input(
+      {required this.controller, required this.hint, required this.style, this.maxLines = 1, this.maxLength});
 
   final TextEditingController controller;
   final String hint;
   final TextStyle style;
   final int? maxLines;
+  /// 서버 제한(제목 200자·본문 5000자). 서버도 입력칸처럼 글자 단위로 센다.
+  final int? maxLength;
 
   @override
   Widget build(BuildContext context) => TextField(
         controller: controller,
         style: style,
         maxLines: maxLines,
+        maxLength: maxLength,
         minLines: maxLines == null ? 3 : 1,
         decoration: InputDecoration(
           hintText: hint,
@@ -190,17 +195,18 @@ class _Input extends StatelessWidget {
 }
 
 class _NoticeRow extends StatelessWidget {
-  const _NoticeRow({required this.store, required this.notice, required this.targets});
+  const _NoticeRow({required this.store, required this.notice});
 
   final AppStore store;
   final Notice notice;
-  final int targets;
 
   @override
   Widget build(BuildContext context) {
-    final read = targets - store.unreadStaffOf(notice).length;
-    final all = read >= targets;
-    final label = '읽음 $read/$targets';
+    // 필독 확인 현황과 같은 분모: 확인한 재직 직원 + 확인 대상 미확인자.
+    final read = noticeReaders(store, notice).length;
+    final total = read + store.unreadStaffOf(notice).length;
+    final all = read >= total;
+    final label = '읽음 $read/$total';
     return InkWell(
       onTap: () => Navigator.push(context,
           MaterialPageRoute(builder: (_) => NoticeReadStatusScreen(noticeId: notice.id))),

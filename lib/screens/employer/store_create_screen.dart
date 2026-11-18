@@ -91,9 +91,9 @@ class _StoreCreateScreenState extends State<StoreCreateScreen> {
         body: ListView(
           padding: const EdgeInsets.fromLTRB(20, 8, 20, 16),
           children: [
-            LabeledField('상호명', child: AppTextField(controller: _name, hint: '예: 카페 커푸치노')),
+            LabeledField('상호명', child: AppTextField(controller: _name, hint: '예: 카페 커푸치노', maxLength: 100)),
             const SizedBox(height: 16),
-            LabeledField('사업장 주소', child: AppTextField(controller: _address, hint: '도로명 주소')),
+            LabeledField('사업장 주소', child: AppTextField(controller: _address, hint: '도로명 주소', maxLength: 255)),
             const SizedBox(height: 16),
             LabeledField(
               '상시 근로자 수',
