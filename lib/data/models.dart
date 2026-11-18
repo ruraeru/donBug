@@ -388,8 +388,11 @@ class Contract {
     this.duty = '',
     this.ownerSignedAt,
     this.employeeSignedAt,
+    this.id,
   });
 
+  /// 서버 계약서 id (서명할 때 본 계약서를 보낸다). 데모는 null.
+  final String? id;
   String start;
   String end;
   int wage;
@@ -410,6 +413,7 @@ class Contract {
         'duty': duty,
         'ownerSignedAt': ownerSignedAt,
         'employeeSignedAt': employeeSignedAt,
+        if (id != null) 'id': id,
       };
 
   factory Contract.fromJson(Map<String, dynamic> j) => Contract(
@@ -421,6 +425,7 @@ class Contract {
         duty: j['duty'] ?? '',
         ownerSignedAt: j['ownerSignedAt'],
         employeeSignedAt: j['employeeSignedAt'],
+        id: j['id']?.toString(),
       );
 }
 

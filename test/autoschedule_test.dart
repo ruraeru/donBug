@@ -74,6 +74,30 @@ void main() {
     expect(add.any((x) => x.staffId == jihun.id && x.date == '2026-05-19'), isFalse);
   });
 
+  test('fixedShifts/autofill: BE 규칙 — 주말·공휴일 영업시간으로 자르고 휴게 재계산, 휴무 날·겹침 건너뜀', () {
+    final s = _demo();
+    final jimin = s.partStaff.firstWhere((m) => s.nameOf(m.id) == '지민');
+    final open = s.store.parts.firstWhere((p) => p.name == '오픈');
+    jimin.fixedParts = List.generate(7, (_) => ['오픈']);
+    s.store
+      ..weekendOpenMin = open.startMin + 120
+      ..weekendCloseMin = 1200;
+    final sat = DateTime(2026, 5, 16), hol = DateTime(2026, 5, 5), mon = DateTime(2026, 5, 18), tue = DateTime(2026, 5, 19);
+    final out = fixedShifts(s.store, [jimin], [sat, hol, mon, tue]);
+    final byDay = {for (final x in out) x.date: x};
+    final cut = open.endMin - open.startMin - 120;
+    for (final d in ['2026-05-16', '2026-05-05']) {
+      expect([byDay[d]!.startMin, byDay[d]!.breakMin], [open.startMin + 120, minBreakFor(cut)]);
+    }
+    expect([byDay['2026-05-18']!.startMin, byDay['2026-05-18']!.breakMin], [open.startMin, open.breakMin]);
+    final existing = [
+      Shift(id: '1', storeId: 'x', staffId: jimin.id, date: '2026-05-18', startMin: 0, endMin: 0, part: '', kind: ShiftKind.off),
+      Shift(id: '2', storeId: 'x', staffId: jimin.id, date: '2026-05-19', startMin: open.startMin + 60, endMin: open.endMin + 60, part: '기타'),
+    ];
+    final add = autofill(existing, out);
+    expect(add.map((x) => x.date).toSet(), {'2026-05-16', '2026-05-05'});
+  });
+
   test('toPattern/fillMonth: 첫 완전한 주 → 그 달 같은 요일, from 이전은 안 만듦', () {
     // 2026-06: 1일이 월요일 → 첫 완전한 주는 1~7일
     Shift sh(String d, String staff) =>
