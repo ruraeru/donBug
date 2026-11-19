@@ -73,7 +73,7 @@ class _WebStaffScreenState extends State<WebStaffScreen> {
     final filters = <(String?, String)>[
       (null, '전체 ${active.length}'),
       if (store.flexStaff.isNotEmpty) (flexFilter, '유동 근무 ${store.flexStaff.length}'),
-      for (final p in store.store.parts)
+      for (final p in store.store.timerParts)
         (p.name, '${p.name} ${store.partStaff.where((s) => s.part == p.name).length}'),
     ];
     return WebPage(
@@ -287,6 +287,8 @@ class _StaffSheetState extends State<_StaffSheet> {
             Text(p.fullName, style: AppText.style(20, FontWeight.w500)),
             Text('${s.kind.label} · ${s.kind.flex ? '유동 근무' : s.part} · ${dotDate(parseYmd(s.joinedAt))} 입사',
                 style: AppText.style(13, FontWeight.w400, AppColors.textSecondary)),
+            if (p.contact != null)
+              Text('연락처 ${p.contact}', style: AppText.style(13, FontWeight.w400, AppColors.textSecondary)),
           ]),
         ),
       ]),
@@ -299,7 +301,10 @@ class _StaffSheetState extends State<_StaffSheet> {
             child: WebSegmented(
               labels: const ['알바생 (파트 근무)', '직원'],
               selected: s.kind.flex ? 1 : 0,
-              onChanged: (i) => store.updateStaff(s.id, kind: employmentKind(s.kind, flex: i == 1)),
+              // 고용 형태가 바뀌면 다른 쪽 고정 파트는 남기지 않는다.
+              onChanged: (i) => store.updateStaff(s.id,
+                  kind: employmentKind(s.kind, flex: i == 1),
+                  fixedParts: s.kind.flex == (i == 1) ? null : List.generate(7, (_) => <String>[])),
             ),
           ),
         ),
@@ -319,14 +324,14 @@ class _StaffSheetState extends State<_StaffSheet> {
               ),
             ]),
           ),
-          if (store.store.parts.isNotEmpty)
+          if (store.store.timerParts.isNotEmpty)
             webField(
                 '기본 파트',
                 WebSelect<String>(
-                  value: store.store.parts.any((x) => x.name == s.part)
+                  value: store.store.timerParts.any((x) => x.name == s.part)
                       ? s.part
-                      : store.store.parts.first.name,
-                  items: [for (final x in store.store.parts) (x.name, x.name)],
+                      : store.store.timerParts.first.name,
+                  items: [for (final x in store.store.timerParts) (x.name, x.name)],
                   onChanged: (v) => store.updateStaff(s.id, part: v),
                 )),
         ],
@@ -442,6 +447,7 @@ String? workHoursError(List<WorkHours?> wh) {
 bool workHoursBad(WorkHours w) => w.startMin >= w.endMin;
 
 /// 직원 상세의 고정 근무: 알바생 = 파트×요일 격자, 직원 = 요일별 출퇴근.
+/// 매장에 직원 파트가 있으면 직원은 "고정 근무" 켜기/끄기 + 요일마다 없음 / 직원 파트 / 시간 직접 입력.
 class FixedWorkEditor extends StatefulWidget {
   const FixedWorkEditor({super.key, required this.staffId});
 
@@ -453,6 +459,8 @@ class FixedWorkEditor extends StatefulWidget {
 
 class _FixedWorkEditorState extends State<FixedWorkEditor> {
   late List<WorkHours?> _wh, _av;
+  late List<String?> _fp; // 직원 요일별 고정 파트 이름
+  late bool _fixedOn;
 
   static List<WorkHours?> _copy(List<WorkHours?> l) => [
         for (var i = 0; i < 7; i++)
@@ -462,11 +470,21 @@ class _FixedWorkEditorState extends State<FixedWorkEditor> {
   @override
   void initState() {
     super.initState();
-    final s = AppScope.read(context).staffById(widget.staffId)!;
+    final store = AppScope.read(context);
+    final s = store.staffById(widget.staffId)!;
     _wh = _copy(s.workHours);
     _av = _copy(s.availHours);
-    // 직원인데 아직 정한 적이 없으면 평일 9–18 로 시작한다.
-    if (s.kind.flex && _wh.every((w) => w == null)) {
+    final flexNames = {for (final p in store.store.flexParts) p.name};
+    _fp = [
+      for (var i = 0; i < 7; i++)
+        i < s.fixedParts.length ? s.fixedParts[i].where(flexNames.contains).firstOrNull : null
+    ];
+    for (var i = 0; i < 7; i++) {
+      if (_fp[i] != null) _wh[i] = null;
+    }
+    _fixedOn = _fp.any((x) => x != null) || _wh.any((w) => w != null);
+    // 직원인데 아직 정한 적이 없으면 평일 9–18 로 시작한다(직원 파트가 없는 매장만).
+    if (s.kind.flex && flexNames.isEmpty && _wh.every((w) => w == null)) {
       for (var i = 0; i < 5; i++) {
         _wh[i] = WorkHours(540, 1080);
       }
@@ -478,6 +496,22 @@ class _FixedWorkEditorState extends State<FixedWorkEditor> {
     final bad = _wh.any((x) => x != null && workHoursBad(x));
     if (bad || workHoursError(_wh) != null) return;
     AppScope.read(context).updateStaff(widget.staffId, workHours: [..._wh]);
+  }
+
+  /// 직원 파트 매장의 직원 고정 근무 저장. 파트 고른 날은 시간을 비우고, 끄면 모두 비운다.
+  void _saveFixed() {
+    if (_wh.any((x) => x != null && workHoursBad(x))) return;
+    AppScope.read(context).updateStaff(widget.staffId,
+        fixedParts: [for (final n in _fp) [?n]], workHours: [..._wh]);
+  }
+
+  void _toggleFixed(bool on) {
+    setState(() {
+      _fixedOn = on;
+      _fp = List.filled(7, null);
+      _wh = List.filled(7, null);
+    });
+    if (!on) _saveFixed();
   }
 
   void _setAvail(int d, WorkHours? w) {
@@ -499,7 +533,9 @@ class _FixedWorkEditorState extends State<FixedWorkEditor> {
     final store = AppScope.of(context);
     final s = store.staffById(widget.staffId);
     if (s == null) return const SizedBox.shrink();
-    if (s.kind.flex) return _flex();
+    if (s.kind.flex) {
+      return store.store.flexParts.isEmpty ? _flex() : _flexFixed(store.store.flexParts);
+    }
     return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
       _parts(store, s),
       const SizedBox(height: 16),
@@ -522,6 +558,72 @@ class _FixedWorkEditorState extends State<FixedWorkEditor> {
       _head('고정 근무 요일·시간', '요일을 눌러 근무·쉼 전환'),
       ..._days(_wh, _setDay, on: '근무', off: '쉼'),
       if (err != null) Text(err, style: AppText.style(12, FontWeight.w400, AppColors.danger)),
+    ]);
+  }
+
+  /// 직원 파트가 있는 매장의 직원: 고정 근무 켜기 + 요일마다 없음(-1) / 파트(번호) / 시간 직접 입력(-2).
+  Widget _flexFixed(List<PartTemplate> parts) {
+    int choice(int d) => _fp[d] != null
+        ? parts.indexWhere((p) => p.name == _fp[d])
+        : _wh[d] != null
+            ? -2
+            : -1;
+    void choose(int d, int v) {
+      setState(() {
+        _fp[d] = v >= 0 ? parts[v].name : null;
+        _wh[d] = v == -2 ? (_wh[d] ?? _prev(_wh, d)) : null;
+      });
+      _saveFixed();
+    }
+
+    return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+      InkWell(
+        onTap: () => _toggleFixed(!_fixedOn),
+        child: Row(children: [
+          Checkbox(value: _fixedOn, onChanged: (v) => _toggleFixed(v == true)),
+          Expanded(
+            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Text('고정 근무', style: AppText.style(13, FontWeight.w500)),
+              Text('꺼 두면 직원 파트를 돌아가며 맡아요',
+                  style: AppText.style(11, FontWeight.w400, AppColors.textTertiary)),
+            ]),
+          ),
+        ]),
+      ),
+      if (_fixedOn)
+        for (var d = 0; d < 7; d++)
+          Padding(
+            padding: const EdgeInsets.only(top: 6),
+            child: Wrap(spacing: 8, runSpacing: 4, crossAxisAlignment: WrapCrossAlignment.center, children: [
+              SizedBox(width: 24, child: Text(_dayLabels[d], style: AppText.style(13, FontWeight.w500))),
+              SizedBox(
+                width: 200,
+                child: WebSelect<int>(
+                  key: ValueKey('fixedDay$d'),
+                  value: choice(d),
+                  items: [
+                    (-1, '없음'),
+                    for (var i = 0; i < parts.length; i++)
+                      (i, '${parts[i].name} ${range(parts[i].startMin, parts[i].endMin)}'),
+                    (-2, '시간 직접 입력'),
+                  ],
+                  onChanged: (v) => choose(d, v),
+                ),
+              ),
+              if (_wh[d] case final w?) ...[
+                TimeRange(
+                    label: _dayLabels[d],
+                    start: w.startMin,
+                    end: w.endMin,
+                    onChanged: (a, b) {
+                      setState(() => _wh[d] = WorkHours(a, b));
+                      _saveFixed();
+                    }),
+                if (workHoursBad(w))
+                  Text('시각 확인', style: AppText.style(12, FontWeight.w400, AppColors.danger)),
+              ],
+            ]),
+          ),
     ]);
   }
 
@@ -568,7 +670,7 @@ class _FixedWorkEditorState extends State<FixedWorkEditor> {
       ];
 
   Widget _parts(AppStore store, Staff s) {
-    final parts = store.store.parts;
+    final parts = store.store.timerParts;
     if (parts.isEmpty) {
       return Text('매장 설정에서 알바생 근무 파트를 먼저 추가하세요.',
           style: AppText.style(12, FontWeight.w400, AppColors.textSecondary));
