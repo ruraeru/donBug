@@ -12,10 +12,14 @@ import 'substitute_status_screen.dart';
 enum SubstituteDoneKind { request, apply }
 
 class SubstituteDoneScreen extends StatelessWidget {
-  const SubstituteDoneScreen(this.kind, {super.key, required this.requestId});
+  const SubstituteDoneScreen(this.kind,
+      {super.key, required this.requestId, this.fromStatus = false});
 
   final SubstituteDoneKind kind;
   final String requestId;
+
+  /// 요청 현황 화면에서 신청했으면 새로 띄우지 않고 아래 화면으로 돌아간다.
+  final bool fromStatus;
 
   @override
   Widget build(BuildContext context) {
@@ -47,10 +51,12 @@ class SubstituteDoneScreen extends StatelessWidget {
         child: request
             ? AppButton(
                 '요청 현황 보기',
-                onPressed: () => Navigator.pushReplacement(
-                  context,
-                  MaterialPageRoute(builder: (_) => const SubstituteStatusScreen()),
-                ),
+                onPressed: () => fromStatus
+                    ? Navigator.pop(context)
+                    : Navigator.pushReplacement(
+                        context,
+                        MaterialPageRoute(builder: (_) => const SubstituteStatusScreen()),
+                      ),
               )
             : AppButton(
                 '홈으로 가기',
