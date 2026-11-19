@@ -8,6 +8,7 @@ library;
 import 'package:flutter/foundation.dart' show debugPrint;
 
 import 'format.dart' show ymd;
+import 'holidays.dart' show isHoliday;
 
 enum Role { employee, employer }
 
@@ -51,6 +52,16 @@ enum ShiftKind {
 /// 근무표 파트 색 계열.
 enum PartTone { open, middle, close }
 
+/// 파트가 쓰이는 날. weekend = 토·일·공휴일, weekday = 그 밖.
+enum PartDays {
+  all('매일'),
+  weekday('평일'),
+  weekend('주말·공휴일');
+
+  const PartDays(this.label);
+  final String label;
+}
+
 /// 사업장 규모 설정. auto 면 재직 인원으로 판단.
 enum SizeMode { auto, under5, over5 }
 
@@ -79,6 +90,9 @@ class Person {
     this.certExpiry,
     List<int>? certAlertDays,
     this.certHasPhoto = false,
+    this.contact,
+    this.hasPhoto = false,
+    this.photoVer,
   }) : certAlertDays = certAlertDays ?? [30, 14, 7, 0];
 
   final String id;
@@ -87,6 +101,13 @@ class Person {
   String? certExpiry;
   List<int> certAlertDays;
   bool certHasPhoto;
+
+  /// 연락처. 서버는 내 것과 (사장님이면) 재직 직원 것만 준다. 없으면 null.
+  String? contact;
+
+  /// 프로필 사진. [photoVer] 는 사진이 바뀔 때마다 바뀌는 값(이미지 캐시 키).
+  bool hasPhoto;
+  String? photoVer;
 
   // runes: 이모지(서로게이트 쌍)로 시작하는 이름도 깨지지 않게
   String get letter => name.isEmpty ? '?' : String.fromCharCode(name.runes.first);
@@ -98,6 +119,9 @@ class Person {
         'certExpiry': certExpiry,
         'certAlertDays': certAlertDays,
         'certHasPhoto': certHasPhoto,
+        'contact': contact,
+        'hasPhoto': hasPhoto,
+        'photoVer': photoVer,
       };
 
   factory Person.fromJson(Map<String, dynamic> j) => Person(
@@ -107,6 +131,9 @@ class Person {
         certExpiry: j['certExpiry'],
         certAlertDays: (j['certAlertDays'] as List).cast<int>(),
         certHasPhoto: j['certHasPhoto'] ?? false,
+        contact: j['contact'],
+        hasPhoto: j['hasPhoto'] ?? false,
+        photoVer: j['photoVer'],
       );
 }
 
@@ -125,7 +152,7 @@ class WorkHours {
 class PartTemplate {
   /// [id] 는 서버 id 문자열. 새 파트는 ''.
   PartTemplate(this.name, this.startMin, this.endMin, this.need,
-      {this.id = '', this.tone = PartTone.open, this.breakMin = 0});
+      {this.id = '', this.tone = PartTone.open, this.breakMin = 0, this.flex = false, this.days = PartDays.all});
 
   String id;
   String name;
@@ -135,7 +162,19 @@ class PartTemplate {
   int breakMin;
   int need;
 
-  PartTemplate copy() => PartTemplate(name, startMin, endMin, need, id: id, tone: tone, breakMin: breakMin);
+  /// true = 직원(매니저·정직원) 파트. 영업시간으로 자르지 않고 직원으로만 채운다. 만든 뒤엔 바꿀 수 없다(서버).
+  bool flex;
+  PartDays days;
+
+  /// 그 날 이 파트를 쓰는지 ([days]: 주말 = 토·일·공휴일). 인원 부족·자동 생성은 이 날만 센다.
+  bool appliesOn(DateTime d) => switch (days) {
+        PartDays.all => true,
+        PartDays.weekend => d.weekday >= DateTime.saturday || isHoliday(d),
+        PartDays.weekday => d.weekday < DateTime.saturday && !isHoliday(d),
+      };
+
+  PartTemplate copy() =>
+      PartTemplate(name, startMin, endMin, need, id: id, tone: tone, breakMin: breakMin, flex: flex, days: days);
 
   Map<String, dynamic> toJson() => {
         'id': id,
@@ -145,6 +184,8 @@ class PartTemplate {
         'endMin': endMin,
         'breakMin': breakMin,
         'need': need,
+        'flex': flex,
+        'days': days.name,
       };
 
   factory PartTemplate.fromJson(Map<String, dynamic> j) => PartTemplate(
@@ -155,6 +196,8 @@ class PartTemplate {
         id: '${j['id'] ?? ''}',
         tone: _enum(PartTone.values, j['tone'], PartTone.open),
         breakMin: j['breakMin'] ?? 0,
+        flex: j['flex'] ?? false,
+        days: _enum(PartDays.values, j['days'], PartDays.all),
       );
 }
 
@@ -325,6 +368,12 @@ class Store {
   /// 직원 가입 승인 때 기본으로 고르는 공제.
   Deduction defaultDeduction;
   List<PartTemplate> parts;
+
+  /// 알바생 파트(고정 파트·기본 파트·필요 인원 편집에 쓴다).
+  List<PartTemplate> get timerParts => [for (final p in parts) if (!p.flex) p];
+
+  /// 직원(매니저·정직원) 파트.
+  List<PartTemplate> get flexParts => [for (final p in parts) if (p.flex) p];
 
   /// 'yyyy-MM' → 지난 달 인건비 합계(추이 차트용 상수).
   Map<String, int> monthlyTotals;

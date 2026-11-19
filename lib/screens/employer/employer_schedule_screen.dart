@@ -31,7 +31,8 @@ class _EmployerScheduleScreenState extends State<EmployerScheduleScreen> {
     final day = _day ?? store.today;
     final monday = mondayOf(day);
     final shifts = store.shiftsOn(day);
-    final partNames = {...store.store.parts.map((p) => p.name), ...shifts.map((s) => s.part)};
+    // 그날 쓰지 않는 파트(평일·주말 전용)는 근무가 있을 때만 보인다.
+    final partNames = {...store.store.parts.where((p) => p.appliesOn(day)).map((p) => p.name), ...shifts.map((s) => s.part)};
     return SafeArea(
       child: ListView(
         padding: const EdgeInsets.fromLTRB(20, 10, 20, 16),
@@ -67,7 +68,7 @@ class _EmployerScheduleScreenState extends State<EmployerScheduleScreen> {
           ),
           for (final part in partNames) ...[
             const SizedBox(height: 12),
-            _partCard(store, part, shifts.where((s) => s.part == part).toList()),
+            _partCard(store, part, shifts.where((s) => s.part == part).toList(), day),
           ],
           const SizedBox(height: 12),
           AppButton('+ 근무 추가', variant: AppButtonVariant.outline, onPressed: () => _push(ShiftAddScreen(date: day))),
@@ -76,9 +77,9 @@ class _EmployerScheduleScreenState extends State<EmployerScheduleScreen> {
     );
   }
 
-  Widget _partCard(AppStore store, String part, List<Shift> list) {
+  Widget _partCard(AppStore store, String part, List<Shift> list, DateTime day) {
     final template = store.store.parts.where((p) => p.name == part).firstOrNull;
-    final need = template?.need ?? 0;
+    final need = template != null && template.appliesOn(day) ? template.need : 0;
     final short = need - list.length;
     final time = list.isNotEmpty
         ? shiftTime(list.first)

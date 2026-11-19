@@ -2,10 +2,13 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 import '../../data/app_scope.dart';
+import '../../data/format.dart';
 import '../../theme.dart';
 import '../../widgets/common.dart';
 import '../../widgets/demo_menu.dart';
+import '../profile_edit_screen.dart';
 import '../web/web_view_mode.dart';
+import 'store_info_edit_screen.dart';
 
 /// 매장 설정.
 class StoreSettingsScreen extends StatefulWidget {
@@ -16,6 +19,12 @@ class StoreSettingsScreen extends StatefulWidget {
 }
 
 class _StoreSettingsScreenState extends State<StoreSettingsScreen> {
+  void _push(Widget page) => Navigator.push(context, MaterialPageRoute(builder: (_) => page));
+
+  /// '10:00 – 익일 02:00'
+  static String _hours(int open, int close) =>
+      '${hm(open)} – ${close > 1440 ? '익일 ${hm(close)}' : close == 1440 ? '24:00' : hm(close)}';
+
   @override
   Widget build(BuildContext context) {
     final store = AppScope.of(context);
@@ -43,6 +52,12 @@ class _StoreSettingsScreenState extends State<StoreSettingsScreen> {
                 const SizedBox(height: 12),
                 const Divider(height: 1, color: AppColors.border),
                 const SizedBox(height: 12),
+                KeyValueRow('평일 영업', _hours(st.openMin, st.closeMin)),
+                const SizedBox(height: 8),
+                KeyValueRow('주말·공휴일 영업', _hours(st.weekendOpenMin, st.weekendCloseMin)),
+                const SizedBox(height: 12),
+                const Divider(height: 1, color: AppColors.border),
+                const SizedBox(height: 12),
                 Row(
                   children: [
                     Expanded(
@@ -54,6 +69,22 @@ class _StoreSettingsScreenState extends State<StoreSettingsScreen> {
                 ),
               ],
             ),
+          ),
+          const SizedBox(height: 12),
+          PersonRow(
+            avatar: const LetterAvatar('정', color: AppColors.textSecondary, background: AppColors.bg),
+            title: '매장 정보 수정',
+            subtitle: '이름 · 주소 · 영업시간',
+            trailing: const Icon(Icons.chevron_right_rounded, color: AppColors.textTertiary),
+            onTap: () => _push(const StoreInfoEditScreen()),
+          ),
+          const SizedBox(height: 12),
+          PersonRow(
+            avatar: LetterAvatar(store.me.letter, person: store.me),
+            title: '내 프로필',
+            subtitle: [store.me.fullName, ?store.me.contact].join(' · '),
+            trailing: const Icon(Icons.chevron_right_rounded, color: AppColors.textTertiary),
+            onTap: () => _push(const ProfileEditScreen()),
           ),
           for (final (title, sub, value, onChanged) in toggles) ...[
             const SizedBox(height: 12),

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_svg/flutter_svg.dart';
+import 'package:image_picker/image_picker.dart';
 
 import '../data/app_scope.dart';
 import '../data/format.dart';
@@ -162,28 +163,40 @@ class AppHeader extends StatelessWidget implements PreferredSizeWidget {
   Size get preferredSize => const Size.fromHeight(58);
 
   @override
-  Widget build(BuildContext context) => Material(
+  Widget build(BuildContext context) {
+    final canPop = Navigator.canPop(context);
+    return Material(
         color: AppColors.bg,
         child: SafeArea(
           bottom: false,
           child: SizedBox(
             height: 58,
             child: Padding(
-              padding: const EdgeInsets.only(left: 16, right: 20),
+              // 뒤로 버튼은 왼쪽 끝부터 48 폭 탭 영역. 글자 '‹' 는 예전처럼 왼쪽 16 에 둔다.
+              padding: EdgeInsets.only(left: canPop ? 0 : 16, right: 20),
               child: Row(
                 children: [
-                  if (Navigator.canPop(context)) ...[
+                  if (canPop)
                     Semantics(
                       button: true,
                       label: '뒤로',
                       child: InkWell(
                         onTap: () => Navigator.maybePop(context),
-                        child: Text('‹',
-                            style: AppText.style(32).copyWith(height: 1.15)),
+                        borderRadius: BorderRadius.circular(14),
+                        child: SizedBox(
+                          width: 48,
+                          height: 58,
+                          child: Padding(
+                            padding: const EdgeInsets.only(left: 16),
+                            child: Align(
+                              alignment: Alignment.centerLeft,
+                              child: Text('‹',
+                                  style: AppText.style(32).copyWith(height: 1.15)),
+                            ),
+                          ),
+                        ),
                       ),
                     ),
-                    const SizedBox(width: 6),
-                  ],
                   Expanded(
                     child: Text(title,
                         overflow: TextOverflow.ellipsis,
@@ -196,6 +209,7 @@ class AppHeader extends StatelessWidget implements PreferredSizeWidget {
           ),
         ),
       );
+  }
 }
 
 /// 헤더 오른쪽 글자 액션 (본문 오른쪽 선에 맞춘다).
@@ -224,6 +238,7 @@ class LetterAvatar extends StatelessWidget {
     this.background = AppColors.primarySoft,
     this.size = 40,
     this.selected = false,
+    this.person,
   });
 
   final String letter;
@@ -232,21 +247,51 @@ class LetterAvatar extends StatelessWidget {
   final double size;
   final bool selected;
 
+  /// 주면 그 사람의 프로필 사진([Person.hasPhoto])을 보여 준다. 못 불러오면 글자.
+  final Person? person;
+
   @override
-  Widget build(BuildContext context) => Container(
+  Widget build(BuildContext context) {
+    final text = Text(letter,
+        style: AppText.style(
+            (size * 0.375).roundToDouble(), FontWeight.w500, color));
+    return Container(
         width: size,
         height: size,
         alignment: Alignment.center,
+        clipBehavior: Clip.antiAlias,
         decoration: BoxDecoration(
           color: background,
           shape: BoxShape.circle,
           border:
               selected ? Border.all(color: AppColors.primary, width: 2) : null,
         ),
-        child: Text(letter,
-            style: AppText.style(
-                (size * 0.375).roundToDouble(), FontWeight.w500, color)),
+        child: _photo(context, text) ?? text,
       );
+  }
+
+  Widget? _photo(BuildContext context, Widget fallback) {
+    final p = person;
+    if (p == null) return null;
+    // 사진이 생기거나 바뀌면 다시 그리도록 먼저 구독한다.
+    final store = AppScope.of(context);
+    if (!p.hasPhoto) return null;
+    if (!store.remote) {
+      final bytes = store.demoPhotos[p.id];
+      return bytes == null
+          ? null
+          : Image.memory(bytes, fit: BoxFit.cover, width: size, height: size,
+              errorBuilder: (_, _, _) => fallback);
+    }
+    // URL 의 ?v=photoVer 가 캐시 키: 사진이 바뀌면 새로 받는다.
+    return Image.network(store.personPhotoUrl(p),
+        headers: store.api!.authHeaders,
+        fit: BoxFit.cover,
+        width: size,
+        height: size,
+        frameBuilder: (_, child, frame, sync) => frame == null && !sync ? fallback : child,
+        errorBuilder: (_, _, _) => fallback);
+  }
 }
 
 /// 흰 radius 16 리스트 행: 아바타 + 제목/부제 + 오른쪽 trailing.
@@ -733,6 +778,34 @@ class CountBadge extends StatelessWidget {
 }
 
 /// 화면 아래에 짧은 안내를 띄운다. 이미 떠 있는 것은 바로 바꾼다(연달아 누를 때 줄 서지 않게).
+/// 사진 고르기: 카메라·앨범 시트 → (바이트, 파일 이름). 취소면 null, 못 읽으면 토스트 후 null.
+Future<(Uint8List, String)?> pickPhoto(BuildContext context, {required String fallbackName}) async {
+  final src = await showModalBottomSheet<ImageSource>(
+    context: context,
+    builder: (ctx) => SafeArea(
+      child: Column(mainAxisSize: MainAxisSize.min, children: [
+        ListTile(
+            leading: const Icon(Icons.photo_camera_outlined),
+            title: const Text('카메라로 촬영'),
+            onTap: () => Navigator.pop(ctx, ImageSource.camera)),
+        ListTile(
+            leading: const Icon(Icons.photo_library_outlined),
+            title: const Text('앨범에서 선택'),
+            onTap: () => Navigator.pop(ctx, ImageSource.gallery)),
+      ]),
+    ),
+  );
+  if (src == null) return null;
+  try {
+    final f = await ImagePicker().pickImage(source: src, maxWidth: 1600, imageQuality: 85);
+    if (f == null) return null;
+    return (await f.readAsBytes(), f.name.contains('.') ? f.name : fallbackName);
+  } catch (_) {
+    if (context.mounted) showToast(context, '사진을 불러오지 못했어요');
+    return null;
+  }
+}
+
 void showToast(BuildContext context, String text) =>
     showToastOn(ScaffoldMessenger.of(context), text);
 
@@ -809,7 +882,8 @@ class MemberAvatar extends StatelessWidget {
       return LetterAvatar('-', color: AppColors.textSecondary, background: AppColors.bg, size: size);
     }
     final (fg, bg) = toneColors(staff.tone);
-    return LetterAvatar(store.personOf(staff).letter, color: fg, background: bg, size: size);
+    final p = store.personOf(staff);
+    return LetterAvatar(p.letter, color: fg, background: bg, size: size, person: p);
   }
 }
 

@@ -82,7 +82,7 @@ Future<String?> showCreateScheduleDialog(BuildContext context) {
   String? error;
   final fixedNames = [
     for (final s in store.flexStaff)
-      if (s.workHours.any((w) => w != null)) store.personOf(s).fullName
+      if (s.workHours.any((w) => w != null) || s.fixedParts.any((l) => l.isNotEmpty)) store.personOf(s).fullName
   ];
 
   return showWebDialog<String>(

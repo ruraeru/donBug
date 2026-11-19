@@ -76,6 +76,10 @@ class StaffDetailScreen extends StatelessWidget {
                 KeyValueRow('시급', wonText(s.wage)),
                 const SizedBox(height: 12),
                 KeyValueRow('공제 유형', s.deduction.label),
+                if (p.contact != null) ...[
+                  const SizedBox(height: 12),
+                  KeyValueRow('연락처', p.contact!),
+                ],
                 const SizedBox(height: 12),
                 KeyValueRow('근무 요일',
                     days.isEmpty ? '예정 근무 없음' : days.map((d) => weekday(DateTime(2024, 1, d))).join(' · ')),

@@ -248,6 +248,7 @@ class _Avatar extends StatelessWidget {
     final store = AppScope.of(context);
     final s = store.staffById(staffId)!;
     final (fg, bg) = toneColors(s.tone);
-    return LetterAvatar(store.personOf(s).letter, color: fg, background: bg, selected: selected);
+    final p = store.personOf(s);
+    return LetterAvatar(p.letter, color: fg, background: bg, selected: selected, person: p);
   }
 }
