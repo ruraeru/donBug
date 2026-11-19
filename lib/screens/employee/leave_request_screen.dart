@@ -10,9 +10,12 @@ import 'substitute_done_screen.dart';
 
 /// A4 휴무·대타 신청. [shiftId]가 없으면 가장 가까운 예정 근무를 고른다.
 class LeaveRequestScreen extends StatefulWidget {
-  const LeaveRequestScreen({super.key, this.shiftId});
+  const LeaveRequestScreen({super.key, this.shiftId, this.fromStatus = false});
 
   final String? shiftId;
+
+  /// 요청 현황 화면에서 열었으면 완료 뒤 그 화면으로 돌아간다.
+  final bool fromStatus;
 
   @override
   State<LeaveRequestScreen> createState() => _LeaveRequestScreenState();
@@ -56,7 +59,8 @@ class _LeaveRequestScreenState extends State<LeaveRequestScreen> {
     Navigator.pushReplacement(
       context,
       MaterialPageRoute(
-          builder: (_) => SubstituteDoneScreen(SubstituteDoneKind.request, requestId: r.id)),
+          builder: (_) => SubstituteDoneScreen(SubstituteDoneKind.request,
+              requestId: r.id, fromStatus: widget.fromStatus)),
     );
   }
 

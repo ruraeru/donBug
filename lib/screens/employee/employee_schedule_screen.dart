@@ -8,8 +8,8 @@ import '../../theme.dart';
 import '../../widgets/common.dart';
 import '../employer/employer_parts.dart';
 import 'employee_parts.dart';
-import 'leave_request_screen.dart';
 import 'shift_detail_screen.dart';
+import 'substitute_status_screen.dart';
 
 /// A3 근무표 (탭 루트). 주 이동 · 날짜를 누르면 그날만 보기.
 class EmployeeScheduleScreen extends StatefulWidget {
@@ -90,11 +90,11 @@ class _EmployeeScheduleScreenState extends State<EmployeeScheduleScreen> {
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
             child: AppButton(
-              '휴무 · 대타 신청',
+              '휴무 · 대타',
               icon: 'send',
               onPressed: () => Navigator.push(
                 context,
-                MaterialPageRoute(builder: (_) => const LeaveRequestScreen()),
+                MaterialPageRoute(builder: (_) => const SubstituteStatusScreen()),
               ),
             ),
           ),

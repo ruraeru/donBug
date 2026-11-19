@@ -6,6 +6,7 @@ import '../../data/format.dart';
 import '../../data/models.dart';
 import '../../theme.dart';
 import '../../widgets/common.dart';
+import 'leave_request_screen.dart';
 import 'substitute_detail_screen.dart';
 import 'substitute_done_screen.dart';
 
@@ -47,6 +48,20 @@ class _SubstituteStatusScreenState extends State<SubstituteStatusScreen> {
           const SizedBox(height: 16),
           if (_tab == 0) ..._myRequests(context, store) else ..._available(context, store),
         ],
+      ),
+      bottomNavigationBar: BottomBar(
+        child: AppButton(
+          '휴무 · 대타 신청',
+          icon: 'send',
+          onPressed: () async {
+            await Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const LeaveRequestScreen(fromStatus: true)),
+            );
+            // 새 요청이 보이게 내 요청 탭으로.
+            if (mounted) setState(() => _tab = 0);
+          },
+        ),
       ),
     );
   }
