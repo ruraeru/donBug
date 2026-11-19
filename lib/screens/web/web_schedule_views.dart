@@ -177,7 +177,7 @@ Widget _named(AppStore store, Shift s) => Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(store.personOf(store.staffById(s.staffId)!).fullName,
-            maxLines: 1,
+            maxLines: 3,
             overflow: TextOverflow.ellipsis,
             style: AppText.style(11, FontWeight.w400, AppColors.textSecondary)),
         const SizedBox(height: 3),
@@ -405,7 +405,7 @@ class PeopleWeekView extends StatelessWidget {
                 Row(children: [
                   Flexible(
                     child: Text(store.personOf(s).fullName,
-                        overflow: TextOverflow.ellipsis, style: AppText.style(14, FontWeight.w500)),
+                        maxLines: 3, overflow: TextOverflow.ellipsis, style: AppText.style(14, FontWeight.w500)),
                   ),
                   const SizedBox(width: 6),
                   WebTag(s.kind.label,
@@ -487,8 +487,6 @@ class MonthView extends StatelessWidget {
               TextSpan(text: '$tag ', style: AppText.style(11, FontWeight.w500, fg)),
               TextSpan(text: text, style: AppText.style(11, FontWeight.w400, AppColors.textPrimary)),
             ]),
-            maxLines: 2,
-            overflow: TextOverflow.ellipsis,
           ),
         );
 
@@ -612,7 +610,7 @@ class DayTimelineView extends StatelessWidget {
               Row(children: [
                 Flexible(
                   child: Text(store.personOf(staff).fullName,
-                      overflow: TextOverflow.ellipsis, style: AppText.style(14, FontWeight.w500)),
+                      maxLines: 3, overflow: TextOverflow.ellipsis, style: AppText.style(14, FontWeight.w500)),
                 ),
                 const SizedBox(width: 6),
                 WebTag(tag,

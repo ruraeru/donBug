@@ -56,21 +56,23 @@ class ShiftDetailScreen extends StatelessWidget {
                       MemberAvatar(store.staffById(c.staffId)),
                       const SizedBox(width: 12),
                       Expanded(
-                        child: Row(children: [
-                          Text(store.nameOf(c.staffId),
-                              style: AppText.style(15, FontWeight.w500)),
-                          const SizedBox(width: 8),
-                          Container(
-                              width: 8,
-                              height: 8,
-                              decoration: BoxDecoration(
-                                  color: partColors(c.part).$1, shape: BoxShape.circle)),
-                          const SizedBox(width: 4),
-                          Flexible(
-                            child: Text('${c.part} ${shiftTime(c)}',
-                                overflow: TextOverflow.ellipsis,
-                                style: AppText.style(15, FontWeight.w400, AppColors.textSecondary)),
+                        // 이름이 길면 파트·시간이 다음 줄로.
+                        child: Wrap(crossAxisAlignment: WrapCrossAlignment.center, children: [
+                          Padding(
+                            padding: const EdgeInsets.only(right: 8),
+                            child: Text(store.nameOf(c.staffId),
+                                style: AppText.style(15, FontWeight.w500)),
                           ),
+                          Row(mainAxisSize: MainAxisSize.min, children: [
+                            Container(
+                                width: 8,
+                                height: 8,
+                                decoration: BoxDecoration(
+                                    color: partColors(c.part).$1, shape: BoxShape.circle)),
+                            const SizedBox(width: 4),
+                            Text('${c.part} ${shiftTime(c)}',
+                                style: AppText.style(15, FontWeight.w400, AppColors.textSecondary)),
+                          ]),
                         ]),
                       ),
                     ],
