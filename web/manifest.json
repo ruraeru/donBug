@@ -1,11 +1,11 @@
 {
-    "name": "donbug",
-    "short_name": "donbug",
+    "name": "돈벌래",
+    "short_name": "돈벌래",
     "start_url": ".",
     "display": "standalone",
-    "background_color": "#0175C2",
-    "theme_color": "#0175C2",
-    "description": "A new Flutter project.",
+    "background_color": "#1F8A5B",
+    "theme_color": "#1F8A5B",
+    "description": "사장님·알바생을 위한 스마트 매장 관리 앱",
     "orientation": "portrait-primary",
     "prefer_related_applications": false,
     "icons": [
