@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../data/api_client.dart';
 import '../../data/app_scope.dart';
+import '../../data/app_store.dart' show AppStore;
 import '../../data/format.dart';
 import '../../data/models.dart';
 import '../../data/payroll.dart';
@@ -19,7 +20,8 @@ String _t(int m) => '${(m ~/ 60).toString().padLeft(2, '0')}:${(m % 60).toString
 
 /// 파트 한 줄의 편집 값. 저장할 때 [PartTemplate] 으로 바꾼다.
 class PartRow {
-  PartRow(this.uid, this.id, this.name, this.tone, this.startMin, this.endMin, this.breakMin, this.need);
+  PartRow(this.uid, this.id, this.name, this.tone, this.startMin, this.endMin, this.breakMin, this.need,
+      {this.flex = false, this.days = PartDays.all});
 
   /// 목록 안에서 줄을 구분하는 값(서버 id 와 별개, 새 줄도 가진다).
   final int uid;
@@ -30,7 +32,11 @@ class PartRow {
   PartTone tone;
   int startMin, endMin, breakMin, need;
 
-  PartRow copy() => PartRow(uid, id, name, tone, startMin, endMin, breakMin, need);
+  /// 직원 파트 줄인지. 줄은 만든 카드에 머문다(바뀌지 않음).
+  final bool flex;
+  PartDays days;
+
+  PartRow copy() => PartRow(uid, id, name, tone, startMin, endMin, breakMin, need, flex: flex, days: days);
 
   @override
   bool operator ==(Object other) =>
@@ -41,10 +47,12 @@ class PartRow {
       other.startMin == startMin &&
       other.endMin == endMin &&
       other.breakMin == breakMin &&
-      other.need == need;
+      other.need == need &&
+      other.flex == flex &&
+      other.days == days;
 
   @override
-  int get hashCode => Object.hash(id, name, tone, startMin, endMin, breakMin, need);
+  int get hashCode => Object.hash(id, name, tone, startMin, endMin, breakMin, need, flex, days);
 }
 
 /// 저장을 막는 이유. 없으면 null. 문구는 레퍼런스 Settings.tsx 와 같다.
@@ -60,23 +68,29 @@ String? settingsError({
   if (closeMin - openMin > _day || weekendCloseMin - weekendOpenMin > _day) {
     return '영업시간은 24시간을 넘을 수 없습니다.';
   }
+  final names = <String>{};
   for (final p in parts) {
     if (p.name.trim().isEmpty) return '파트 이름을 입력하세요.';
     if (p.startMin >= p.endMin) return '${p.name} 종료 시각은 시작 시각보다 늦어야 합니다.';
+    if (!names.add(AppStore.partNameKey(p.name.trim()))) {
+      return '파트 이름이 겹쳐요: ${p.name.trim()}. 알바생·직원 파트를 통틀어 이름이 달라야 합니다.';
+    }
   }
   return null;
 }
 
 /// 새 파트: 마지막 파트 끝(없거나 마감 이후면 영업 시작)부터 4시간, 색은 돌려 쓴다.
-PartRow newPartRow(int uid, List<PartRow> parts, int openMin, int closeMin) {
+/// [parts] 는 새 줄이 들어갈 카드의 줄들(알바생 또는 직원).
+PartRow newPartRow(int uid, List<PartRow> parts, int openMin, int closeMin, {bool flex = false}) {
   final sorted = [...parts]..sort((a, b) => a.startMin.compareTo(b.startMin));
   final last = sorted.isEmpty ? null : sorted.last;
   // 파트 시각은 24:00 까지만 고를 수 있어 익일 마감이어도 자정에서 자른다.
   final close = closeMin < _day ? closeMin : _day;
   final start = last != null && last.endMin < close ? last.endMin : openMin;
   final end = (start + 240) < close ? start + 240 : close;
-  return PartRow(uid, '', '새 파트', PartTone.values[parts.length % PartTone.values.length], start,
-      end, partBreakFor(end - start), 1);
+  return PartRow(uid, '', flex ? '새 직원 파트' : '새 파트', PartTone.values[parts.length % PartTone.values.length],
+      start, end, partBreakFor(end - start), 1,
+      flex: flex);
 }
 
 Color toneColor(PartTone t) => switch (t) {
@@ -85,7 +99,7 @@ Color toneColor(PartTone t) => switch (t) {
       PartTone.close => AppColors.accent,
     };
 
-/// 매장 설정 (레퍼런스 pages/Settings.tsx): 기본 정보 · 영업시간 · 사업장 규모 · 알바생 근무 파트 · 기존 설정.
+/// 매장 설정 (레퍼런스 pages/Settings.tsx): 기본 정보 · 영업시간 · 사업장 규모 · 알바생 근무 파트 · 직원 근무 파트 · 기존 설정.
 class WebSettingsScreen extends StatefulWidget {
   const WebSettingsScreen({super.key});
 
@@ -128,7 +142,7 @@ class _WebSettingsScreenState extends State<WebSettingsScreen> {
     _deduction = s.defaultDeduction;
     _savedParts = [
       for (final p in s.parts)
-        PartRow(_uid++, p.id, p.name, p.tone, p.startMin, p.endMin, p.breakMin, p.need)
+        PartRow(_uid++, p.id, p.name, p.tone, p.startMin, p.endMin, p.breakMin, p.need, flex: p.flex, days: p.days)
     ];
     _parts = [for (final p in _savedParts) p.copy()];
     _gen++;
@@ -155,9 +169,10 @@ class _WebSettingsScreenState extends State<WebSettingsScreen> {
       weekendCloseMin: _wClose,
       parts: _parts);
 
-  void _setPart(PartRow p, {String? name, int? start, int? end, int? breakMin, int? need}) {
+  void _setPart(PartRow p, {String? name, int? start, int? end, int? breakMin, int? need, PartDays? days}) {
     setState(() {
       if (name != null) p.name = name;
+      if (days != null) p.days = days;
       if (need != null) p.need = need;
       if (breakMin != null) p.breakMin = breakMin;
       if (start != null || end != null) {
@@ -225,7 +240,7 @@ class _WebSettingsScreenState extends State<WebSettingsScreen> {
   }
 
   PartTemplate _toPart(PartRow p) => PartTemplate(p.name.trim(), p.startMin, p.endMin, p.need,
-      id: p.id, tone: p.tone, breakMin: p.breakMin);
+      id: p.id, tone: p.tone, breakMin: p.breakMin, flex: p.flex, days: p.days);
 
   Widget _card(String title, {String? sub, Widget? trailing, required Widget child}) => AppCard(
         padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
@@ -372,19 +387,11 @@ class _WebSettingsScreenState extends State<WebSettingsScreen> {
               const SizedBox(height: 16),
               webField('최저시급', Text('${wonText(minimumWage2026)} (2026년)', style: AppText.style(15))),
             ])),
-        _card(
-          '알바생 근무 파트',
-          sub: '시작 시각 순으로 보여줍니다. 휴게시간은 근무 4시간마다 30분으로 자동 설정되며, 직접 고칠 수 있습니다.',
-          trailing: WebButton('+ 파트 추가',
-              height: 36,
-              style: WebButtonStyle.outline,
-              onPressed: () => setState(() => _parts.add(newPartRow(_uid++, _parts, _open, _close)))),
-          child: Column(children: [
-            if (_parts.isEmpty) const EmptyNote('파트가 없어요. 파트를 추가하세요.'),
-            for (final p in ([..._parts]..sort((a, b) => a.startMin.compareTo(b.startMin))))
-              _partRow(p),
-          ]),
-        ),
+        _partCard(false, '알바생 근무 파트',
+            '시작 시각 순으로 보여줍니다. 휴게시간은 근무 4시간마다 30분으로 자동 설정되며, 직접 고칠 수 있습니다.'),
+        _partCard(true, '직원 근무 파트',
+            '매니저·정직원이 일하는 파트예요. 자동 생성은 이 파트를 직원으로 채우고, 영업시간으로 자르지 않아 '
+                '오픈 전·마감 뒤 시간도 그대로 씁니다.'),
         _card('알림·공제',
             child: Column(children: [
               ToggleCard(
@@ -426,6 +433,24 @@ class _WebSettingsScreenState extends State<WebSettingsScreen> {
             borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: AppColors.primary)),
       );
 
+  /// 파트 카드. [flex] 카드의 줄만 보여 주고, 추가한 줄도 이 카드에 남는다.
+  Widget _partCard(bool flex, String title, String sub) {
+    final rows = [for (final p in _parts) if (p.flex == flex) p];
+    return _card(
+      title,
+      sub: sub,
+      trailing: WebButton('+ 파트 추가',
+          key: ValueKey(flex ? 'addFlexPart' : 'addPart'),
+          height: 36,
+          style: WebButtonStyle.outline,
+          onPressed: () => setState(() => _parts.add(newPartRow(_uid++, rows, _open, _close, flex: flex)))),
+      child: Column(children: [
+        if (rows.isEmpty) EmptyNote(flex ? '직원 파트가 없어요. 직원은 시간을 직접 정해 근무해요.' : '파트가 없어요. 파트를 추가하세요.'),
+        for (final p in (rows..sort((a, b) => a.startMin.compareTo(b.startMin)))) _partRow(p),
+      ]),
+    );
+  }
+
   Widget _partRow(PartRow p) => Container(
         key: ValueKey('part${p.uid}'),
         padding: const EdgeInsets.symmetric(vertical: 10),
@@ -458,6 +483,12 @@ class _WebSettingsScreenState extends State<WebSettingsScreen> {
               start: p.startMin,
               end: p.endMin,
               onChanged: (a, b) => _setPart(p, start: a, end: b)),
+          _MiniSelect<PartDays>(
+            label: '${p.name} 요일',
+            value: p.days,
+            items: [for (final d in PartDays.values) (d, d.label)],
+            onChanged: (v) => _setPart(p, days: v),
+          ),
           Row(mainAxisSize: MainAxisSize.min, children: [
             Text('휴게 ', style: AppText.style(12, FontWeight.w400, AppColors.textSecondary)),
             _MiniSelect<int>(

@@ -37,7 +37,7 @@ void main() {
     expect(hoursOn(st, DateTime(2026, 5, 5)), (open: 600, close: 1200)); // 어린이날(화)
   });
 
-  test('fixedShifts: 알바생은 고른 파트, 직원은 요일별 시간(영업시간 밖 제외)', () {
+  test('fixedShifts: 알바생은 고른 파트, 직원은 요일별 시간(영업시간 밖이어도 넣음)', () {
     final s = _demo();
     final mon = DateTime(2026, 5, 18), wed = DateTime(2026, 5, 20), fri = DateTime(2026, 5, 22);
     final jimin = s.partStaff.firstWhere((m) => s.nameOf(m.id) == '지민');
@@ -50,9 +50,9 @@ void main() {
     expect(byDay['2026-05-20/${jihun.id}'], isNull); // 수 지훈 쉼
     final jh = byDay['2026-05-18/${jihun.id}']!;
     expect([jh.part, jh.startMin, jh.endMin, jh.breakMin], ['직원', 540, 1080, 60]);
-    // 영업시간 밖이면 뺀다
+    // 영업시간 밖이어도 그대로 넣는다(서버와 같음)
     s.store.closeMin = 1000;
-    expect(fixedShifts(s.store, [jihun], [mon]), isEmpty);
+    expect(fixedShifts(s.store, [jihun], [mon]).map((x) => (x.startMin, x.endMin)), [(540, 1080)]);
     // 날짜·시작 순
     expect(out.map((x) => x.date).toList(), [...out.map((x) => x.date)]..sort());
   });

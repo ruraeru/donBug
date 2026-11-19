@@ -37,26 +37,33 @@ String? moveProblem(AppStore store, Shift s, {required DateTime day, String? sta
 List<int> _times(int a, int b) => ({for (var m = 360; m <= 1440; m += 15) m, a, b}.toList()..sort());
 
 /// W2 근무 추가 · 수정 창 (레퍼런스 ShiftDialog). [shift] 가 있으면 수정, 없으면 [date]에 추가.
-/// 직원 = 근무/연차/휴무 + 시간 미정, 알바생 = 파트 또는 직접 입력. 편집기(초안 모드)에서는 로컬에만 반영된다.
+/// 직원 = 근무/연차/휴무 + 시간 미정 + 직원 파트 또는 직접 입력, 알바생 = 알바생 파트 또는 직접 입력.
+/// 편집기(초안 모드)에서는 로컬에만 반영된다.
 Future<void> showShiftDialog(BuildContext context,
     {Shift? shift, required DateTime date, String? staffId, String? part}) {
   final store = AppScope.read(context);
   final staffList = [...store.flexStaff, ...store.partStaff];
-  final parts = store.store.parts;
-  // 파트 칸 빈 칸: 그 파트 알바 중 그날 근무 없는 사람이 기본 구성원.
+  // 직원은 직원 파트만, 알바생은 알바생 파트만 고른다.
+  List<PartTemplate> partsFor(Staff s) => s.kind.flex ? store.store.flexParts : store.store.timerParts;
+  // 파트 칸 빈 칸: 그 파트 알바(직원 파트면 직원) 중 그날 근무 없는 사람이 기본 구성원.
   final busy = store.scheduleOn(date).map((x) => x.staffId).toSet();
+  final flexSlot = part == flexPart || store.store.flexParts.any((p) => p.name == part);
   final partPeople = store.partStaff.where((s) => s.part == part).toList();
   var who = store.staffById(shift?.staffId ?? staffId) ??
-      (part == flexPart ? store.flexStaff.firstOrNull : null) ??
+      (flexSlot ? store.flexStaff.where((s) => !busy.contains(s.id)).firstOrNull ?? store.flexStaff.firstOrNull : null) ??
       partPeople.where((s) => !busy.contains(s.id)).firstOrNull ??
       partPeople.firstOrNull ??
       staffList.first;
-  PartTemplate? partOf(String? name) => parts.where((p) => p.name == name).firstOrNull;
+  PartTemplate? partOf(Staff s, String? name) => partsFor(s).where((p) => p.name == name).firstOrNull;
   // null = 직접 입력(파트 없음)
-  PartTemplate? pt = shift == null ? (partOf(part ?? who.part) ?? parts.firstOrNull) : partOf(shift.part);
+  PartTemplate? pt = shift != null
+      ? partOf(who, shift.part)
+      : who.kind.flex
+          ? partOf(who, part)
+          : partOf(who, part ?? who.part) ?? partsFor(who).firstOrNull;
   var kind = shift?.kind ?? ShiftKind.work;
-  var start = shift?.startMin ?? (who.kind.flex ? 540 : pt?.startMin ?? 540);
-  var end = shift == null ? (who.kind.flex ? 1080 : pt?.endMin ?? 1080) : shift.endAbs;
+  var start = shift?.startMin ?? pt?.startMin ?? 540;
+  var end = shift == null ? (pt?.endMin ?? 1080) : shift.endAbs;
   if (end > 1440 && shift == null) end = 1440;
   var tbd = shift?.timeTbd ?? false;
   // 수정 창에서 시간이 06–24 밖이면 그대로 보여 주기만 한다.
@@ -73,9 +80,9 @@ Future<void> showShiftDialog(BuildContext context,
   void pickWho(Staff s, StateSetter set) => set(() {
         who = s;
         if (s.kind.flex) {
-          pt = null;
+          if (pt?.flex != true) pt = null;
         } else {
-          pt = partOf(s.part) ?? pt ?? parts.firstOrNull;
+          pt = partOf(s, s.part) ?? (pt?.flex == false ? pt : null) ?? partsFor(s).firstOrNull;
           start = pt?.startMin ?? start;
           end = pt == null ? end : (pt!.endMin <= pt!.startMin ? pt!.endMin + 1440 : pt!.endMin);
           breakMin = pt?.breakMin ?? AppStore.defaultBreak(span());
@@ -93,7 +100,8 @@ Future<void> showShiftDialog(BuildContext context,
     if (kind == ShiftKind.work && breakMin >= span()) {
       return set(() => error = '휴게 시간은 근무 시간보다 짧아야 해요');
     }
-    final partName = who.kind.flex ? flexPart : (pt?.name ?? flexPart);
+    // 직원 파트를 고른 직원 근무는 그 파트 이름으로. 연차·휴무·시간 미정은 '직원'.
+    final partName = kind == ShiftKind.work && !(who.kind.flex && tbd) ? (pt?.name ?? flexPart) : flexPart;
     final endMin = end > 1440 ? end - 1440 : end;
     if (kind == ShiftKind.work && !tbd) {
       final draft = Shift(
@@ -163,15 +171,15 @@ Future<void> showShiftDialog(BuildContext context,
               ),
             ),
           ],
-          if (kind == ShiftKind.work && !who.kind.flex) ...[
+          if (kind == ShiftKind.work && (!who.kind.flex || partsFor(who).isNotEmpty)) ...[
             const SizedBox(height: 16),
             webField(
               '파트',
               WebSelect<PartTemplate?>(
                 value: pt,
                 items: [
-                  for (final p in parts) (p, '${p.name} ${range(p.startMin, p.endMin)}'),
-                  (null, '직접 입력'),
+                  for (final p in partsFor(who)) (p, '${p.name} ${range(p.startMin, p.endMin)}'),
+                  (null, who.kind.flex ? '직접 입력(직원)' : '직접 입력'),
                 ],
                 onChanged: (p) => set(() {
                   pt = p;
