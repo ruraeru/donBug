@@ -46,6 +46,7 @@ import 'package:donbug/screens/employer/substitute_approval_screen.dart';
 import 'package:donbug/screens/employer/substitute_done_screen.dart' as employer;
 import 'package:donbug/screens/employer/staff_detail_screen.dart';
 import 'package:donbug/theme.dart';
+import 'package:donbug/widgets/common.dart';
 
 /// 테스트 기준 시각: 2026-05-14(수) 14:30 (Figma 화면과 같은 날).
 final testNow = DateTime(2026, 5, 14, 14, 30);
@@ -189,6 +190,8 @@ void main() {
     final store = await pumpAt(tester, const EmployeeShell(), const Size(390, 844));
     await tester.tap(find.text('근무표').last);
     await tester.pumpAndSettle();
+    await tester.tap(find.text('휴무 · 대타'));
+    await tester.pumpAndSettle();
     await tester.tap(find.text('휴무 · 대타 신청'));
     await tester.pumpAndSettle();
 
@@ -209,6 +212,57 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.textContaining('님이 수락했어요'), findsOneWidget);
     expect(find.text('사장님 승인 대기'), findsOneWidget);
+  });
+
+  testWidgets('알바생: 근무표 휴무 · 대타 → 현황 먼저, 신청 뒤 현황은 한 겹', (tester) async {
+    final store = await pumpAt(tester, const EmployeeShell(), const Size(390, 844));
+    await tester.tap(find.text('근무표').last);
+    await tester.pumpAndSettle();
+    // 근무 상세에서 신청하는 길도 그대로: 상세 → 신청 → 완료 → 현황 → 근무표.
+    await tester.tap(find.widgetWithText(AppCard, '16'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('휴무 · 대타 신청'));
+    await tester.pumpAndSettle();
+    await tester.scrollUntilVisible(find.byType(TextField), 200);
+    await tester.enterText(find.byType(TextField), '가족 모임');
+    await tester.tap(find.text('휴무 신청하고 대타 구하기'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('요청 현황 보기'));
+    await tester.pumpAndSettle();
+    expect(find.byType(SubstituteStatusScreen, skipOffstage: false), findsOneWidget);
+    expect(find.text('사유: 가족 모임'), findsOneWidget);
+    await tester.tap(find.text('‹'));
+    await tester.pumpAndSettle();
+    expect(find.byType(SubstituteStatusScreen, skipOffstage: false), findsNothing);
+    expect(find.text('휴무 · 대타'), findsOneWidget);
+    await tester.tap(find.text('휴무 · 대타'));
+    await tester.pumpAndSettle();
+    // 내 요청 탭이 먼저, 신청 버튼은 아래 바에.
+    expect(find.byType(SubstituteStatusScreen), findsOneWidget);
+    expect(find.text('사유: 가족 모임'), findsOneWidget);
+    expect(find.descendant(of: find.byType(BottomBar), matching: find.text('휴무 · 대타 신청')),
+        findsOneWidget);
+
+    await tester.tap(find.text('휴무 · 대타 신청'));
+    await tester.pumpAndSettle();
+    await tester.scrollUntilVisible(find.byType(TextField), 200,
+        scrollable: find
+            .descendant(of: find.byType(LeaveRequestScreen), matching: find.byType(Scrollable))
+            .first);
+    await tester.enterText(find.byType(TextField), '치과 진료');
+    await tester.tap(find.text('휴무 신청하고 대타 구하기'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('요청 현황 보기'));
+    await tester.pumpAndSettle();
+    expect(find.byType(SubstituteStatusScreen, skipOffstage: false), findsOneWidget);
+    expect(find.text('사유: 치과 진료'), findsOneWidget);
+
+    await tester.tap(find.text('‹'));
+    await tester.pumpAndSettle();
+    expect(find.byType(SubstituteStatusScreen, skipOffstage: false), findsNothing);
+    expect(find.text('휴무 · 대타'), findsOneWidget);
+
+    expect(store.mySubs.length, 2);
   });
 
   testWidgets('알바생: 매장 전환하면 홈이 그 매장 기준', (tester) async {
