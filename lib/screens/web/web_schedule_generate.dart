@@ -398,9 +398,10 @@ class GeneratePreviewView extends StatelessWidget {
             padding: const EdgeInsets.symmetric(vertical: 4),
             child: Row(children: [
               SizedBox(
-                  width: 72,
+                  width: 140,
                   child: Text(store.nameOf(e.key),
-                      overflow: TextOverflow.ellipsis, style: AppText.style(13, FontWeight.w400))),
+                      maxLines: 3, overflow: TextOverflow.ellipsis, style: AppText.style(13, FontWeight.w400))),
+              const SizedBox(width: 8),
               Expanded(
                 child: ClipRRect(
                   borderRadius: BorderRadius.circular(2),

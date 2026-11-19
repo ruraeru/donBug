@@ -355,7 +355,7 @@ class _StaffWeekCard extends StatelessWidget {
               Row(children: [
                 Flexible(
                   child: Text(store.personOf(st).name,
-                      overflow: TextOverflow.ellipsis, style: AppText.style(14, FontWeight.w500)),
+                      maxLines: 3, overflow: TextOverflow.ellipsis, style: AppText.style(14, FontWeight.w500)),
                 ),
                 const SizedBox(width: 6),
                 WebTag(st.kind.label, fontSize: 11),
