@@ -13,6 +13,8 @@ import 'clock_out_done_screen.dart';
 import 'notification_center_screen.dart';
 import 'qr_check_in_screen.dart';
 import 'substitute_detail_screen.dart';
+import 'substitute_done_screen.dart';
+import 'substitute_status_screen.dart';
 
 /// A2 알바생 홈 (탭 루트). 오늘 근무 · 출근 중 타이머 · 예상 급여 · 대타 요청.
 class EmployeeHomeScreen extends StatelessWidget {
@@ -46,6 +48,11 @@ class EmployeeHomeScreen extends StatelessWidget {
     final elsewhere = open == null ? store.myOpenAttendanceElsewhere : null;
     final today = store.myTodayShift;
     final sub = store.subsAvailableToMe.firstOrNull;
+    // 내 요청 중 근무가 아직 안 끝난 것(취소 제외). 승인·거절도 근무 전까지 보인다.
+    final mine = store.mySubs.where((r) {
+      final s = store.shiftById(r.shiftId);
+      return r.status != SubStatus.cancelled && s != null && !store.shiftEnd(s).isBefore(store.now);
+    }).toList();
     return SafeArea(
       child: ListView(
         padding: const EdgeInsets.only(bottom: 16),
@@ -104,6 +111,20 @@ class EmployeeHomeScreen extends StatelessWidget {
                   _NextShiftCard(store: store),
                 const SizedBox(height: 16),
                 _PayCard(store: store),
+                for (final r in mine.take(2)) ...[
+                  const SizedBox(height: 16),
+                  _MyRequestCard(store: store, request: r),
+                ],
+                if (mine.length > 2) ...[
+                  const SizedBox(height: 16),
+                  AppCard(
+                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+                    onTap: () => _openStatus(context),
+                    child: Text('내 요청 ${mine.length - 2}건 더 보기',
+                        textAlign: TextAlign.center,
+                        style: AppText.style(14, FontWeight.w500, AppColors.textSecondary)),
+                  ),
+                ],
                 if (sub != null && open == null) ...[
                   const SizedBox(height: 16),
                   _SubstituteCard(store: store, request: sub),
@@ -111,6 +132,52 @@ class EmployeeHomeScreen extends StatelessWidget {
               ],
             ),
           ),
+        ],
+      ),
+    );
+  }
+}
+
+void _openStatus(BuildContext context) => Navigator.push(
+    context, MaterialPageRoute(builder: (_) => const SubstituteStatusScreen()));
+
+/// 내 휴무·대타 요청 한 건. 누르면 요청 현황(내 요청 탭).
+class _MyRequestCard extends StatelessWidget {
+  const _MyRequestCard({required this.store, required this.request});
+
+  final AppStore store;
+  final SubstituteRequest request;
+
+  @override
+  Widget build(BuildContext context) {
+    final r = request;
+    final s = store.shiftById(r.shiftId)!;
+    final who = r.acceptedId != null
+        ? store.nameOf(r.acceptedId)
+        : r.applicantIds.map(store.nameOf).join(', ');
+    final detail = switch (r.status) {
+      SubStatus.approved => '$who님 근무로 바뀌었어요',
+      SubStatus.rejected => '근무는 그대로예요',
+      SubStatus.accepted => '$who님이 수락했어요',
+      _ => who.isEmpty ? '동료 지원을 기다리고 있어요' : '$who님이 지원했어요',
+    };
+    return AppCard(
+      onTap: () => _openStatus(context),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: Text('${shiftDay(s)} ${shiftTime(s)}',
+                    style: AppText.style(17, FontWeight.w500)),
+              ),
+              Pill.accent(subStatusLabel(r)),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Text('내 대타 요청 · $detail',
+              style: AppText.style(13, FontWeight.w400, AppColors.textSecondary)),
         ],
       ),
     );
