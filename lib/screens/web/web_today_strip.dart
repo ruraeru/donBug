@@ -125,12 +125,16 @@ class TodayStrip extends StatelessWidget {
   Widget _bar(String name, Shift s, Color tone, double w, int row) {
     final left = _x(s.startMin, w);
     final right = _x(s.endAbs, w); // 야간 근무는 24시에서 자른다(_x 가 clamp)
-    final label = Row(mainAxisSize: MainAxisSize.min, children: [
-      Text(name, style: AppText.style(12, FontWeight.w500, tone)),
-      const SizedBox(width: 6),
-      Text(s.timeTbd ? '시간 미정' : '${_t(s.startMin)}–${_t(s.endMin)}',
-          style: AppText.style(12, FontWeight.w400, tone)),
-    ]);
+    // 막대 폭이 한계라 넘치면 말줄임(이름·시간 전체는 툴팁). 글자를 줄이지 않는다.
+    final label = Text.rich(
+        TextSpan(children: [
+          TextSpan(text: name, style: AppText.style(12, FontWeight.w500, tone)),
+          TextSpan(
+              text: '  ${s.timeTbd ? '시간 미정' : '${_t(s.startMin)}–${_t(s.endMin)}'}',
+              style: AppText.style(12, FontWeight.w400, tone)),
+        ]),
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis);
     final box = Container(
       height: _row,
       padding: const EdgeInsets.symmetric(horizontal: 10),
@@ -140,7 +144,7 @@ class TodayStrip extends StatelessWidget {
         color: s.timeTbd ? AppColors.surface : tone.withValues(alpha: .14),
         borderRadius: BorderRadius.circular(6),
       ),
-      child: FittedBox(fit: BoxFit.scaleDown, alignment: Alignment.centerLeft, child: label),
+      child: label,
     );
     return Positioned(
       left: left,
