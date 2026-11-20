@@ -5,11 +5,15 @@ import '../../widgets/common.dart';
 
 /// AI 답변 상세.
 class AiAnswerDetailScreen extends StatelessWidget {
-  const AiAnswerDetailScreen({super.key, this.question, this.answer});
+  const AiAnswerDetailScreen(
+      {super.key, this.question, this.answer, this.citations = const []});
 
   /// 서버 모드에서 받은 질문·답. 없으면(데모) 고정 예시를 보여 준다.
   final String? question;
   final String? answer;
+
+  /// 서버 답의 근거 조항.
+  final List<String> citations;
 
   @override
   Widget build(BuildContext context) =>
@@ -37,8 +41,11 @@ class AiAnswerDetailScreen extends StatelessWidget {
             const SizedBox(height: 12),
             AppCard(
               radius: 16,
-              child: SelectableText(a,
-                  style: AppText.style(14, FontWeight.w400).copyWith(height: 22 / 14)),
+              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                SelectableText(a,
+                    style: AppText.style(14, FontWeight.w400).copyWith(height: 22 / 14)),
+                CitationChips(citations),
+              ]),
             ),
             const SizedBox(height: 12),
             AppCard(
