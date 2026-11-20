@@ -2,11 +2,12 @@ import 'package:flutter/material.dart';
 
 import '../../data/ai_api.dart';
 import '../../data/app_scope.dart';
+import '../../data/models.dart';
 import '../../theme.dart';
 import '../../widgets/common.dart';
 import 'ai_answer_detail_screen.dart';
 
-/// B6 AI 노무 도우미 (채팅).
+/// B6 AI 노무 도우미 (채팅). 사장님·알바생이 같이 쓴다(알바생은 MY 탭, 서버 모드만).
 class AiLaborAssistantScreen extends StatefulWidget {
   const AiLaborAssistantScreen({super.key});
 
@@ -18,7 +19,7 @@ class _Msg {
   _Msg(this.question);
 
   final String question;
-  String? answer;
+  AiAnswer? answer;
 }
 
 class _AiLaborAssistantScreenState extends State<AiLaborAssistantScreen> {
@@ -47,7 +48,7 @@ class _AiLaborAssistantScreenState extends State<AiLaborAssistantScreen> {
     _toEnd();
     try {
       final r = await askLaborQuestion(store.api!, store.session.storeId, q);
-      msg.answer = r.answer;
+      msg.answer = r;
     } catch (e) {
       if (mounted) showToast(context, aiErrorText(e));
       _msgs.remove(msg);
@@ -73,14 +74,17 @@ class _AiLaborAssistantScreenState extends State<AiLaborAssistantScreen> {
         MaterialPageRoute(
             builder: (_) => m == null
                 ? const AiAnswerDetailScreen()
-                : AiAnswerDetailScreen(question: m.question, answer: m.answer)));
+                : AiAnswerDetailScreen(
+                    question: m.question,
+                    answer: m.answer?.answer,
+                    citations: m.answer?.citations ?? const [])));
     final secondary =
         AppText.style(13, FontWeight.w400, AppColors.textSecondary)
             .copyWith(height: 1.5);
 
     return Scaffold(
       appBar: AppHeader('AI 노무 도우미', actions: [
-        Text(remote ? 'Claude' : 'Gemini',
+        Text('AI',
             style: const TextStyle(fontSize: 13, color: AppColors.textSecondary)),
         const SizedBox(width: 16),
       ]),
@@ -236,11 +240,17 @@ class _AiLaborAssistantScreenState extends State<AiLaborAssistantScreen> {
     );
   }
 
-  /// 서버 모드 대화: 질문(오른쪽) → 로딩 → 답(왼쪽, 누르면 상세).
-  List<Widget> _serverChat(void Function([_Msg?]) openDetail) => [
+  /// 서버 모드 대화: 질문(오른쪽) → 로딩 → 답(왼쪽, 누르면 상세). 알바생이면 인사·추천 질문이 일하는 사람 쪽이다.
+  List<Widget> _serverChat(void Function([_Msg?]) openDetail) {
+    final employee = AppScope.read(context).session.role == Role.employee;
+    return [
         _Bubble(
           ai: true,
-          child: Text('노동법이나 매장 관리, 궁금한 걸 편하게 물어보세요.', style: AppText.style(14)),
+          child: Text(
+              employee
+                  ? '주휴수당·휴게시간·급여처럼 일하면서 궁금한 걸 편하게 물어보세요.'
+                  : '노동법이나 매장 관리, 궁금한 걸 편하게 물어보세요.',
+              style: AppText.style(14)),
         ),
         for (final m in _msgs) ...[
           const SizedBox(height: 16),
@@ -254,7 +264,10 @@ class _AiLaborAssistantScreenState extends State<AiLaborAssistantScreen> {
             _Bubble(
               ai: true,
               onTap: () => openDetail(m),
-              child: Text(m.answer!, style: AppText.style(14).copyWith(height: 1.5)),
+              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                Text(m.answer!.answer, style: AppText.style(14).copyWith(height: 1.5)),
+                CitationChips(m.answer!.citations),
+              ]),
             )
           else
             _Bubble(
@@ -272,12 +285,15 @@ class _AiLaborAssistantScreenState extends State<AiLaborAssistantScreen> {
             spacing: 8,
             runSpacing: 8,
             children: [
-              for (final q in const ['주휴수당은 꼭 줘야 하나요?', '4대보험 가입 기준은?', '근로계약서 안 쓰면?'])
+              for (final q in employee
+                  ? const ['저는 주휴수당 대상인가요?', '휴게시간은 얼마나 받아야 하나요?', '갑자기 그만두라고 하면 어떻게 하나요?']
+                  : const ['주휴수당은 꼭 줘야 하나요?', '4대보험 가입 기준은?', '근로계약서 안 쓰면?'])
                 _Suggestion(q, onTap: () => _send(q)),
             ],
           ),
         ],
       ];
+  }
 }
 
 /// AI(왼쪽·흰색) / 사용자(오른쪽·primary) 말풍선. 최대 폭 310.

@@ -447,6 +447,28 @@ class NoteBox extends StatelessWidget {
       );
 }
 
+/// AI 답변·노무 점검의 근거 조항 칩. 비어 있으면 아무것도 그리지 않는다.
+class CitationChips extends StatelessWidget {
+  const CitationChips(this.citations, {super.key});
+
+  final List<String> citations;
+
+  @override
+  Widget build(BuildContext context) => citations.isEmpty
+      ? const SizedBox.shrink()
+      : Padding(
+          padding: const EdgeInsets.only(top: 10),
+          child: Wrap(
+            spacing: 6,
+            runSpacing: 6,
+            children: [
+              for (final c in citations)
+                Pill(c, color: AppColors.info, background: AppColors.infoSoft),
+            ],
+          ),
+        );
+}
+
 /// 완료 화면 상단: 96px 체크 원 + 제목 + 설명.
 class SuccessHero extends StatelessWidget {
   const SuccessHero({super.key, required this.title, required this.subtitle});

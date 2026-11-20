@@ -7,7 +7,7 @@ Flutter app (돈벌래 - 스마트 매장 관리 앱). 소상공인 사장님·�
 - 계약: `lib/data/models.dart` 의 JSON 이 FE↔BE 계약이다. 백엔드가 이 모양에 맞춘다. 서버는 `GET /api/v1/me/state` 로 `AppState` JSON 을 그대로 준다.
 - 로그인: 카카오(웹 = 서버 리다이렉트, 앱 = `flutter_web_auth_2` 로 서버 OAuth → `donbug://auth`). 테스트 계정 = 로그인 화면 로고 길게 누르기 → 서버 `TEST_LOGIN_TOKEN` 값 입력.
 - 웹: 사장님 PC 대시보드. 폭 700 미만(폰 브라우저)이거나 알바생이면 모바일 앱 화면을 웹에서 그대로 띄운다.
-- AI: 노무 도우미(앱 B6·웹 W7, Claude), AI 근무표 생성(웹, Ollama). 모바일 B6 은 진입 경로가 없다.
+- AI: 노무 도우미(앱 B6·웹 W7, 매장 사장님의 자체 LLM — 화면 라벨은 "AI"), AI 근무표 생성(웹, Ollama). 답 아래 근거 조항 칩(`citations`). 웹 W7 서버 모드에 "매장 노무 점검"(`labor-audit`, 결과는 화면에 있는 동안만). 앱 B6 진입은 알바생 MY "AI 노무 도우미"(서버 모드만, 알바생 인사·추천 질문)뿐, 사장님 앱 진입은 없다.
 
 아직 안 만든 것:
 - 휴대폰 푸시 알림 없음. 변경은 롱 폴링(`/me/changes`)·60초 확인·당겨서 새로고침으로 반영.
@@ -78,7 +78,7 @@ Flutter SDK는 PATH에 없음. 프로젝트 루트의 로컬 SDK 사용 (`/flutt
   - `app_store.dart`: `AppStore extends ChangeNotifier`. 조회·파생값(내 근무, 출근 상태, 대타, 급여, 인건비, 안 읽은 수)과 모든 액션(출퇴근, 대타, 근무표(근무표 만들기: planSchedule 미리보기 → applySchedulePlan), 직원, 공지, 서류, 매장, 세션, 데모). 액션마다 관련자에게 `AppNotification` 을 만든다.
   - 서버 모드에서 액션은 로컬 상태를 바꾸고 `_remote(...)` 로 API 를 보낸 뒤 `/me/state` 를 다시 읽는다(실패는 `remoteError`). 결과를 기다려야 하는 일은 `...Remote` Future 메서드(`createStoreRemote`, `requestJoinRemote`, `clockInRemote`, `uploadHealthCertRemote`, `signContractRemote` 등). `reload` 는 늦게 온 응답·초안 편집 중 응답을 버린다. `refreshNow({quiet})` 는 버전 불일치를 한 번 알린다.
   - 웹 근무표 초안 모드: `setScheduleDraft(true)` 동안 근무 편집은 로컬 + 되돌리기 스택만, `saveSchedule(month)` 이 `PUT /stores/{id}/schedules/{month}/shifts`(그 달 근무 전체). 월 근무표 `createMonthSchedule`·`autofillMonth`·`previewGenerate`(자동 생성 미리보기, `POST …/schedules/generate/preview`)·`applyGenerated`(`…/generate/apply {planId}`, AI 설명은 서버가 적용 뒤 붙임)·`confirmMonth`·`deleteMonthSchedule`, 템플릿 `saveScheduleTemplate`·`applyScheduleTemplate`·`deleteScheduleTemplate`, 매장 `updateStoreSettings`·`saveParts`.
-  - `autoschedule.dart`: autoSchedule_FE 이식 순수 함수(`fixedShifts`, `autofill`, `toPattern`/`fillMonth`, 휴게 규칙, `hoursOn`). `holidays.dart`: 2026~2027 공휴일. `ai_api.dart`: AI 노무 도우미 호출.
+  - `autoschedule.dart`: autoSchedule_FE 이식 순수 함수(`fixedShifts`, `autofill`, `toPattern`/`fillMonth`, 휴게 규칙, `hoursOn`). `holidays.dart`: 2026~2027 공휴일. `ai_api.dart`: AI 노무 도우미 질문(`askLaborQuestion` → `AiAnswer{answer, citations}`)·매장 노무 점검(`auditLabor` → `LaborAudit{summary, aiUsed, findings}`, 높음→낮음 정렬, 모르는 심각도는 low).
   - `seed.dart`: `buildSeed(now)`. 지난달 1일이 있는 주부터 다음 주까지 근무·출근 기록을 만든다.
   - `payroll.dart`: 급여 순수 함수(`computePayslip`, `weeklyHolidayPay`, `deductionOf`), `minimumWage2026 = 10320`.
   - `format.dart`: `won`, `wonText`, `md`, `hm`, `dDay`, `relative`, `shiftDay/Time/Caption` 등.
@@ -87,7 +87,7 @@ Flutter SDK는 PATH에 없음. 프로젝트 루트의 로컬 SDK 사용 (`/flutt
 - `lib/widgets/common.dart` — 공용 위젯
   - 레이아웃·표시: `AppIcon`, `AppCard`, `Pill`, `AppButton`(Primary/Soft/Surface/Outline/Danger), `AppHeader`("‹ 제목" 헤더), `LetterAvatar`, `MemberAvatar`(직원 tone 색), `PersonRow`, `KeyValueRow`, `BottomBar`, `NoteBox`, `SuccessHero`, `StepRow`, `LabeledField`
   - 입력: `FieldBox`(`onTap` 주면 날짜·시간 선택 버튼), `AppTextField`, `AppToggle`, `ToggleCard`
-  - 데이터 표시: `PayBreakdown`, `MonthNav`, `certPill`, `CountBadge`, `EmptyNote`
+  - 데이터 표시: `PayBreakdown`, `MonthNav`, `certPill`, `CountBadge`, `EmptyNote`, `CitationChips`(AI 근거 조항 칩)
   - 상태·피드백: `MissingScreen`(상세 대상이 사라졌을 때), `showConfirmDialog`, `showToast`
 - `lib/widgets/demo_menu.dart` — `openShell(context, role)`, `logoutToLogin`, `DemoMenu`(역할 전환 · 데모 데이터 초기화, 서버 모드에선 숨김).
 - `lib/widgets/tab_shell.dart` — 하단 탭 셸. `TabShell.of(context)?.select(i)`로 탭 전환. 서버 모드면 탭마다 당겨서 새로고침.
