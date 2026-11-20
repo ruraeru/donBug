@@ -4,12 +4,13 @@ import '../../data/app_scope.dart';
 import '../../theme.dart';
 import '../../widgets/common.dart';
 import '../../widgets/demo_menu.dart';
+import '../employer/ai_labor_assistant_screen.dart';
 import '../profile_edit_screen.dart';
 import 'my_documents_screen.dart';
 import 'notification_center_screen.dart';
 import 'store_switch_screen.dart';
 
-/// MY (탭 루트): 프로필 · 매장 전환 · 내 서류 · 알림 · 로그아웃.
+/// MY (탭 루트): 프로필 · 매장 전환 · 내 서류 · AI 노무 도우미(서버 모드) · 알림 · 로그아웃.
 class EmployeeMyScreen extends StatelessWidget {
   const EmployeeMyScreen({super.key});
 
@@ -75,6 +76,18 @@ class EmployeeMyScreen extends StatelessWidget {
             trailing: docAlert ? const Pill.accent('확인 필요') : chevron,
             onTap: () => _push(context, const MyDocumentsScreen()),
           ),
+          // 데모의 AI 화면은 사장님용 예시라 서버 모드에서만 보인다.
+          if (store.remote) ...[
+            const SizedBox(height: 12),
+            PersonRow(
+              avatar: const LetterAvatar('AI',
+                  color: AppColors.textSecondary, background: AppColors.bg),
+              title: 'AI 노무 도우미',
+              subtitle: '주휴수당 · 휴게 · 급여 질문',
+              trailing: chevron,
+              onTap: () => _push(context, const AiLaborAssistantScreen()),
+            ),
+          ],
           const SizedBox(height: 12),
           PersonRow(
             avatar: const LetterAvatar('알',
