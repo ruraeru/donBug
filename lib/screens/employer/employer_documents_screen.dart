@@ -6,6 +6,7 @@ import '../../data/models.dart';
 import '../../data/payroll.dart';
 import '../../theme.dart';
 import '../../widgets/common.dart';
+import 'ai_labor_assistant_screen.dart';
 import 'employer_contract_write_screen.dart';
 import 'employer_staff_documents_screen.dart';
 
@@ -69,6 +70,15 @@ class EmployerDocumentsScreen extends StatelessWidget {
                       ],
                     ],
                   ),
+                ),
+                const SizedBox(height: 12),
+                AppButton(
+                  'AI 노무 도우미에게 물어보기',
+                  variant: AppButtonVariant.soft,
+                  verticalPadding: 12,
+                  fontSize: 15,
+                  onPressed: () => Navigator.push(
+                      context, MaterialPageRoute(builder: (_) => const AiLaborAssistantScreen())),
                 ),
                 const SizedBox(height: 16),
                 AppCard(
