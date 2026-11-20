@@ -8,6 +8,7 @@ import '../../theme.dart';
 import '../../widgets/common.dart';
 import '../../widgets/tab_shell.dart';
 import '../employee/notification_center_screen.dart';
+import 'ai_labor_assistant_screen.dart';
 import 'attendance_screen.dart';
 import 'employer_parts.dart';
 import 'staff_approval_screen.dart';
@@ -170,6 +171,15 @@ class EmployerDashboardScreen extends StatelessWidget {
               subtitle: '재직 ${store.activeStaff.length}명',
               trailing: const Icon(Icons.chevron_right_rounded, color: AppColors.textTertiary),
               onTap: () => _push(context, const StaffManagementScreen()),
+            ),
+            const SizedBox(height: 12),
+            PersonRow(
+              avatar: const LetterAvatar('AI',
+                  color: AppColors.textSecondary, background: AppColors.bg),
+              title: 'AI 노무 도우미',
+              subtitle: '주휴수당 · 휴게 · 근로계약 질문',
+              trailing: const Icon(Icons.chevron_right_rounded, color: AppColors.textTertiary),
+              onTap: () => _push(context, const AiLaborAssistantScreen()),
             ),
           ],
         ),
